@@ -29,26 +29,37 @@ public:
 
     static bool html_output_;
 
-    static JSON& GetTest(std::string test_class);
-    static void AddReport(JSON& data);
+    static void SetTest(std::string suite, std::string test, JSON& data);
     static void WriteReport(std::string filename);
-    static void AddTest(std::string suite, std::string test, double points);
     static void Init();
-    static void SetGradingMethod(std::string test_class, std::string method);
-    static void SetFormat(std::string test_class, std::string format);
 };
 
 class Test {
 
     static std::vector<Test*> test_list_;
 
-    virtual void RunTest() = 0;
+    virtual void ActualTest() = 0;
+
+    void RunTest();
 protected:
 
+    JSON data_;
+
     double points_ = 1;
+    std::string grading_method_ = "partial";
+    std::string output_format_ = "horizontal";
+    std::string suite_;
+    std::string test_;
+
+    int correct_ = 0;
+    int incorrect_ = 0;
+
+    void AddReport(JSON data);
+    void GradingMethod(std::string method);
+    void OutputFormat(std::string format);
 public:
 
-    Test();
+    Test(std::string suite, std::string test, double points);
 
     static void RunTests();
 };
@@ -58,27 +69,23 @@ public:
 #define ADD_REPORT_(json, type, condition, result) \
     json.Set("type", type); \
     json.Set("condition", condition); \
-    json.Set("test_class", typeid(*this).name() ); \
-    Formatter::AddReport(json.Set("result", result)); \
+    AddReport(json.Set("result", result));
 
 #define ADD_REPORT(type, condition, result) \
     JSON json; \
     ADD_REPORT_(json, type, condition, result)
 
-#define TEST_POINTS(suitename, testname, points) \
+#define TEST_(suitename, testname, points) \
     class GCHECK_TEST_##suitename##_GCHECK_TEST_##testname : Test { \
-        void RunTest(); \
+        void ActualTest(); \
     public: \
-        GCHECK_TEST_##suitename##_GCHECK_TEST_##testname() { \
-            points_ = points; \
-            Formatter::AddTest(#suitename, #testname, points_); \
-        } \
+        GCHECK_TEST_##suitename##_GCHECK_TEST_##testname() : Test(#suitename, #testname, points) { } \
     }; \
     GCHECK_TEST_##suitename##_GCHECK_TEST_##testname GCHECK_TESTVAR_##suitename##_GCHECK_TEST_##testname; \
-    void GCHECK_TEST_##suitename##_GCHECK_TEST_##testname::RunTest() 
+    void GCHECK_TEST_##suitename##_GCHECK_TEST_##testname::ActualTest() 
 
 #define TEST(suitename, testname) \
-    TEST_POINTS(suitename, testname, points_)
+    TEST_(suitename, testname, points_)
 
 #define EXPECT_TRUE_(b, msg) \
     { \
@@ -116,16 +123,6 @@ public:
         ADD_REPORT_(json, "EE", #left " = " #right, left == right) \
     }
 
-#define GRADING_METHOD(method) \
-    { \
-        Formatter::SetGradingMethod(typeid(*this).name(), #method); \
-    }
-
-#define FORMAT(format) \
-    { \
-        Formatter::SetFormat(typeid(*this).name(), #format); \
-    }
-
 #define TEST_CASE(num, correct, under_test, ...) \
     { \
         JSON json; \
@@ -140,5 +137,5 @@ public:
             result.Set("output", under_test(__VA_ARGS__)); \
             results.push_back(result); \
         } \
-        Formatter::AddReport(json.Set("cases", results)); \
+        AddReport(json.Set("cases", results)); \
     }
