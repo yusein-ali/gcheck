@@ -7,6 +7,9 @@
 #include <type_traits>
 #include "argument.h"
 
+/*
+    Class for holding multiple types of data in a json-like structure.
+*/
 class JSON {
     std::unordered_map<std::string, std::any> items_;
 
@@ -59,15 +62,20 @@ public:
         return *out;
     }
 
+    // Returns the object as a json string with or without the starting/ending {} characters
     std::string AsString(bool strip_ends = false) const;
+    // Returns the item corresponding to key as a json string
     std::string AsString(const char* key) const;
     std::string AsString(std::string key) const;
+    // Escapes all special json characters
     static std::string Escape(std::string str);
 
     auto begin() { return items_.begin(); }
     auto end() { return items_.end(); }
 };
 
+// MakeAnyList: function for making a vector containing std::any types from any number of any types of arguments
+// If the type is an argument type, insert its value instead of the object itself
 template<typename T>
 typename std::enable_if<is_Argument<T>::value>::type
 MakeAnyList(std::vector<std::any>& container, T first) {

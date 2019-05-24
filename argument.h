@@ -3,12 +3,14 @@
 #include <random>
 #include <type_traits>
 
+// is_instance<A, B>; a struct for checking if A is a template specialization of B
 template <class, template <typename...> class>
 struct is_instance : public std::false_type {};
 
 template <class... Args, template <typename...> class U>
 struct is_instance<U<Args...>, U> : public std::true_type {};
 
+// Base class for the different distributions
 template<typename A>
 class Distribution {
 protected:
@@ -21,6 +23,7 @@ public:
     virtual A operator()() = 0;
 };
 
+// A class that randomly selects an item from a std::vector
 template<typename A>
 class ChoiceDistribution : public Distribution<A> {
     std::vector<A> choices_;
@@ -30,14 +33,17 @@ public:
     A operator()() { return choices_[distribution_(Distribution<A>::generator_)]; }
 };
 
+// A class that randomly selects a value from a range
 template<typename A, typename Enable = void>
 class RangeDistribution;
 
+// Specialization of RangeDistribution for floating point and integral values
 template<typename A>
 class RangeDistribution<A, typename std::enable_if<std::is_floating_point<A>::value || std::is_integral<A>::value>::type> : public Distribution<A> {
 
     A start_;
     A end_;
+    // Use int distribution for integral types and real distribution for floating point types
     typename std::conditional<std::is_integral<A>::value, 
         std::uniform_int_distribution<A>, 
         std::uniform_real_distribution<A>>
@@ -50,6 +56,7 @@ public:
     A operator()() { return distribution_(Distribution<A>::generator_); }
 };
 
+// Specialization of RangeDistribution for values not floating point nor integral
 template<typename A>
 class RangeDistribution<A, typename std::enable_if<!std::is_floating_point<A>::value && !std::is_integral<A>::value>::type> : public Distribution<A> {
 
@@ -65,6 +72,7 @@ public:
     A operator()() { return start_+distribution_(Distribution<A>::generator_); }
 };
 
+// Base class for different argument types
 template <typename A>
 class Argument {
 protected:
@@ -76,12 +84,14 @@ public:
     A operator ()() const { return value_; };
 };
 
+// An argument with a constant value
 template <typename A>
 class ConstantArgument : public Argument<A> {
 public:
     ConstantArgument(A value) : Argument<A>(value) {}
 };
 
+// An argument that takes a random value from a distribution
 template <typename A>
 class RandomArgument : public Argument<A> {
     Distribution<A>& generator_;
@@ -90,6 +100,7 @@ public:
     A Next() { return this->value_ = generator_(); };
 };
 
+// An argument that fills a container with random values from a distribution
 template <template <typename> class C, typename T>
 class RandomContainerArgument : public Argument<C<T>> {
     Distribution<T>& generator_;
@@ -103,6 +114,7 @@ public:
     }
 };
 
+// is_Random<A>::value; true if A is RandomArgument or RandomContainerArgument, false otherwise
 template<typename A>
 struct is_Random : public std::false_type {};
 template <typename T>
@@ -110,6 +122,7 @@ struct is_Random<RandomArgument<T>> : public std::true_type {};
 template <template <typename> class C, typename T>
 struct is_Random<RandomContainerArgument<C, T>> : public std::true_type {};
 
+// is_Argument<A>::value; true if A is any of the argument types, false otherwise
 template<typename A>
 struct is_Argument : public std::false_type {};
 template <typename T>
@@ -119,14 +132,17 @@ struct is_Argument<RandomArgument<T>> : public std::true_type {};
 template <template <typename> class C, typename T>
 struct is_Argument<RandomContainerArgument<C, T>> : public std::true_type {};
 
+// advance(item): Generates a new random value for item if it is a random argument type
 template<typename T>
 typename std::enable_if<is_Random<T>::value>::type 
 advance(T& item) { item.Next(); }
 
+// if item isn't a random argument type, do nothing
 template<typename T>
 typename std::enable_if<!is_Random<T>::value>::type 
 advance(T& item) { }
 
+// Calls advance(arg) on all arguments
 template<typename T, typename... Args>
 void advance(T& first, Args&... rest) {
     advance(first);

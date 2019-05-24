@@ -16,9 +16,11 @@ std::stringstream Formatter::cerr_(std::ios_base::in | std::ios_base::out);
 std::vector<std::pair<std::string, JSON>> Formatter::tests_ = std::vector<std::pair<std::string, JSON>>();
 
 std::vector<Test*> Test::test_list_ = std::vector<Test*>();
+double Test::default_points_ = 1;
 
 void Formatter::WriteReport(std::string filename) {
 
+    // Restores the cout and cerr buffers (check Formatter::Init())
     if(swapped_) {
         std::cout.rdbuf(cout_buf_);
         std::cerr.rdbuf(cerr_buf_);
@@ -50,7 +52,7 @@ void Formatter::WriteReport(std::string filename) {
     }
 }
 
-void Formatter::SetTest(std::string suite, std::string test, JSON& data) {
+void Formatter::SetTestData(std::string suite, std::string test, JSON& data) {
 
     auto it = std::find_if(tests_.begin(), tests_.end(), [suite](std::pair<std::string, JSON> item){ return suite == item.first; });
 
@@ -67,6 +69,7 @@ void Formatter::Init() {
     if(swapped_) return;
     swapped_ = true;
 
+    // Swaps the cout and cerr buffers to redirect them to own readable streams
     cout_buf_ = std::cout.rdbuf();
     cerr_buf_ = std::cerr.rdbuf();
     std::cout.rdbuf(cout_.rdbuf());
@@ -98,7 +101,7 @@ void Test::RunTest() {
         points = 0;
     data_.Set("points", points);
 
-    Formatter::SetTest(suite_, test_, data_);
+    Formatter::SetTestData(suite_, test_, data_);
 }
 
 void Test::AddReport(JSON data) {

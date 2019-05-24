@@ -23,6 +23,7 @@ output_filename = args.out
 templates = {}
 
 def differences(correct, answer):
+    """Returns a tuple with two lists of tuples with the difference locations and lengths"""
     def LCS(n, m):
         nonlocal correct, answer
         if n < 0 or m < 0:
@@ -52,6 +53,7 @@ def differences(correct, answer):
     return diffs(correct), diffs(answer)
 
 def mark_differences(correct, answer):
+    """Returns a tuple the differences between the two strings highlighted with html and css"""
     def mark(string, positions, start_marker, end_marker):
         offset = 0
         marker_length = len(start_marker) + len(end_marker)
@@ -64,29 +66,31 @@ def mark_differences(correct, answer):
     return mark(correct, cor_diff, "<span style=\"background-color: red\">", "</span>"), mark(answer, ans_diff, "<span style=\"background-color: red\">", "</span>")
 
 def replace_entries(template, input_data, correct_data, output_data):
+    """Returns the template with the input, output and correct tags replaced"""
     correct, output = mark_differences(str(correct_data), str(output_data))
-    if len(input_data) == 1:
+    if len(input_data) == 1: # no brackets when only item
         input = str(input_data[0])
     else:
         input = str(input_data)
-    if input[-1] == '\n':
+    if input[-1] == '\n': # html pre tags need two newlines at the end to place a newline
         input += '\n'
     if output[-1] == '\n':
         output += '\n'
     if correct[-1] == '\n':
         correct += '\n'
-    templ = template.replace("<<<input>>>", input)
-    templ = templ.replace("<<<output>>>", output)
-    templ = templ.replace("<<<correct>>>", correct)
+    templ = template.replace("{{{input}}}", input)
+    templ = templ.replace("{{{output}}}", output)
+    templ = templ.replace("{{{correct}}}", correct)
     return templ
 
 def get_table(template, results, replace_func):
+    """Fills the template with the data in results according to replace_func"""
     if len(results) == 0:
         return ""
     hor = template
     pos = 0
     entries = []
-    while True:
+    while True: # find and copy the templates
         pos = hor.find("<!--ENTRY", pos)
         if pos == -1:
             break
@@ -94,12 +98,17 @@ def get_table(template, results, replace_func):
         if pos == -1:
             break
         end = hor.find("-->", pos)
+        if end == -1:
+            break
+        end = hor.rfind("\n", 0, end)
+        if end == -1:
+            break
         entries.append(hor[pos+1:end])
         pos = end
 
     pos = 0
     index = 0
-    while True:
+    while True: # replace each template with a series of filled ones
         pos = hor.find("<!--ENTRY")
         if pos == -1:
             break
@@ -126,52 +135,37 @@ with open(report_filename, 'r') as f:
 tests = ""
 for suite_name, suite_data in report_data.items():
     for test_name, test_data in suite_data.items():
-        max_points = test_data['max_points']
-        correct = 0
-        incorrect = 0
-        test_content = ""
-        for result in test_data['results']:
-            test_content += str(result) + '\n'
-            if result['type'] == "TC":
-                correct += 1
-            else:
-                if result['result']:
-                    correct += 1
-                else:
-                    incorrect += 1
-        #grading_method = default_grading_method if 'grading_method' not in test_data else test_data['grading_method']
-
-        points = test_data["points"]
-
         format_name = default_format if 'format' not in test_data else test_data['format']
 
         def TC_func(template, result):
+            """Function for replacing test case data"""
             content = ""
             for case in result.get("cases", []):
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
 
-        templ = templates[format_name].replace("<<<input_header>>>", "Input")
-        templ = templ.replace("<<<output_header>>>", "Output")
-        templ = templ.replace("<<<correct_header>>>", "Correct")
+        templ = templates[format_name].replace("{{{input_header}}}", "Input")
+        templ = templ.replace("{{{output_header}}}", "Output")
+        templ = templ.replace("{{{correct_header}}}", "Correct")
         content = get_table(templ, [res for res in test_data['results'] if res["type"] == "TC"], TC_func)
             
         def nTC_func(template, result):
+            """Function for replacing condition case data"""
             return replace_entries(template, result["condition"], result["right"], result["left"])
 
-        templ = templates[format_name].replace("<<<input_header>>>", "Condition")
-        templ = templ.replace("<<<output_header>>>", "Right (Correct)")
-        templ = templ.replace("<<<correct_header>>>", "Left (Output)")
+        templ = templates[format_name].replace("{{{input_header}}}", "Condition")
+        templ = templ.replace("{{{output_header}}}", "Right (Correct)")
+        templ = templ.replace("{{{correct_header}}}", "Left (Output)")
         content += get_table(templ, [res for res in test_data['results'] if res["type"] != "TC"], nTC_func)
 
-        testbody = templates["testbody"].replace('<<<testname>>>',test_name)
-        testbody = testbody.replace('<<<points>>>', str(points) + "/" + str(max_points))
-        testbody = testbody.replace('<<<testid>>>', suite_name+test_name)
-        testbody = testbody.replace('<<<testcontent>>>', content)
+        testbody = templates["testbody"].replace('{{{testname}}}',test_name)
+        testbody = testbody.replace('{{{points}}}', str(test_data["points"]) + "/" + str(test_data['max_points']))
+        testbody = testbody.replace('{{{testid}}}', suite_name+test_name)
+        testbody = testbody.replace('{{{testcontent}}}', content)
 
         tests += testbody
 
-main = templates["main"].replace('<<<tests>>>', tests)
+main = templates["main"].replace('{{{tests}}}', tests)
 
 if output_filename == "stdout":
     print(main)

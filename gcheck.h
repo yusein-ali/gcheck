@@ -11,6 +11,9 @@
 
 #define DEFAULT_REPORT_NAME "report.json"
 
+/*
+    Static class for keeping track of and logging test results.
+*/
 class Formatter {
     static std::vector<std::pair<std::string, JSON>> tests_;
 
@@ -25,29 +28,36 @@ class Formatter {
 
     static std::stringstream cout_;
     static std::stringstream cerr_;
+
+    Formatter() {}; //Disallows instantation of this class
 public:
 
     static bool html_output_;
 
-    static void SetTest(std::string suite, std::string test, JSON& data);
+    static void SetTestData(std::string suite, std::string test, JSON& data);
+    // Writes the test results to a file
     static void WriteReport(std::string filename);
     static void Init();
 };
 
+/*
+    Abstract base class for tests. Keeps track of the test's results and options.
+*/
 class Test {
 
-    static std::vector<Test*> test_list_;
+    static std::vector<Test*> test_list_; // Contains all the tests
 
-    virtual void ActualTest() = 0;
+    virtual void ActualTest() = 0; // The test function specified by user
 
-    void RunTest();
+    void RunTest(); // Runs the test and takes care of result logging to Formatter
 protected:
 
     JSON data_;
 
-    double points_ = 1;
+    double points_ = default_points_; // Maximum points given for this test
     std::string grading_method_ = "partial";
     std::string output_format_ = "horizontal";
+
     std::string suite_;
     std::string test_;
 
@@ -61,10 +71,10 @@ public:
 
     Test(std::string suite, std::string test, double points);
 
+    static double default_points_;
+
     static void RunTests();
 };
-
-#define DEFAULT_POINTS(points) \
 
 #define ADD_REPORT_(json, type, condition, result) \
     json.Set("type", type); \
@@ -75,6 +85,7 @@ public:
     JSON json; \
     ADD_REPORT_(json, type, condition, result)
 
+// Creates a class for a test with specific maximum points
 #define TEST_(suitename, testname, points) \
     class GCHECK_TEST_##suitename##_GCHECK_TEST_##testname : Test { \
         void ActualTest(); \
@@ -84,6 +95,7 @@ public:
     GCHECK_TEST_##suitename##_GCHECK_TEST_##testname GCHECK_TESTVAR_##suitename##_GCHECK_TEST_##testname; \
     void GCHECK_TEST_##suitename##_GCHECK_TEST_##testname::ActualTest() 
 
+// Calls TEST_ with the default maximum points
 #define TEST(suitename, testname) \
     TEST_(suitename, testname, points_)
 
@@ -123,6 +135,8 @@ public:
         ADD_REPORT_(json, "EE", #left " = " #right, left == right) \
     }
 
+/* Runs num tests with correct(__VA_ARGS__) giving correct answer
+and under_test(__VA_ARGS__) being the testing code and adds the results to test data */
 #define TEST_CASE(num, correct, under_test, ...) \
     { \
         JSON json; \
