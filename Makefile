@@ -3,17 +3,14 @@ objects=gcheck.o testtest.o utility.o
 debug_objects=gcheck.od testtest.od utility.od
 std=-std=c++17
 
-.PHONY: clean beautify run-testtest
+.PHONY: clean
 
-testtest-run: testtest run-testtest beautify
-run-testtest:
+testtest-run: testtest
 	./testtest
-	
+	python3 beautify.py -o output.html
+
 testtest-debug: testtest-d
 	gdb ./testtest-d
-
-beautify:
-	python3 beautify.py $(report) $(out)
 
 testtest-d: gcheck.od utility.od testtest.od
 	$(CC) -g $(std) $^ -o $@

@@ -1,20 +1,25 @@
 import json
 import os
 import sys
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-o", dest='out', type=str, default="stdout")
+parser.add_argument("-i", dest='input', type=str, default="report.json")
+args = parser.parse_args()
 
 default_grading_method = "partial"
 default_format = "list"
 
-template_location = "templates/"
+template_location = sys.path[0] + "/templates/"
 template_filenames = {
     "vertical": "vertical.html", 
     "horizontal": "horizontal.html",
     "main": "main.html",
-    "testbody": "testbody.html",
-    "condition": "condition.html"
+    "testbody": "testbody.html"
     }
-report_filename = "report.json" if len(sys.argv) == 1 else sys.argv[1]
-output_filename = "output.html" if len(sys.argv) < 3 else sys.argv[2]
+report_filename = args.input
+output_filename = args.out
 templates = {}
 
 def differences(correct, answer):
@@ -168,5 +173,8 @@ for suite_name, suite_data in report_data.items():
 
 main = templates["main"].replace('<<<tests>>>', tests)
 
-with open(output_filename, 'w') as f:
-    f.write(main)
+if output_filename == "stdout":
+    print(main)
+else:
+    with open(output_filename, 'w') as f:
+        f.write(main)
