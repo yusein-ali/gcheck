@@ -140,7 +140,7 @@ advance(T& item) { item.Next(); }
 // if item isn't a random argument type, do nothing
 template<typename T>
 typename std::enable_if<!is_Random<T>::value>::type 
-advance(T& item) { }
+advance(T& item) { (void)item; }
 
 // Calls advance(arg) on all arguments
 template<typename T, typename... Args>

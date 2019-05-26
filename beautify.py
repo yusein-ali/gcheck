@@ -130,7 +130,7 @@ for key, file_name in template_filenames.items():
         templates[key] = f.read()
 
 with open(report_filename, 'r') as f:
-    report_data = json.load(f)
+    report_data = json.load(f)["test_results"]
 
 tests = ""
 for suite_name, suite_data in report_data.items():

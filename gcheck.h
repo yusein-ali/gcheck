@@ -6,6 +6,7 @@
 #include <iterator>
 #include <sstream>
 #include <tuple>
+#include <memory>
 #include "utility.h"
 #include "argument.h"
 
@@ -17,26 +18,28 @@
 class Formatter {
     static std::vector<std::pair<std::string, JSON>> tests_;
 
+    static double total_points_;
+    static double total_max_points_;
+
     static bool show_input_;
     static bool highlight_difference_;
     static std::string default_format_;
 
     static bool swapped_;
-
     static std::streambuf* cout_buf_;
     static std::streambuf* cerr_buf_;
-
     static std::stringstream cout_;
     static std::stringstream cerr_;
 
-    Formatter() {}; //Disallows instantation of this class
+    Formatter() {}; //Disallows instantiation of this class
 public:
 
-    static bool html_output_;
+    static bool pretty_;
 
     static void SetTestData(std::string suite, std::string test, JSON& data);
-    // Writes the test results to a file
-    static void WriteReport(std::string filename);
+    static void SetTotal(double points, double max_points);
+    // Writes the test results to stdout
+    static void WriteReport();
     static void Init();
 };
 
@@ -45,16 +48,19 @@ public:
 */
 class Test {
 
-    static std::vector<Test*> test_list_; // Contains all the tests
+    static std::vector<Test*>& test_list_() { 
+        static std::unique_ptr<std::vector<Test*>> list(new std::vector<Test*>());
+        return *list;
+    }; // Contains all the tests. It's a function to get around the static initialization order problem
 
     virtual void ActualTest() = 0; // The test function specified by user
 
-    void RunTest(); // Runs the test and takes care of result logging to Formatter
+    std::pair<double, double> RunTest(); // Runs the test and takes care of result logging to Formatter
 protected:
 
     JSON data_;
 
-    double points_ = default_points_; // Maximum points given for this test
+    double points_; // Maximum points given for this test
     std::string grading_method_ = "partial";
     std::string output_format_ = "horizontal";
 
@@ -87,17 +93,17 @@ public:
 
 // Creates a class for a test with specific maximum points
 #define TEST_(suitename, testname, points) \
-    class GCHECK_TEST_##suitename##_GCHECK_TEST_##testname : Test { \
+    class GCHECK_TEST_##suitename##_##testname : Test { \
         void ActualTest(); \
     public: \
-        GCHECK_TEST_##suitename##_GCHECK_TEST_##testname() : Test(#suitename, #testname, points) { } \
+        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points) { } \
     }; \
-    GCHECK_TEST_##suitename##_GCHECK_TEST_##testname GCHECK_TESTVAR_##suitename##_GCHECK_TEST_##testname; \
-    void GCHECK_TEST_##suitename##_GCHECK_TEST_##testname::ActualTest() 
+    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
+    void GCHECK_TEST_##suitename##_##testname::ActualTest() 
 
 // Calls TEST_ with the default maximum points
 #define TEST(suitename, testname) \
-    TEST_(suitename, testname, points_)
+    TEST_(suitename, testname, default_points_)
 
 #define EXPECT_TRUE_(b, msg) \
     { \

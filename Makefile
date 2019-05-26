@@ -1,38 +1,26 @@
-CC=g++
-binaries=testtest testtest-d
-objects=gcheck.o gcheck_.o testtest.o utility.o
-debug_objects=gcheck.od gcheck_.od testtest.od utility.od
-std=-std=c++17
+EXECUTABLES=testtest
+OBJECTS=gcheck.o gcheck_.o testtest.o utility.o
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic
 
 .PHONY: clean
 
-testtest-run: testtest
-	./testtest
+all: testtest gcheck.o
+
+run: testtest
+	./testtest > report.json
 	python3 beautify.py -o output.html
 
-testtest-debug: testtest-d
-	gdb ./testtest-d
+testtest: gcheck.o testtest.o
+	$(CXX) $(CPPFLAGS) $(LOADLIBES) $(LDLIBS) $^ -o $@
 
-testtest-d: gcheck_.od utility.od testtest.od
-	$(CC) -g $(std) $^ -o $@
-
-testtest: gcheck.o
-	$(CC) $(std) $^ -o $@
-
-gcheck.o: gcheck_.o utility.o testtest.o
-	ld -r gcheck_.o utility.o testtest.o -o gcheck.o
+gcheck.o: gcheck_.o utility.o
+	ld -r gcheck_.o utility.o -o gcheck.o
 	
-gcheck_.od: gcheck.cpp gcheck.h
-	$(CC) -g $(std) -Wall -c $< -o $@
-
 gcheck_.o: gcheck.cpp gcheck.h
-	$(CC) $(std) -Wall  -c $< -o $@
-
-%.od: %.cpp gcheck.h
-	$(CC) -g $(std) -Wall -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.cpp gcheck.h
-	$(CC) $(std) -Wall  -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm $(objects) $(debug_objects) $(binaries) output.html report.json > /dev/null 2>&1
+	rm -f $(OBJECTS) $(EXECUTABLES) output.html report.json
