@@ -27,15 +27,22 @@ std::string asd2(std::list<char> a) {
     return str;
 }
 
+std::string asd4(std::list<char> a) {
+    std::string str;
+    for(auto it = a.begin(); it != a.end(); ++it)
+        (str += *it) += ' ';
+    return str;
+}
+
 TEST(suite1, test1) {
     GradingMethod("partial");
-    RangeDistribution<char> dist('a', 'z');
-    ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
-    RandomArgument<char> rng(dist);
-    RandomContainerArgument<std::list, char> rng2(std::list<char>(10), dist2);
-    ConstantArgument cnt(1);
-    TEST_CASE(10, asd, asd3, rng, cnt);
-    TEST_CASE(10, asd2, asd2, rng2);
+    gcheck::RangeDistribution<char> dist('a', 'z');
+    gcheck::ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
+    gcheck::RandomArgument<char> rng(dist);
+    gcheck::RandomContainerArgument<std::list, char> rng2(std::list<char>(10), dist2);
+    gcheck::ConstantArgument cnt(1);
+    TestCase(10, asd, asd3, gcheck::RandomArgument<char>(dist), cnt);
+    TestCase(10, asd2, asd4, rng2);
     std::cout << "err";
     EXPECT_EQ(true, true);
 }

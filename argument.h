@@ -3,6 +3,8 @@
 #include <random>
 #include <type_traits>
 
+namespace gcheck {
+
 // is_instance<A, B>; a struct for checking if A is a template specialization of B
 template <class, template <typename...> class>
 struct is_instance : public std::false_type {};
@@ -133,18 +135,20 @@ template <template <typename> class C, typename T>
 struct is_Argument<RandomContainerArgument<C, T>> : public std::true_type {};
 
 // advance(item): Generates a new random value for item if it is a random argument type
-template<typename T>
+template<class T>
 typename std::enable_if<is_Random<T>::value>::type 
 advance(T& item) { item.Next(); }
 
 // if item isn't a random argument type, do nothing
-template<typename T>
+template<class T>
 typename std::enable_if<!is_Random<T>::value>::type 
 advance(T& item) { (void)item; }
 
 // Calls advance(arg) on all arguments
-template<typename T, typename... Args>
+template<class T, class... Args>
 void advance(T& first, Args&... rest) {
     advance(first);
     advance(rest...);
+}
+
 }

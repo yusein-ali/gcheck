@@ -1,5 +1,6 @@
 #include "utility.h"
 
+namespace gcheck {
 
 std::string to_string(bool b) {
     return std::string(b ? "true" : "false");
@@ -99,4 +100,6 @@ std::string JSON::Escape(std::string str) {
     }
 
     return str;
+}
+
 }

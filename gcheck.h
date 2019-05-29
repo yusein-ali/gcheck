@@ -10,6 +10,8 @@
 #include "utility.h"
 #include "argument.h"
 
+namespace gcheck {
+
 #define DEFAULT_REPORT_NAME "report.json"
 
 /*
@@ -32,14 +34,16 @@ class Formatter {
     static std::stringstream cerr_;
 
     Formatter() {}; //Disallows instantiation of this class
+
 public:
 
     static bool pretty_;
+    static std::string filename_;
 
     static void SetTestData(std::string suite, std::string test, JSON& data);
     static void SetTotal(double points, double max_points);
     // Writes the test results to stdout
-    static void WriteReport();
+    static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
     static void Init();
 };
 
@@ -55,7 +59,7 @@ class Test {
 
     virtual void ActualTest() = 0; // The test function specified by user
 
-    std::pair<double, double> RunTest(); // Runs the test and takes care of result logging to Formatter
+    double RunTest(); // Runs the test and takes care of result logging to Formatter
 protected:
 
     JSON data_;
@@ -70,17 +74,59 @@ protected:
     int correct_ = 0;
     int incorrect_ = 0;
 
+    int priority_;
+
     void AddReport(JSON data);
     void GradingMethod(std::string method);
     void OutputFormat(std::string format);
+    
+    /* Runs num tests with correct(args...) giving correct answer
+    and under_test(arg...) giving the testing answer and adds the results to test data */
+    template <class... Args, class... Args2>
+    void TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args) {
+        gcheck::JSON json; 
+        json.Set("type", "TC"); 
+        json.Set("test_class", typeid(*this).name() ); 
+        std::vector<gcheck::JSON> results; 
+        for(int i = 0; i < num; i++) { 
+            gcheck::JSON result; 
+            gcheck::advance(args...); 
+            result.Set("input", MakeAnyList(args...)); 
+            result.Set("correct", correct(args...)); 
+            result.Set("output", under_test(args...)); 
+            results.push_back(result); 
+        }
+        gcheck::Test::AddReport(json.Set("cases", results)); 
+    }
+    
+    /* Runs num tests with correct being the correct answer
+    and under_test(arg...) giving the testing answer and adds the results to test data */
+    template <class... Args, class... Args2>
+    void TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args) {
+        gcheck::JSON json; 
+        json.Set("type", "TC"); 
+        json.Set("test_class", typeid(*this).name() ); 
+        std::vector<gcheck::JSON> results; 
+        for(int i = 0; i < num; i++) { 
+            gcheck::JSON result; 
+            gcheck::advance(args...); 
+            result.Set("input", MakeAnyList(args...)); 
+            result.Set("correct", correct); 
+            result.Set("output", under_test(args...)); 
+            results.push_back(result); 
+        }
+        gcheck::Test::AddReport(json.Set("cases", results)); 
+    }
+
 public:
 
-    Test(std::string suite, std::string test, double points);
+    Test(std::string suite, std::string test, double points, int priority);
 
     static double default_points_;
 
     static void RunTests();
 };
+}
 
 #define ADD_REPORT_(json, type, condition, result) \
     json.Set("type", type); \
@@ -88,15 +134,19 @@ public:
     AddReport(json.Set("result", result));
 
 #define ADD_REPORT(type, condition, result) \
-    JSON json; \
+    gcheck::JSON json; \
     ADD_REPORT_(json, type, condition, result)
 
 // Creates a class for a test with specific maximum points
 #define TEST_(suitename, testname, points) \
-    class GCHECK_TEST_##suitename##_##testname : Test { \
+    PREREQ_TEST(suitename, testname, points, -1)
+
+// Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
+#define PREREQ_TEST(suitename, testname, points, priority) \
+    class GCHECK_TEST_##suitename##_##testname : gcheck::Test { \
         void ActualTest(); \
     public: \
-        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points) { } \
+        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points, priority) { } \
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
     void GCHECK_TEST_##suitename##_##testname::ActualTest() 
@@ -119,7 +169,7 @@ public:
 
 #define EXPECT_TRUE(b) \
     { \
-        JSON json; \
+        gcheck::JSON json; \
         json.Set("left", b); \
         json.Set("right", false); \
         ADD_REPORT(json, "ET", #b " = true", b) \
@@ -127,7 +177,7 @@ public:
     
 #define EXPECT_FALSE(b) \
     { \
-        JSON json; \
+        gcheck::JSON json; \
         json.Set("left", b); \
         json.Set("right", false); \
         ADD_REPORT(json, "EF", #b " = false", !b) \
@@ -135,27 +185,9 @@ public:
 
 #define EXPECT_EQ(left, right) \
     { \
-        JSON json; \
+        gcheck::JSON json; \
         json.Set("left", left); \
         json.Set("right", right); \
         ADD_REPORT_(json, "EE", #left " = " #right, left == right) \
     }
 
-/* Runs num tests with correct(__VA_ARGS__) giving correct answer
-and under_test(__VA_ARGS__) being the testing code and adds the results to test data */
-#define TEST_CASE(num, correct, under_test, ...) \
-    { \
-        JSON json; \
-        json.Set("type", "TC"); \
-        json.Set("test_class", typeid(*this).name() ); \
-        std::vector<JSON> results; \
-        for(int i = 0; i < num; i++) { \
-            JSON result; \
-            advance(__VA_ARGS__); \
-            result.Set("input", MakeAnyList(__VA_ARGS__)); \
-            result.Set("correct", correct(__VA_ARGS__)); \
-            result.Set("output", under_test(__VA_ARGS__)); \
-            results.push_back(result); \
-        } \
-        AddReport(json.Set("cases", results)); \
-    }
