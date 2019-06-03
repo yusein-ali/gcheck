@@ -89,16 +89,36 @@ std::string JSON::AsString(std::string key) const {
 }
 
 std::string JSON::Escape(std::string str) {
+    
     std::string escapees = "\\\n\t\b\f\r\"";
     std::vector<std::string> replacees{"\\\\", "\\n", "\\t", "\\b", "\\f", "\\r", "\\\""};
+    size_t pos = 0;
+    int index = 0;
+    size_t min = std::string::npos;
     for(unsigned int i = 0; i < escapees.length(); i++) {
-        size_t pos = 0;
-        while((pos = str.find(escapees[i], pos)) != std::string::npos) {
-            str.replace(pos, 1, replacees[i]);
-            pos += replacees[i].length()+1;
+        size_t p = str.find(escapees[i], pos);
+        if(p < min) {
+            min = p;
+            index = i;
         }
     }
-
+    pos = min;
+    while(pos != std::string::npos) {
+        str.replace(pos, 1, replacees[index]);
+        pos += replacees[index].length();
+        
+        index = 0;
+        min = std::string::npos;
+        for(unsigned int i = 0; i < escapees.length(); i++) {
+            size_t p = str.find(escapees[i], pos);
+            if(p < min) {
+                min = p;
+                index = i;
+            }
+        }
+        pos = min;
+    }
+    
     return str;
 }
 

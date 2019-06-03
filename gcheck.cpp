@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <functional>
+#include <unistd.h>
 
 namespace gcheck {
 
@@ -11,26 +13,13 @@ double Formatter::total_max_points_ = 0;
 bool Formatter::show_input_ = false;
 bool Formatter::highlight_difference_ = true;
 bool Formatter::pretty_ = true;
-bool Formatter::swapped_ = false;
 std::string Formatter::filename_ = "";
 std::string Formatter::default_format_ = "horizontal";
-std::streambuf* Formatter::cout_buf_ = nullptr;
-std::streambuf* Formatter::cerr_buf_ = nullptr;
-std::stringstream Formatter::cout_(std::ios_base::in | std::ios_base::out);
-std::stringstream Formatter::cerr_(std::ios_base::in | std::ios_base::out);
 std::vector<std::pair<std::string, JSON>> Formatter::tests_ = std::vector<std::pair<std::string, JSON>>();
 
 double Test::default_points_ = 1;
 
 void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
-
-    // Restores the cout and cerr buffers (check Formatter::Init())
-    bool was_swapped = swapped_;
-    if(swapped_) {
-        std::cout.rdbuf(cout_buf_);
-        std::cerr.rdbuf(cerr_buf_);
-        swapped_ = false;
-    }
 
     std::fstream file;
     auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
@@ -78,15 +67,6 @@ void Formatter::WriteReport(bool is_finished, std::string suite, std::string tes
 
     if(filename_ != "")
         file.close();
-
-    if(!is_finished && was_swapped) {
-        // Swaps the cout and cerr buffers to redirect them to own readable streams
-        cout_buf_ = std::cout.rdbuf();
-        cerr_buf_ = std::cerr.rdbuf();
-        std::cout.rdbuf(cout_.rdbuf());
-        std::cerr.rdbuf(cerr_.rdbuf());
-        swapped_ = true;
-    }
 }
 
 void Formatter::SetTestData(std::string suite, std::string test, JSON& data) {
@@ -99,7 +79,7 @@ void Formatter::SetTestData(std::string suite, std::string test, JSON& data) {
     }
     
     it->second.Set(test, data);
-
+    
     WriteReport(false, suite, test);
 }
 
@@ -108,26 +88,93 @@ void Formatter::SetTotal(double points, double max_points) {
     total_points_ = points;
 }
 
-void Formatter::Init() {
-
-    if(swapped_) return;
-    swapped_ = true;
-
-    // Swaps the cout and cerr buffers to redirect them to own readable streams
-    cout_buf_ = std::cout.rdbuf();
-    cerr_buf_ = std::cerr.rdbuf();
-    std::cout.rdbuf(cout_.rdbuf());
-    std::cerr.rdbuf(cerr_.rdbuf());
-}
-
 Test::Test(std::string suite, std::string test, double points, int priority) : points_(points), suite_(suite), test_(test), priority_(priority) {
     data_.Set("results", std::vector<JSON>());
     data_.Set("max_points", points);
     test_list_().push_back(this);
 }
 
+// Class for capturing output to a file (e.g. stdout)
+class FileCapture {
+    bool is_swapped_;
+    long last_pos_;
+    int fileno_;
+    int save_;
+    FILE* new_;
+    FILE* original_;
+public:
+    FileCapture(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
+        new_ = tmpfile();
+        if(new_ == NULL) throw; // TODO: better exception
+        Capture();
+    }
+    
+    ~FileCapture() {
+        Restore();
+        if(new_ == NULL) return;
+        
+        fclose(new_);
+        new_ = NULL;
+    }
+    
+    std::string str() {
+        if(new_ == NULL) return "";
+        
+        fflush(new_);
+        
+        fseek(new_, last_pos_, 0);
+        
+        std::stringstream ss;
+        
+        int c = EOF+1;
+        while((c = fgetc(new_)) != EOF) {
+            ss.put(c);
+        }
+        
+        last_pos_ = ftell(new_);
+        
+        return ss.str();
+    }
+    
+    void Restore() {
+        if(!is_swapped_) return;
+        is_swapped_ = false;
+    
+        fflush(original_);
+        dup2(save_, fileno_);
+        close(save_);
+    }
+    
+    void Capture() {
+        if(new_ == NULL) throw; // TODO: better exception
+        if(is_swapped_) return;
+        is_swapped_ = true;
+        
+        fflush(original_);
+        save_ = dup(fileno_);
+        dup2(fileno(new_), fileno_);
+    }
+};
+
 double Test::RunTest() {
+    
+    FileCapture tout(stdout);
+    FileCapture terr(stderr);
+    
     ActualTest();
+    
+    tout.Restore();
+    terr.Restore();
+    data_.Set("cout", tout.str());
+    data_.Set("cerr", terr.str());
+    
+    std::vector<JSON>& results =  data_.Get<std::vector<JSON>>("results");
+    for(auto it = results.begin(); it != results.end(); it++) {
+        if(it->Contains("info_stream")) {
+            it->Set("info", it->Get<std::shared_ptr<std::stringstream>>("info_stream")->str());
+            it->Remove("info_stream");
+        }
+    }
     
     data_.Set("grading_method", grading_method_);
     data_.Set("format", output_format_);
@@ -143,6 +190,10 @@ double Test::RunTest() {
         points = incorrect_ < correct_ ? points_ : 0;
     else
         points = 0;
+    
+    if(std::isinf(points) || std::isnan(points))
+        points = points_;
+        
     data_.Set("points", points);
 
     Formatter::SetTestData(suite_, test_, data_);
@@ -183,7 +234,7 @@ void Test::OutputFormat(std::string format) {
 void Test::RunTests() {
 
     auto& test_list = test_list_();
-    std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ >= b->priority_; });
+    std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ > b->priority_; });
 
     double total_max = 0;
     for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
@@ -218,8 +269,8 @@ int main(int argc, char** argv) {
     }
     if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
 
-    //Formatter::Init();
-
+    //printf(" \r");
+    //std::cout << " \r";
     Test::RunTests();
 
     Formatter::WriteReport();

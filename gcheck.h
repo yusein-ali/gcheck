@@ -12,8 +12,6 @@
 
 namespace gcheck {
 
-#define DEFAULT_REPORT_NAME "report.json"
-
 /*
     Static class for keeping track of and logging test results.
 */
@@ -27,12 +25,6 @@ class Formatter {
     static bool highlight_difference_;
     static std::string default_format_;
 
-    static bool swapped_;
-    static std::streambuf* cout_buf_;
-    static std::streambuf* cerr_buf_;
-    static std::stringstream cout_;
-    static std::stringstream cerr_;
-
     Formatter() {}; //Disallows instantiation of this class
 
 public:
@@ -44,7 +36,6 @@ public:
     static void SetTotal(double points, double max_points);
     // Writes the test results to stdout
     static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
-    static void Init();
 };
 
 /*
@@ -118,6 +109,46 @@ protected:
         gcheck::Test::AddReport(json.Set("cases", results)); 
     }
 
+    std::stringstream& ExpectTrue(bool b, std::string descriptor, JSON json = JSON()) {
+
+        auto ss = std::make_shared<std::stringstream>();
+        json.Set("info_stream", ss);
+        json.Set("left", b);
+        json.Set("right", true);
+        json.Set("type", "ET");
+        json.Set("condition", descriptor);
+        AddReport(json.Set("result", b));
+        
+        return *ss;
+    }
+    
+    std::stringstream& ExpectFalse(bool b, std::string descriptor, JSON json = JSON()) {
+        
+        auto ss = std::make_shared<std::stringstream>();
+        json.Set("info_stream", ss);
+        json.Set("left", b);
+        json.Set("right", false);
+        json.Set("type", "EF");
+        json.Set("condition", descriptor);
+        AddReport(json.Set("result", !b));
+        
+        return *ss;
+    }
+    
+    template <class T, class S>
+    std::stringstream& ExpectEqual(T left, S right, std::string descriptor, JSON json = JSON()) {
+        
+        auto ss = std::make_shared<std::stringstream>();
+        json.Set("info_stream", ss);
+        json.Set("left", left);
+        json.Set("right", right);
+        json.Set("type", "EE");
+        json.Set("condition", descriptor);
+        AddReport(json.Set("result", left == right));
+        
+        return *ss;
+    }
+
 public:
 
     Test(std::string suite, std::string test, double points, int priority);
@@ -128,19 +159,6 @@ public:
 };
 }
 
-#define ADD_REPORT_(json, type, condition, result) \
-    json.Set("type", type); \
-    json.Set("condition", condition); \
-    AddReport(json.Set("result", result));
-
-#define ADD_REPORT(type, condition, result) \
-    gcheck::JSON json; \
-    ADD_REPORT_(json, type, condition, result)
-
-// Creates a class for a test with specific maximum points
-#define TEST_(suitename, testname, points) \
-    PREREQ_TEST(suitename, testname, points, -1)
-
 // Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
 #define PREREQ_TEST(suitename, testname, points, priority) \
     class GCHECK_TEST_##suitename##_##testname : gcheck::Test { \
@@ -150,44 +168,39 @@ public:
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
     void GCHECK_TEST_##suitename##_##testname::ActualTest() 
-
+    
+// Creates a class for a test with specific maximum points
+#define TEST_(suitename, testname, points) \
+    PREREQ_TEST(suitename, testname, points, -1)
+    
 // Calls TEST_ with the default maximum points
 #define TEST(suitename, testname) \
     TEST_(suitename, testname, default_points_)
 
+
 #define EXPECT_TRUE_(b, msg) \
-    { \
-        ADD_REPORT(msg, "ET", #b, b) \
-    }
+    ExpectTrue(b, #b, msg)
+#define EXPECT_TRUE(b) \
+    ExpectTrue(b, #b)
+    
+#define EXPECT_FALSE_(b, msg) \
+    ExpectFalse(b, #b, msg)
+#define EXPECT_FALSE(b) \
+    ExpectFalse(b, #b)
 
 #define EXPECT_EQ_(left, right, msg) \
-    { \
-        msg.Set("left", left); \
-        msg.Set("right", right); \
-        ADD_REPORT(msg, "EE", #left " = " #right, left == right) \
-    }
-
-#define EXPECT_TRUE(b) \
-    { \
-        gcheck::JSON json; \
-        json.Set("left", b); \
-        json.Set("right", false); \
-        ADD_REPORT(json, "ET", #b " = true", b) \
-    }
-    
-#define EXPECT_FALSE(b) \
-    { \
-        gcheck::JSON json; \
-        json.Set("left", b); \
-        json.Set("right", false); \
-        ADD_REPORT(json, "EF", #b " = false", !b) \
-    }
-
+    ExpectEqual(left, right, #left " = " #right, msg)
 #define EXPECT_EQ(left, right) \
-    { \
-        gcheck::JSON json; \
-        json.Set("left", left); \
-        json.Set("right", right); \
-        ADD_REPORT_(json, "EE", #left " = " #right, left == right) \
-    }
+    ExpectEqual(left, right, #left " = " #right)
 
+#define ASSERT_TRUE(b) \
+    ExpectTrue(b, #b); \
+    if(!(b)) return;
+    
+#define ASSERT_FALSE(b) \
+    ExpectFalse(b, #b); \
+    if(b) return;
+
+#define FAIL() \
+    GradingMethod("binary"); \
+    ExpectTrue(false, "FAIL")

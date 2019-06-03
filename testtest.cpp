@@ -51,7 +51,7 @@ TEST(suite1, test2) {
     OutputFormat("vertical");
     GradingMethod("binary");
     std::cout << "err2";
-    EXPECT_EQ(true, true);
+    EXPECT_EQ(true, true) << "true is indeed true";
     std::cout << "err3";
     EXPECT_EQ(false, true);
 }
