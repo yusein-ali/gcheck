@@ -5,8 +5,35 @@
 #include <algorithm>
 #include <functional>
 #include <unistd.h>
+#include "argument.h"
 
 namespace gcheck {
+
+/*
+    Static class for keeping track of and logging test results.
+*/
+class Formatter {
+    static std::vector<std::pair<std::string, JSON>> tests_;
+
+    static double total_points_;
+    static double total_max_points_;
+
+    static bool show_input_;
+    static bool highlight_difference_;
+    static std::string default_format_;
+
+    Formatter() {}; //Disallows instantiation of this class
+
+public:
+
+    static bool pretty_;
+    static std::string filename_;
+
+    static void SetTestData(std::string suite, std::string test, JSON& data);
+    static void SetTotal(double points, double max_points);
+    // Writes the test results to stdout
+    static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
+};
 
 double Formatter::total_points_ = 0;
 double Formatter::total_max_points_ = 0;
@@ -88,78 +115,72 @@ void Formatter::SetTotal(double points, double max_points) {
     total_points_ = points;
 }
 
+
+
+FileCapture::FileCapture(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
+    new_ = tmpfile();
+    if(new_ == NULL) throw; // TODO: better exception
+    Capture();
+}
+
+FileCapture::~FileCapture() {
+    Restore();
+    if(new_ == NULL) return;
+    
+    fclose(new_);
+    new_ = NULL;
+}
+
+std::string FileCapture::str() {
+    if(new_ == NULL) return "";
+    
+    fflush(new_);
+    
+    fseek(new_, last_pos_, 0);
+    
+    std::stringstream ss;
+    
+    int c = EOF+1;
+    while((c = fgetc(new_)) != EOF) {
+        ss.put(c);
+    }
+    
+    last_pos_ = ftell(new_);
+    
+    return ss.str();
+}
+
+void FileCapture::Restore() {
+    if(!is_swapped_) return;
+    is_swapped_ = false;
+
+    fflush(original_);
+    dup2(save_, fileno_);
+    close(save_);
+}
+
+void FileCapture::Capture() {
+    if(new_ == NULL) throw; // TODO: better exception
+    if(is_swapped_) return;
+    is_swapped_ = true;
+    
+    fflush(original_);
+    save_ = dup(fileno_);
+    dup2(fileno(new_), fileno_);
+}
+
+
+
 Test::Test(std::string suite, std::string test, double points, int priority) : points_(points), suite_(suite), test_(test), priority_(priority) {
     data_.Set("results", std::vector<JSON>());
     data_.Set("max_points", points);
     test_list_().push_back(this);
 }
 
-// Class for capturing output to a file (e.g. stdout)
-class FileCapture {
-    bool is_swapped_;
-    long last_pos_;
-    int fileno_;
-    int save_;
-    FILE* new_;
-    FILE* original_;
-public:
-    FileCapture(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
-        new_ = tmpfile();
-        if(new_ == NULL) throw; // TODO: better exception
-        Capture();
-    }
-    
-    ~FileCapture() {
-        Restore();
-        if(new_ == NULL) return;
-        
-        fclose(new_);
-        new_ = NULL;
-    }
-    
-    std::string str() {
-        if(new_ == NULL) return "";
-        
-        fflush(new_);
-        
-        fseek(new_, last_pos_, 0);
-        
-        std::stringstream ss;
-        
-        int c = EOF+1;
-        while((c = fgetc(new_)) != EOF) {
-            ss.put(c);
-        }
-        
-        last_pos_ = ftell(new_);
-        
-        return ss.str();
-    }
-    
-    void Restore() {
-        if(!is_swapped_) return;
-        is_swapped_ = false;
-    
-        fflush(original_);
-        dup2(save_, fileno_);
-        close(save_);
-    }
-    
-    void Capture() {
-        if(new_ == NULL) throw; // TODO: better exception
-        if(is_swapped_) return;
-        is_swapped_ = true;
-        
-        fflush(original_);
-        save_ = dup(fileno_);
-        dup2(fileno(new_), fileno_);
-    }
-};
-
 double Test::RunTest() {
     
-    FileCapture tout(stdout);
-    FileCapture terr(stderr);
+    StdoutCapture tout;
+    StderrCapture terr;
     
     ActualTest();
     
@@ -229,6 +250,32 @@ void Test::GradingMethod(std::string method) {
 
 void Test::OutputFormat(std::string format) { 
     output_format_ = format; 
+}
+
+std::stringstream& Test::ExpectTrue(bool b, std::string descriptor, JSON json) {
+
+    auto ss = std::make_shared<std::stringstream>();
+    json.Set("info_stream", ss);
+    json.Set("left", b);
+    json.Set("right", true);
+    json.Set("type", "ET");
+    json.Set("condition", descriptor);
+    AddReport(json.Set("result", b));
+    
+    return *ss;
+}
+
+std::stringstream& Test::ExpectFalse(bool b, std::string descriptor, JSON json) {
+    
+    auto ss = std::make_shared<std::stringstream>();
+    json.Set("info_stream", ss);
+    json.Set("left", b);
+    json.Set("right", false);
+    json.Set("type", "EF");
+    json.Set("condition", descriptor);
+    AddReport(json.Set("result", !b));
+    
+    return *ss;
 }
 
 void Test::RunTests() {

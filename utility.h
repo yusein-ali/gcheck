@@ -1,83 +1,34 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
-#include <vector>
 #include <any>
 #include <type_traits>
-#include "argument.h"
-
-#include <iostream>
-#include <string>
 
 namespace gcheck {
 
-/*
-    Class for holding multiple types of data in a json-like structure.
-*/
-class JSON {
-    std::unordered_map<std::string, std::any> items_;
+template<class>
+struct ConstantArgument;
+template<class>
+struct RandomArgument;
+template<template<class> class,class>
+struct RandomContainerArgument;
 
-public:
-    static std::string AsString(const std::any& item);
+// is_Random<A>::value; true if A is RandomArgument or RandomContainerArgument, false otherwise
+template<typename A>
+struct is_Random : public std::false_type {};
+template <typename T>
+struct is_Random<RandomArgument<T>> : public std::true_type {};
+template <template <typename> class C, typename T>
+struct is_Random<RandomContainerArgument<C, T>> : public std::true_type {};
 
-    template <typename A>
-    JSON& Set(const std::string& name, const A& value) {
-        items_.insert_or_assign(name, value);
-        return *this;
-    }
-    JSON& Set(const std::string& name, std::vector<std::any> value) {
-        items_.insert_or_assign(name, value);
-        //for(auto it = std::any_cast<std::vector<std::any>>(&items_[name])->begin(); it != std::any_cast<std::vector<std::any>>(&items_[name])->end(); ++it)
-            //std::cout << JSON::AsString(*it) << " ";
-        return *this;
-    }
-    JSON& Set(const std::string& name, const char value[]) {
-        items_.insert_or_assign(name, std::string(value));
-        return *this;
-    }
-
-    JSON& Set(JSON json);
-    JSON& Remove(std::string key);
-
-    bool Contains(std::string key) { return items_.find(key) != items_.end(); }
-    std::any& Get(std::string key);
-    std::any Get(std::string key) const;
-    
-    template<typename A>
-    A& Get(std::string key) {
-        auto out = std::any_cast<A>(&Get(key));
-
-        if(out == NULL) {
-            throw; //TODO: an actual exception
-        }
-
-        return *out;
-    }
-
-    template<typename A>
-    A Get(std::string key) const {
-        auto item = Get(key);
-        auto out = std::any_cast<A>(&item);
-
-        if(out == NULL) {
-            throw; //TODO: an actual exception
-        }
-
-        return *out;
-    }
-
-    // Returns the object as a json string with or without the starting/ending {} characters
-    std::string AsString(bool strip_ends = false) const;
-    // Returns the item corresponding to key as a json string
-    std::string AsString(const char* key) const;
-    std::string AsString(std::string key) const;
-    // Escapes all special json characters
-    static std::string Escape(std::string str);
-
-    auto begin() { return items_.begin(); }
-    auto end() { return items_.end(); }
-};
+// is_Argument<A>::value; true if A is any of the argument types, false otherwise
+template<typename A>
+struct is_Argument : public std::false_type {};
+template <typename T>
+struct is_Argument<ConstantArgument<T>> : public std::true_type {};
+template <typename T>
+struct is_Argument<RandomArgument<T>> : public std::true_type {};
+template <template <typename> class C, typename T>
+struct is_Argument<RandomContainerArgument<C, T>> : public std::true_type {};
 
 template<class>
 struct sfinae_bool {};
@@ -151,6 +102,23 @@ std::vector<std::any> MakeAnyList(Args... args) {
     std::vector<std::any> out;
     AddToAnyList(out, args...);
     return out;
+}
+
+// advance(item): Generates a new random value for item if it is a random argument type
+template<class T>
+typename std::enable_if<is_Random<T>::value>::type 
+advance(T& item) { item.Next(); }
+
+// if item isn't a random argument type, do nothing
+template<class T>
+typename std::enable_if<!is_Random<T>::value>::type 
+advance(T& item) { (void)item; }
+
+// Calls advance(arg) on all arguments
+template<class T, class... Args>
+void advance(T& first, Args&... rest) {
+    advance(first);
+    advance(rest...);
 }
 
 }

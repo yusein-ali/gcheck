@@ -3,39 +3,42 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <iterator>
 #include <sstream>
-#include <tuple>
 #include <memory>
 #include "utility.h"
-#include "argument.h"
+#include "json.h"
 
 namespace gcheck {
 
-/*
-    Static class for keeping track of and logging test results.
+/* 
+    Class for capturing output to a file (e.g. stdout).
+    Capture stdout to capture std::cout and stderr to captrue std::cerr.
+    Or use StdoutCapture and StderrCapture classes.
 */
-class Formatter {
-    static std::vector<std::pair<std::string, JSON>> tests_;
-
-    static double total_points_;
-    static double total_max_points_;
-
-    static bool show_input_;
-    static bool highlight_difference_;
-    static std::string default_format_;
-
-    Formatter() {}; //Disallows instantiation of this class
-
+class FileCapture {
+    bool is_swapped_;
+    long last_pos_;
+    int fileno_;
+    int save_;
+    FILE* new_;
+    FILE* original_;
 public:
+    FileCapture(FILE* stream);
+    ~FileCapture();
+    
+    std::string str();
+    void Restore();
+    void Capture();
+};
 
-    static bool pretty_;
-    static std::string filename_;
+class StdoutCapture : public FileCapture {
+public:
+    StdoutCapture() : FileCapture(stdout) {}
+};
 
-    static void SetTestData(std::string suite, std::string test, JSON& data);
-    static void SetTotal(double points, double max_points);
-    // Writes the test results to stdout
-    static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
+class StderrCapture : public FileCapture {
+public:
+    StderrCapture() : FileCapture(stderr) {}
 };
 
 /*
@@ -74,80 +77,17 @@ protected:
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class... Args, class... Args2>
-    void TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args) {
-        gcheck::JSON json; 
-        json.Set("type", "TC"); 
-        json.Set("test_class", typeid(*this).name() ); 
-        std::vector<gcheck::JSON> results; 
-        for(int i = 0; i < num; i++) { 
-            gcheck::JSON result; 
-            gcheck::advance(args...); 
-            result.Set("input", MakeAnyList(args...)); 
-            result.Set("correct", correct(args...)); 
-            result.Set("output", under_test(args...)); 
-            results.push_back(result); 
-        }
-        gcheck::Test::AddReport(json.Set("cases", results)); 
-    }
+    void TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args);
     
     /* Runs num tests with correct being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class... Args, class... Args2>
-    void TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args) {
-        gcheck::JSON json; 
-        json.Set("type", "TC"); 
-        json.Set("test_class", typeid(*this).name() ); 
-        std::vector<gcheck::JSON> results; 
-        for(int i = 0; i < num; i++) { 
-            gcheck::JSON result; 
-            gcheck::advance(args...); 
-            result.Set("input", MakeAnyList(args...)); 
-            result.Set("correct", correct); 
-            result.Set("output", under_test(args...)); 
-            results.push_back(result); 
-        }
-        gcheck::Test::AddReport(json.Set("cases", results)); 
-    }
+    void TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args);
 
-    std::stringstream& ExpectTrue(bool b, std::string descriptor, JSON json = JSON()) {
-
-        auto ss = std::make_shared<std::stringstream>();
-        json.Set("info_stream", ss);
-        json.Set("left", b);
-        json.Set("right", true);
-        json.Set("type", "ET");
-        json.Set("condition", descriptor);
-        AddReport(json.Set("result", b));
-        
-        return *ss;
-    }
-    
-    std::stringstream& ExpectFalse(bool b, std::string descriptor, JSON json = JSON()) {
-        
-        auto ss = std::make_shared<std::stringstream>();
-        json.Set("info_stream", ss);
-        json.Set("left", b);
-        json.Set("right", false);
-        json.Set("type", "EF");
-        json.Set("condition", descriptor);
-        AddReport(json.Set("result", !b));
-        
-        return *ss;
-    }
-    
+    std::stringstream& ExpectTrue(bool b, std::string descriptor, JSON json = JSON());
+    std::stringstream& ExpectFalse(bool b, std::string descriptor, JSON json = JSON());
     template <class T, class S>
-    std::stringstream& ExpectEqual(T left, S right, std::string descriptor, JSON json = JSON()) {
-        
-        auto ss = std::make_shared<std::stringstream>();
-        json.Set("info_stream", ss);
-        json.Set("left", left);
-        json.Set("right", right);
-        json.Set("type", "EE");
-        json.Set("condition", descriptor);
-        AddReport(json.Set("result", left == right));
-        
-        return *ss;
-    }
+    std::stringstream& ExpectEqual(T left, S right, std::string descriptor, JSON json = JSON());
 
 public:
 
@@ -157,7 +97,6 @@ public:
 
     static void RunTests();
 };
-}
 
 // Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
 #define PREREQ_TEST(suitename, testname, points, priority) \
@@ -204,3 +143,52 @@ public:
 #define FAIL() \
     GradingMethod("binary"); \
     ExpectTrue(false, "FAIL")
+
+template <class... Args, class... Args2>
+void Test::TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args) {
+    JSON json; 
+    json.Set("type", "TC"); 
+    json.Set("test_class", typeid(*this).name() ); 
+    std::vector<JSON> results; 
+    for(int i = 0; i < num; i++) { 
+        JSON result; 
+        advance(args...); 
+        result.Set("input", MakeAnyList(args...)); 
+        result.Set("correct", correct(args...)); 
+        result.Set("output", under_test(args...)); 
+        results.push_back(result); 
+    }
+    Test::AddReport(json.Set("cases", results)); 
+}
+
+template <class... Args, class... Args2>
+void Test::TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args) {
+    JSON json; 
+    json.Set("type", "TC"); 
+    json.Set("test_class", typeid(*this).name() ); 
+    std::vector<JSON> results; 
+    for(int i = 0; i < num; i++) { 
+        JSON result; 
+        advance(args...); 
+        result.Set("input", MakeAnyList(args...)); 
+        result.Set("correct", correct); 
+        result.Set("output", under_test(args...)); 
+        results.push_back(result); 
+    }
+    Test::AddReport(json.Set("cases", results)); 
+}
+
+template <class T, class S>
+std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor, JSON json) {
+    
+    auto ss = std::make_shared<std::stringstream>();
+    json.Set("info_stream", ss);
+    json.Set("left", left);
+    json.Set("right", right);
+    json.Set("type", "EE");
+    json.Set("condition", descriptor);
+    AddReport(json.Set("result", left == right));
+    
+    return *ss;
+}
+}

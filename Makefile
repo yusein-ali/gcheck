@@ -1,7 +1,7 @@
 EXECUTABLES=testtest
-SOURCES=gcheck.cpp utility.cpp
-HEADERS=gcheck.h utility.h
-OBJECTS=gcheck.o gcheck_.o testtest.o utility.o
+SOURCES=gcheck.cpp  json.cpp
+HEADERS=gcheck.h utility.h json.h argument.h
+OBJECTS=gcheck.o gcheck_.o testtest.o json.o
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic
 
 .PHONY: clean
