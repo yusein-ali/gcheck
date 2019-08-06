@@ -5,51 +5,21 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
+
 #include "utility.h"
 #include "json.h"
 
 namespace gcheck {
 
-/* 
-    Class for capturing output to a file (e.g. stdout).
-    Capture stdout to capture std::cout and stderr to captrue std::cerr.
-    Or use StdoutCapture and StderrCapture classes.
-*/
-class FileCapture {
-    bool is_swapped_;
-    long last_pos_;
-    int fileno_;
-    int save_;
-    FILE* new_;
-    FILE* original_;
-public:
-    FileCapture(FILE* stream);
-    ~FileCapture();
-    
-    std::string str();
-    void Restore();
-    void Capture();
-};
-
-class StdoutCapture : public FileCapture {
-public:
-    StdoutCapture() : FileCapture(stdout) {}
-};
-
-class StderrCapture : public FileCapture {
-public:
-    StderrCapture() : FileCapture(stderr) {}
-};
-
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
 */
 class Test {
-
+    // Contains all the tests. It's a function to get around the static initialization order problem
     static std::vector<Test*>& test_list_() { 
         static std::unique_ptr<std::vector<Test*>> list(new std::vector<Test*>());
         return *list;
-    }; // Contains all the tests. It's a function to get around the static initialization order problem
+    }
 
     virtual void ActualTest() = 0; // The test function specified by user
 

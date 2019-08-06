@@ -1,14 +1,14 @@
-
 #include "gcheck.h"
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <functional>
-#include <unistd.h>
+
 #include "argument.h"
+#include "redirectors.h"
 
 namespace gcheck {
-
+namespace {
 /*
     Static class for keeping track of and logging test results.
 */
@@ -18,8 +18,6 @@ class Formatter {
     static double total_points_;
     static double total_max_points_;
 
-    static bool show_input_;
-    static bool highlight_difference_;
     static std::string default_format_;
 
     Formatter() {}; //Disallows instantiation of this class
@@ -37,14 +35,10 @@ public:
 
 double Formatter::total_points_ = 0;
 double Formatter::total_max_points_ = 0;
-bool Formatter::show_input_ = false;
-bool Formatter::highlight_difference_ = true;
 bool Formatter::pretty_ = true;
 std::string Formatter::filename_ = "";
 std::string Formatter::default_format_ = "horizontal";
 std::vector<std::pair<std::string, JSON>> Formatter::tests_ = std::vector<std::pair<std::string, JSON>>();
-
-double Test::default_points_ = 1;
 
 void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
 
@@ -114,62 +108,9 @@ void Formatter::SetTotal(double points, double max_points) {
     total_max_points_ = max_points;
     total_points_ = points;
 }
-
-
-
-FileCapture::FileCapture(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
-    new_ = tmpfile();
-    if(new_ == NULL) throw; // TODO: better exception
-    Capture();
 }
 
-FileCapture::~FileCapture() {
-    Restore();
-    if(new_ == NULL) return;
-    
-    fclose(new_);
-    new_ = NULL;
-}
-
-std::string FileCapture::str() {
-    if(new_ == NULL) return "";
-    
-    fflush(new_);
-    
-    fseek(new_, last_pos_, 0);
-    
-    std::stringstream ss;
-    
-    int c = EOF+1;
-    while((c = fgetc(new_)) != EOF) {
-        ss.put(c);
-    }
-    
-    last_pos_ = ftell(new_);
-    
-    return ss.str();
-}
-
-void FileCapture::Restore() {
-    if(!is_swapped_) return;
-    is_swapped_ = false;
-
-    fflush(original_);
-    dup2(save_, fileno_);
-    close(save_);
-}
-
-void FileCapture::Capture() {
-    if(new_ == NULL) throw; // TODO: better exception
-    if(is_swapped_) return;
-    is_swapped_ = true;
-    
-    fflush(original_);
-    save_ = dup(fileno_);
-    dup2(fileno(new_), fileno_);
-}
-
-
+double Test::default_points_ = 1;
 
 Test::Test(std::string suite, std::string test, double points, int priority) : points_(points), suite_(suite), test_(test), priority_(priority) {
     data_.Set("results", std::vector<JSON>());
@@ -179,8 +120,8 @@ Test::Test(std::string suite, std::string test, double points, int priority) : p
 
 double Test::RunTest() {
     
-    StdoutCapture tout;
-    StderrCapture terr;
+    StdoutCapturer tout;
+    StderrCapturer terr;
     
     ActualTest();
     
