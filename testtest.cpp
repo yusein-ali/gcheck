@@ -4,6 +4,8 @@
 #include <string>
 #include "argument.h"
 
+using namespace gcheck;
+
 std::string asd(char a, int b) {
     std::string str;
     str += a;
@@ -22,13 +24,20 @@ std::string asd3(char a, int b) {
 }
 
 std::string asd2(std::list<char> a) {
+    std::cerr << "err" << std::endl;
+    std::cout << "out" << std::endl;
+    std::cerr << "err" << std::endl;
+    std::cout << "out" << std::endl;
     std::string str;
     for(auto it = a.begin(); it != a.end(); ++it)
         (str += *it) += ' ';
+    std::cerr << "err" << std::endl;
+    std::cout << "out" << std::endl;
     return str;
 }
 
 std::string asd4(std::list<char> a) {
+    std::cerr << "err" << std::endl;
     std::string str;
     for(auto it = a.begin(); it != a.end(); ++it)
         (str += *it) += ' ';
@@ -37,17 +46,24 @@ std::string asd4(std::list<char> a) {
 
 TEST(suite1, test1) {
     GradingMethod("partial");
-    gcheck::RangeDistribution<char> dist('a', 'z');
-    gcheck::ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
-    gcheck::RandomArgument<char> rng(dist);
-    gcheck::RandomContainerArgument<std::list, char> rng2(std::list<char>(10), dist2);
-    gcheck::ConstantArgument cnt(1);
-    TestCase(10, asd, asd3, gcheck::RandomArgument<char>(dist), cnt);
-    TestCase(10, asd2, asd4, rng2);
-    std::cout << "err";
-    EXPECT_EQ(true, true);
+    RangeDistribution<char> dist('a', 'z');
+    ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
+    RandomArgument<char> rng(dist);
+    RandomContainerArgument<std::list, char, ChoiceDistribution> rng2(std::list<char>(10), dist2);
+    ConstantArgument cnt(1);
+    //TestCase(10, asd, asd3, RandomArgument<char>(dist), cnt);
+    TestCase(1, asd2, asd4, rng2);
+    //EXPECT_EQ(true, true);
 }
-
+TEST(suite1, test2) {
+    Rnd<int> asds;
+    RangeDistribution<char> dist('a', 'z');
+    ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
+    RandomArgument<char> rng(dist);
+    RandomContainerArgument<std::list, char, ChoiceDistribution> rng2(std::list<char>(100), dist2);
+    TestCase(1, asd2, asd4, rng2);
+}
+/*
 TEST(suite1, test2) {
     OutputFormat("vertical");
     GradingMethod("binary");
@@ -62,4 +78,4 @@ TEST_(suite2, test1, 3) {
     std::cout << "err4";
     std::cerr << "err";
     EXPECT_EQ(true, true);
-}
+}*/

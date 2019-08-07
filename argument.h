@@ -48,13 +48,13 @@ class RangeDistribution<A, typename std::enable_if<std::is_floating_point<A>::va
     // Use int distribution for integral types and real distribution for floating point types
     typename std::conditional<std::is_integral<A>::value, 
         std::uniform_int_distribution<A>, 
-        std::uniform_real_distribution<A>>
-        ::type distribution_;
+        std::uniform_real_distribution<A>
+        >::type distribution_;
     
 public:
 
-    RangeDistribution(A start, A end) : start_(start), end_(end), distribution_(start, end) {}
-    RangeDistribution(unsigned int seed, A start, A end) : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
+    RangeDistribution(A start = std::numeric_limits<A>::min(), A end = std::numeric_limits<A>::max()) : start_(start), end_(end), distribution_(start, end) {}
+    RangeDistribution(unsigned int seed, A start = std::numeric_limits<A>::min(), A end = std::numeric_limits<A>::max()) : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
     A operator()() { return distribution_(Distribution<A>::generator_); }
 };
 
@@ -72,6 +72,13 @@ public:
     RangeDistribution(A start, A end) : start_(start), end_(end), distribution_(0, (dist_t)(end-start)) {}
     RangeDistribution(unsigned int seed, A start, A end) : Distribution<A>(seed), start_(start), end_(end), distribution_(0, (dist_t)(end-start)) {}
     A operator()() { return start_+distribution_(Distribution<A>::generator_); }
+};
+
+// Base class used for determining the existence of Next() function in class.
+template<class T>
+class NextType {
+public:
+    virtual T Next() = 0;
 };
 
 // Base class for different argument types
@@ -94,26 +101,60 @@ public:
 };
 
 // An argument that takes a random value from a distribution
-template <typename A>
-class RandomArgument : public Argument<A> {
-    Distribution<A>& generator_;
+template <typename A, template<typename> class B = RangeDistribution>
+class RandomArgument : public Argument<A>, public NextType<A> {
+    B<A> distribution_;
 public:
-    RandomArgument(Distribution<A>& gen) : Argument<A>(A()), generator_(gen) {}
-    A Next() { return this->value_ = generator_(); };
+    template<typename... Args>
+    RandomArgument(Args&&... args) : Argument<A>(A()), distribution_(args...) {}
+    RandomArgument(RandomArgument<A, B>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
+    RandomArgument(const RandomArgument<A, B>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
+    
+    A Next() { return this->value_ = distribution_(); };
 };
 
 // An argument that fills a container with random values from a distribution
-template <template <typename> class C, typename T>
-class RandomContainerArgument : public Argument<C<T>> {
-    Distribution<T>& generator_;
+template <template <typename> class C, typename T, template<typename> class B = RangeDistribution>
+class RandomContainerArgument : public Argument<C<T>>, public NextType<C<T>> {
+    B<T> distribution_;
 public:
-    RandomContainerArgument(C<T> container, Distribution<T>& gen) : Argument<C<T>>(container), generator_(gen) {}
+    template<typename... Args>
+    RandomContainerArgument(C<T> container, Args... args) : Argument<C<T>>(container), distribution_(args...) {}
+    RandomContainerArgument(RandomContainerArgument<C, T, B>& rnd) : Argument<C<T>>(rnd()), distribution_(rnd.distribution_) {}
+    RandomContainerArgument(const RandomContainerArgument<C, T, B>& rnd) : Argument<C<T>>(rnd()), distribution_(rnd.distribution_) {}
+    
     C<T> Next() { 
         for(auto it = this->value_.begin(); it != this->value_.end(); ++it) {
-            *it = generator_();
+            *it = distribution_();
         }
         return this->value_;
     }
 };
 
+// An argument that sequentially takes items from a vector
+template <class T>
+class SequenceArgument : public Argument<T>, public NextType<T> {
+    std::vector<T> sequence_;
+    typename std::vector<T>::iterator it_;
+public:
+    SequenceArgument(const std::vector<T>& seq) : Argument<T>(seq[0]), sequence_(seq), it_(sequence_.begin()) {}
+    T Next() {
+        this->value_ = *it_;
+        it_++;
+        
+        return this->value_;
+    }
+};
+
+// Shorthand for RandomArgument
+template<typename T, template<typename> class B = RangeDistribution>
+using Rnd = RandomArgument<T, B>;
+
+// Shorthand for RandomContainerArgument
+template<template <typename> class C, typename T, template<typename> class B = RangeDistribution>
+using RndContainer = RandomContainerArgument<C, T, B>;
+
+// Shorthand for SequenceArgument
+template<typename T>
+using Seq = SequenceArgument<T>;
 }
