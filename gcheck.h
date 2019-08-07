@@ -11,6 +11,33 @@
 
 namespace gcheck {
 
+template<typename T, typename S = std::string>
+struct Result {
+    T output;
+    std::string error;
+    
+    Result(T out) { output = out; }
+    
+    Result(const Result<T, S>& r) { 
+        output = r.output;
+        error = r.error;
+        input = r.input;
+        input_set = r.input_set;
+    }
+    
+    Result<T, S>& operator=(const T& item) {
+        output = item;
+        return *this;
+    }
+    
+    void SetInput(S data) { input = data; input_set = true; }
+    const S& GetInput() const { return input; }
+    
+    bool IsSet() { return input_set; }
+private:
+    S input;
+    bool input_set = false;
+};
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
 */
@@ -46,13 +73,18 @@ protected:
     
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
-    template <class... Args, class... Args2>
-    void TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args);
+    template <class T, class S, class... Args, class... Args2>
+    void TestCase(int num, T (*correct)(Args2...), S (*under_test)(Args2...), Args... args);
     
     /* Runs num tests with correct being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
-    template <class... Args, class... Args2>
-    void TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args);
+    template <class T, class S, class... Args, class... Args2>
+    void TestCase(int num, const T& correct, S (*under_test)(Args2...), Args... args);
+    
+    /* Runs num tests with the item with corresponding index in correct vector being the correct answer
+    and under_test(arg...) giving the testing answer and adds the results to test data */
+    template <class T, class S, class... Args, class... Args2>
+    void TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args);
 
     std::stringstream& ExpectTrue(bool b, std::string descriptor, JSON json = JSON());
     std::stringstream& ExpectFalse(bool b, std::string descriptor, JSON json = JSON());
@@ -114,8 +146,8 @@ public:
     GradingMethod("binary"); \
     ExpectTrue(false, "FAIL")
 
-template <class... Args, class... Args2>
-void Test::TestCase(int num, std::string (*correct)(Args2...), std::string (*under_test)(Args2...), Args... args) {
+template <class T, class S, class... Args, class... Args2>
+void Test::TestCase(int num, T (*correct)(Args2...), S (*under_test)(Args2...), Args... args) {
     JSON json; 
     json.Set("type", "TC"); 
     json.Set("test_class", typeid(*this).name() ); 
@@ -131,21 +163,19 @@ void Test::TestCase(int num, std::string (*correct)(Args2...), std::string (*und
     Test::AddReport(json.Set("cases", results)); 
 }
 
-template <class... Args, class... Args2>
-void Test::TestCase(int num, std::string correct, std::string (*under_test)(Args2...), Args... args) {
-    JSON json; 
-    json.Set("type", "TC"); 
-    json.Set("test_class", typeid(*this).name() ); 
-    std::vector<JSON> results; 
-    for(int i = 0; i < num; i++) { 
-        JSON result; 
-        advance(args...); 
-        result.Set("input", MakeAnyList(args...)); 
-        result.Set("correct", correct); 
-        result.Set("output", under_test(args...)); 
-        results.push_back(result); 
+template <class T, class S, class... Args, class... Args2>
+void Test::TestCase(int num, const T& correct, S (*under_test)(Args2...), Args... args) {
+    auto forwarder = [correct](auto... params) -> T { return correct; };
+    TestCase(num, forwarder, under_test, args...);
+    //TODO: not tested.
     }
-    Test::AddReport(json.Set("cases", results)); 
+
+template <class T, class S, class... Args, class... Args2>
+void Test::TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args) {
+    int index = 0;
+    auto forwarder = [&index, &correct](auto... params) -> T { return correct[index++]; };
+    TestCase(num, forwarder, under_test, args...);
+    //TODO: not tested.
 }
 
 template <class T, class S>
