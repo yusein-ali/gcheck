@@ -147,7 +147,7 @@ class Test {
         static std::unique_ptr<std::vector<Test*>> list(new std::vector<Test*>());
         return *list;
     }
-
+    
     virtual void ActualTest() = 0; // The test function specified by user
 
     double RunTest(); // Runs the test and takes care of result logging to Formatter
@@ -178,7 +178,7 @@ protected:
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class T, class S, class... Args, class... Args2>
     void TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args);
-
+    
     std::stringstream& ExpectTrue(bool b, std::string descriptor);
     std::stringstream& ExpectFalse(bool b, std::string descriptor);
     template <class T, class S>
@@ -266,7 +266,7 @@ void Test::TestCase(int num, const T& correct, S (*under_test)(Args2...), Args..
     auto forwarder = [correct](auto... params) -> T { return correct; };
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
-    }
+}
 
 template <class T, class S, class... Args, class... Args2>
 void Test::TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args) {
@@ -275,7 +275,7 @@ void Test::TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
-
+    
 template <class T, class S>
 std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     
@@ -289,5 +289,14 @@ std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     
     return *AddReport(report).info_stream;
 }
+
+//Theoretically improves test compile times by moving template instantiation to gcheck
+extern template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(int left, int right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(float left, float right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(double left, double right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(std::string left, std::string right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(std::string left, const char* right, std::string descriptor);
+extern template std::stringstream& Test::ExpectEqual(const char* left, std::string right, std::string descriptor);
 
 }

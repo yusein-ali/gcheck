@@ -24,7 +24,7 @@ namespace {
 
         Formatter() {}; //Disallows instantiation of this class
 
-public:
+    public:
 
         static bool pretty_;
         static std::string filename_;
@@ -41,8 +41,8 @@ public:
     std::string Formatter::filename_ = "";
     std::string Formatter::default_format_ = "horizontal";
     std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
-
-        
+    
+    
     void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
 
         std::fstream file;
@@ -53,7 +53,7 @@ public:
             output.push_back({"test_results", toJSON(suites_)});
             output.push_back({"points", std::to_string(total_points_)});
             output.push_back({"max_points", std::to_string(total_max_points_)});
-        
+            
             if(!is_finished) {
                 output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
             }
@@ -65,12 +65,12 @@ public:
                     [suite](std::pair<std::string, TestVector> a){ return a.first == suite; }
                 );
             
-            auto it2 = std::find_if(it->second.begin(), it->second.end(), 
+            auto it2 = std::find_if(it->second.begin(), it->second.end(),
                     [test](const std::pair<std::string, TestData>& a){ 
                         return a.first == test; 
                     }
                 );
-                
+            
             if(it2 == it->second.end()) {
                 out << "error" << std::endl; //TODO actual error processing
                 return;
@@ -78,9 +78,9 @@ public:
 
             ConsoleWriter writer;
             writer.WriteSeparator();
-
+            
             TestData& test_data = it2->second;
-
+            
             writer.SetColor(test_data.points == test_data.max_points ? ConsoleWriter::Green : ConsoleWriter::Red);
             out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
             writer.SetColor(ConsoleWriter::Black);
@@ -201,7 +201,7 @@ double Test::RunTest() {
     data_.serr = terr.str();
     
     data_.CalculatePoints();
-    
+
     Formatter::SetTestData(suite_, test_, data_);
 
     return data_.points;
@@ -214,7 +214,7 @@ TestReport& Test::AddReport(TestReport& report) {
     auto increment_correct = [this](bool b) { 
         b ? data_.correct++ : data_.incorrect++;
     };
-
+    
     if(const auto d = std::get_if<TestReport::EqualsData>(&report.data)) {
         increment_correct(d->result);
     } else if(const auto d = std::get_if<TestReport::TrueData>(&report.data)) {
@@ -225,9 +225,9 @@ TestReport& Test::AddReport(TestReport& report) {
         for(auto it = cases->begin(); it != cases->end(); it++) {
             increment_correct(it->result);
         }
-        }
+    }
     data_.reports.push_back(report);
-
+    
     return data_.reports[data_.reports.size()-1];
 }
 
@@ -238,7 +238,7 @@ void Test::GradingMethod(std::string method) {
 void Test::OutputFormat(std::string format) { 
     data_.output_format = format; 
 }
-
+    
 std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
 
     TestReport report = TestReport::Make<TestReport::TrueData>();
@@ -264,7 +264,7 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
 }
 
 void Test::RunTests() {
-
+    
     auto& test_list = test_list_();
     std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ > b->priority_; });
 
@@ -288,6 +288,14 @@ void Test::RunTests() {
         Formatter::SetTotal(total, total_max);
     }
 }
+
+template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(int left, int right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(float left, float right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(double left, double right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(std::string left, std::string right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(std::string left, const char* right, std::string descriptor);
+template std::stringstream& Test::ExpectEqual(const char* left, std::string right, std::string descriptor);
 
 }
 
