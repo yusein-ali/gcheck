@@ -19,7 +19,8 @@ struct Result {
     T output;
     std::string error;
     
-    Result(T out) { output = out; }
+    Result() : output() { }
+    Result(T out) : output(out) { }
     
     Result(const Result<T, S>& r) { 
         output = r.output;
@@ -106,9 +107,16 @@ struct TestReport {
     }
 };
 
+enum GradingMethod {
+    Partial,
+    AllOrNothing,
+    Most,
+    StrictMost
+};
+
 struct TestData {
     std::vector<TestReport> reports;
-    std::string grading_method = "partial";
+    GradingMethod grading_method = Partial;
     std::string output_format = "horizontal";
     
     double points = 0;
@@ -122,14 +130,14 @@ struct TestData {
     
     void CalculatePoints() {
         
-        if(grading_method == "partial")
+        if(grading_method == Partial)
             points = correct/double(correct+incorrect)*max_points;
-        else if(grading_method == "binary")
-            points = incorrect == 0 ? points : 0;
-        else if(grading_method == "most")
-            points = incorrect <= correct ? points : 0;
-        else if(grading_method == "strict_most")
-            points = incorrect < correct ? points : 0;
+        else if(grading_method == AllOrNothing)
+            points = incorrect == 0 ? max_points : 0;
+        else if(grading_method == Most)
+            points = incorrect <= correct ? max_points : 0;
+        else if(grading_method == StrictMost)
+            points = incorrect < correct ? max_points : 0;
         else
             points = 0;
         
@@ -137,6 +145,16 @@ struct TestData {
             points = max_points;
     }
 };
+
+namespace detail {
+    
+    template<class F, class... T>
+    static auto is_callable(int) -> sfinae_true<decltype(std::declval<F>()(std::declval<T>()...))>;
+    template<class F, class... T>
+    static auto is_callable(long) -> sfinae_false<F>;
+}
+template<class F, class... T>
+struct is_callable : decltype(detail::is_callable<F, T...>(0)){};
 
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
@@ -161,23 +179,25 @@ protected:
     int priority_;
 
     TestReport& AddReport(TestReport& report);
-    void GradingMethod(std::string method);
+    void GradingMethod(GradingMethod method);
     void OutputFormat(std::string format);
     
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
-    template <class T, class S, class... Args, class... Args2>
-    void TestCase(int num, T (*correct)(Args2...), S (*under_test)(Args2...), Args... args);
+    template <class F, class S, class... Args>
+    typename std::enable_if<is_callable<F, Args...>::value>
+    ::type TestCase(int num, const F& correct, const S& under_test, Args&... args);
     
     /* Runs num tests with correct being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
-    template <class T, class S, class... Args, class... Args2>
-    void TestCase(int num, const T& correct, S (*under_test)(Args2...), Args... args);
+    template <class T, class S, class... Args>
+    typename std::enable_if<!is_callable<T, Args...>::value>
+    ::type TestCase(int num, const T& correct, const S& under_test, Args&... args);
     
     /* Runs num tests with the item with corresponding index in correct vector being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
-    template <class T, class S, class... Args, class... Args2>
-    void TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args);
+    template <class T, class S, class... Args>
+    void TestCase(int num, const std::vector<T>& correct, const S& under_test, Args&... args);
     
     std::stringstream& ExpectTrue(bool b, std::string descriptor);
     std::stringstream& ExpectFalse(bool b, std::string descriptor);
@@ -190,7 +210,7 @@ public:
 
     static double default_points_;
 
-    static void RunTests();
+    static bool RunTests();
 };
 
 // Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
@@ -205,7 +225,7 @@ public:
     
 // Creates a class for a test with specific maximum points
 #define TEST_(suitename, testname, points) \
-    PREREQ_TEST(suitename, testname, points, -1)
+    PREREQ_TEST(suitename, testname, points, std::numeric_limits<int>::max())
     
 // Calls TEST_ with the default maximum points
 #define TEST(suitename, testname) \
@@ -215,7 +235,7 @@ public:
     ExpectTrue(b, #b)
     
 #define EXPECT_FALSE(b) \
-    ExpectFalse(b, #b)
+    ExpectFalse(b, "!" #b)
 
 #define EXPECT_EQ(left, right) \
     ExpectEqual(left, right, #left " = " #right)
@@ -229,11 +249,12 @@ public:
     if(b) return;
 
 #define FAIL() \
-    GradingMethod("binary"); \
+    GradingMethod(gcheck::AllOrNothing); \
     ExpectTrue(false, "FAIL")
 
-template <class T, class S, class... Args, class... Args2>
-void Test::TestCase(int num, T (*correct)(Args2...), S (*under_test)(Args2...), Args... args) {
+template <class F, class S, class... Args>
+typename std::enable_if<is_callable<F, Args...>::value>
+::type Test::TestCase(int num, const F& correct, const S& under_test, Args&... args) {
     
     TestReport report = TestReport::Make<TestReport::CaseData>();
     auto& data = report.Get<TestReport::CaseData>();
@@ -261,15 +282,16 @@ void Test::TestCase(int num, T (*correct)(Args2...), S (*under_test)(Args2...), 
     AddReport(report);
 }
 
-template <class T, class S, class... Args, class... Args2>
-void Test::TestCase(int num, const T& correct, S (*under_test)(Args2...), Args... args) {
+template <class T, class S, class... Args>
+typename std::enable_if<!is_callable<T, Args...>::value>
+::type Test::TestCase(int num, const T& correct, const S& under_test, Args&... args) {
     auto forwarder = [correct](auto... params) -> T { return correct; };
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
 
-template <class T, class S, class... Args, class... Args2>
-void Test::TestCase(int num, const std::vector<T>& correct, S (*under_test)(Args2...), Args... args) {
+template <class T, class S, class... Args>
+void Test::TestCase(int num, const std::vector<T>& correct, const S& under_test, Args&... args) {
     int index = 0;
     auto forwarder = [&index, &correct](auto... params) -> T { return correct[index++]; };
     TestCase(num, forwarder, under_test, args...);

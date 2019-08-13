@@ -12,6 +12,8 @@ namespace gcheck {
 // Escapes special JSON characters from 'str'
 std::string JSONEscape(std::string str);
 template<typename T>
+std::string toJSON(T value);
+template<typename T>
 std::string toJSON(std::string key, T value);
 std::string toJSON(std::string key, bool value);
 std::string toJSON(std::string key, std::string value);
@@ -26,6 +28,11 @@ std::string toJSON(const TestReport& r);
 std::string toJSON(const CaseEntry& e);
 std::string toJSON(const TestData& data);
 std::string toJSON(const UserObject& o);
+
+template<typename T>
+std::string toJSON(T value) {
+    return JSONEscape(std::to_string(value));
+}
 
 template<typename T>
 std::string toJSON(std::string key, T value) {

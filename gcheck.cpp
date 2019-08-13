@@ -32,7 +32,9 @@ namespace {
         static void SetTestData(std::string suite, std::string test, TestData& data);
         static void SetTotal(double points, double max_points);
         // Writes the test results to stdout
-        static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
+        static void WriteFinalReport(bool ran_all);
+        // Writes the test results to stdout
+        static void WriteReport(std::string suite = "", std::string test = "");
     };
 
     double Formatter::total_points_ = 0;
@@ -43,7 +45,38 @@ namespace {
     std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
     
     
-    void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
+    void Formatter::WriteFinalReport(bool ran_all) {
+        std::fstream file;
+        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
+
+        if(!pretty_) { //if not pretty, print out the whole json
+            std::vector<std::pair<std::string, std::string>> output;
+            output.push_back({"test_results", toJSON(suites_)});
+            output.push_back({"points", std::to_string(total_points_)});
+            output.push_back({"max_points", std::to_string(total_max_points_)});
+            
+            if(!ran_all)
+                output.push_back({"WARNING", "\"Some tests weren't run because prerequisite tests weren't passed first.\""});
+            
+            out << toJSON(output) << std::endl << std::endl;
+        } else {
+            ConsoleWriter writer;
+            writer.WriteSeparator();
+            out << "Total: ";
+            writer.SetColor(total_points_ == total_max_points_ ? ConsoleWriter::Green : ConsoleWriter::Red);
+            out << total_points_ << " / " << total_max_points_;
+            writer.SetColor(ConsoleWriter::Black);
+            out << std::endl;
+            
+            if(!ran_all)
+                out << "WARNING: Some tests weren't run because prerequisite tests weren't passed first." << std::endl;
+            // Wait for user confirmation
+            out << std::endl << "Press enter to exit." << std::endl;
+            std::cin.get();
+        }
+    }
+    
+    void Formatter::WriteReport(std::string suite, std::string test) {
 
         std::fstream file;
         auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
@@ -54,12 +87,10 @@ namespace {
             output.push_back({"points", std::to_string(total_points_)});
             output.push_back({"max_points", std::to_string(total_max_points_)});
             
-            if(!is_finished) {
-                output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
-            }
+            output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
             
             out << toJSON(output) << std::endl << std::endl;
-        } else if(!is_finished) { //if pretty and not finished, print out only current test
+        } else { //if pretty and not finished, print out only current test
 
             auto it = std::find_if(suites_.begin(), suites_.end(), 
                     [suite](std::pair<std::string, TestVector> a){ return a.first == suite; }
@@ -143,18 +174,6 @@ namespace {
                 
                 writer.WriteRows(cells);
             }
-        } else { //if pretty and finished, print totals
-            ConsoleWriter writer;
-            writer.WriteSeparator();
-            out << "Total: ";
-            writer.SetColor(total_points_ == total_max_points_ ? ConsoleWriter::Green : ConsoleWriter::Red);
-            out << total_points_ << " / " << total_max_points_;
-            writer.SetColor(ConsoleWriter::Black);
-            out << std::endl;
-            
-            // Wait for user confirmation
-            out << std::endl << "Press enter to exit." << std::endl;
-            std::cin.get();
         }
 
         if(filename_ != "")
@@ -171,7 +190,7 @@ namespace {
         }
         it->second.push_back({test, data});
         
-        WriteReport(false, suite, test);
+        WriteReport(suite, test);
     }
 
     void Formatter::SetTotal(double points, double max_points) {
@@ -231,7 +250,7 @@ TestReport& Test::AddReport(TestReport& report) {
     return data_.reports[data_.reports.size()-1];
 }
 
-void Test::GradingMethod(std::string method) {
+void Test::GradingMethod(gcheck::GradingMethod method) {
     data_.grading_method = method; 
 }
 
@@ -263,10 +282,10 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     return *AddReport(report).info_stream;
 }
 
-void Test::RunTests() {
+bool Test::RunTests() {
     
     auto& test_list = test_list_();
-    std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ > b->priority_; });
+    std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ < b->priority_; });
 
     double total_max = 0;
     for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
@@ -279,7 +298,7 @@ void Test::RunTests() {
     for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
         if(c_priority != (*it)->priority_) {
             if(max_so_far != total)
-                break; // stop if last prerequisite priority level didnt gain full points
+                return false; // stop if last prerequisite priority level didnt gain full points
             
             c_priority = (*it)->priority_;
         }
@@ -287,6 +306,8 @@ void Test::RunTests() {
         max_so_far += (*it)->data_.max_points;
         Formatter::SetTotal(total, total_max);
     }
+    
+    return true;
 }
 
 template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
@@ -311,9 +332,9 @@ int main(int argc, char** argv) {
 
     //printf(" \r");
     //std::cout << " \r";
-    Test::RunTests();
+    bool ran_all = Test::RunTests();
 
-    Formatter::WriteReport();
+    Formatter::WriteFinalReport(ran_all);
 
     return 0;
 }

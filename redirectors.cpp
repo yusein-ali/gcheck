@@ -16,25 +16,28 @@
 
 namespace gcheck {
     
-FileInjecter::FileInjecter(FILE* stream) {
-        original_ = stream;
-        save_ = dup(fileno(stream));
-        int fds[2];
-        pipe(fds);
-        out_ = fdopen(fds[1], "w");
-        dup2(fds[0], fileno(stream));
-        close(fds[0]);
-    }
-
-void FileInjecter::Write(std::string str) {
-    fputs(str.c_str(), out_);
-    fflush(out_);
+FileInjecter::FileInjecter(FILE* stream, std::string str) {
+    original_ = stream;
+    save_ = dup(fileno(stream));
+    int fds[2];
+    pipe(fds);
+    out_ = fdopen(fds[1], "w");
+    dup2(fds[0], fileno(stream));
+    close(fds[0]);
+    
+    if(str.length() != 0)
+        Write(str);
 }
 
 FileInjecter::~FileInjecter() {
     dup2(save_, fileno(original_));
     fclose(out_);
     close(save_);
+}
+
+void FileInjecter::Write(std::string str) {
+    fputs(str.c_str(), out_);
+    fflush(out_);
 }
 
 
@@ -112,7 +115,7 @@ void FileCapturer::Capture() {
     dup2(fileno(new_), fileno_);
 }
 
-StdinInjecter::StdinInjecter() : FileInjecter(stdin) {}
+StdinInjecter::StdinInjecter(std::string str) : FileInjecter(stdin, str) {}
 StdoutCapturer::StdoutCapturer() : FileCapturer(stdout) {}
 StderrCapturer::StderrCapturer() : FileCapturer(stderr) {}
 

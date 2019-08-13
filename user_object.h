@@ -5,6 +5,7 @@
 #include <any>
 #include <vector>
 #include <type_traits>
+#include <sstream>
 
 #include "argument.h"
 
@@ -71,9 +72,19 @@ class UserObject {
     
     template<typename T>
     typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value>::type
-    SetString(T item) {
-        (void)item;
+    SetString(T) {
         as_string_ = "";
+    }
+    template<typename T>
+    typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value>::type
+    SetString(T* item) {
+        if(item == nullptr)
+            as_string_ = "nullptr";
+        else {
+            std::stringstream ss;
+            ss << static_cast<const void*>(item);
+            as_string_ = ss.str(); 
+        }
     }
     template<typename T>
     typename std::enable_if<!has_tostring<T>::value && has_std_tostring<T>::value>::type
@@ -84,6 +95,9 @@ class UserObject {
     typename std::enable_if<has_tostring<T>::value>::type
     SetString(T item) {
         as_string_ = to_string(item);
+    }
+    void SetString(decltype(nullptr)) {
+        as_string_ = "nullptr";
     }
 public:
     UserObject() {}

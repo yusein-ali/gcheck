@@ -17,7 +17,7 @@ public:
         Constructs an injector to stream 'stream'.
         FileInjecter(stdin) or StdinInjecter() for standard input injection.
     */
-    FileInjecter(FILE* stream);
+    FileInjecter(FILE* stream, std::string str = "");
     ~FileInjecter();
 
     void Write(std::string str);
@@ -28,7 +28,7 @@ public:
 */
 class StdinInjecter : public FileInjecter {
 public:
-    StdinInjecter();
+    StdinInjecter(std::string str = "");
 };
 
 
