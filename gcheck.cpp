@@ -76,15 +76,85 @@ public:
                 return;
             }
 
-        out << "suite: " << suite << ", test: " << test << std::endl;
+            ConsoleWriter writer;
+            writer.WriteSeparator();
 
-        TestData test_data = it2->second;
+            TestData& test_data = it2->second;
 
-        out << '\t' << "max_points: " << test_data.max_points << std::endl;
-        out << '\t' << "format: " << test_data.output_format << std::endl;
-        out << '\t' << "results: " << toJSON(test_data.reports) << std::endl;
+            writer.SetColor(test_data.points == test_data.max_points ? ConsoleWriter::Green : ConsoleWriter::Red);
+            out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
+            writer.SetColor(ConsoleWriter::Black);
+            
+            //out << '\t' << "max_points: " << test_data.max_points << std::endl;
+            //out << '\t' << "format: " << test_data.output_format << std::endl;
+            //out << '\t' << "results: " << toJSON(test_data.reports) << std::endl;
+            
+            for(auto it = test_data.reports.begin(); it != test_data.reports.end(); it++) {
+                std::vector<std::vector<std::string>> cells;
+                if(const auto d = std::get_if<TestReport::EqualsData>(&it->data)) {
+                    cells.push_back({});
+                    auto& row = cells[cells.size()-1];
+                    row.push_back(d->result ? "correct" : "incorrect");
+                    row.push_back(d->descriptor);
+                    row.push_back(d->left.string());
+                    row.push_back(d->right.string());
+                    row.push_back(it->info_stream->str());
+                    
+                    writer.SetHeaders({"Result", "Condition", "Left", "Right", "Info"});
+                } else if(const auto d = std::get_if<TestReport::TrueData>(&it->data)) {
+                    
+                    cells.push_back({});
+                    auto& row = cells[cells.size()-1];
+                    row.push_back(d->result ? "correct" : "incorrect");
+                    row.push_back(d->descriptor);
+                    row.push_back(d->value ? "true" : "false");
+                    row.push_back(it->info_stream->str());
+                    
+                    writer.SetHeaders({"Result", "Condition", "Value", "Info"});
+                } else if(const auto d = std::get_if<TestReport::FalseData>(&it->data)) {
+                    
+                    cells.push_back({});
+                    auto& row = cells[cells.size()-1];
+                    row.push_back(d->result ? "correct" : "incorrect");
+                    row.push_back(d->descriptor);
+                    row.push_back(d->value ? "true" : "false");
+                    row.push_back(it->info_stream->str());
+                    
+                    writer.SetHeaders({"Result", "Condition", "Value", "Info"});
+                } else if(const auto d = std::get_if<TestReport::CaseData>(&it->data)) {
+                    
+                    for(auto it2 = d->begin(); it2 != d->end(); it2++) {
+                        cells.push_back({});
+                        auto& row = cells[cells.size()-1];
+                        row.push_back(it2->result ? "correct" : "incorrect");
+                        row.push_back(it2->input);
+                        row.push_back(it2->correct);
+                        row.push_back(it2->output);
+                        
+                        writer.SetHeaders({"Result", "Input", "Correct", "Output"});
+                    }
+                } else if(const auto d = std::get_if<TestReport::EqualsData>(&it->data)) {
+                    
+                    cells.push_back({});
+                    auto& row = cells[cells.size()-1];
+                    row.push_back("Error: report type None");
+                    break;
+                }
+                
+                writer.WriteRows(cells);
+            }
         } else { //if pretty and finished, print totals
-        out <<  "total points: " << total_points_ << " / " << total_max_points_ << std::endl;
+            ConsoleWriter writer;
+            writer.WriteSeparator();
+            out << "Total: ";
+            writer.SetColor(total_points_ == total_max_points_ ? ConsoleWriter::Green : ConsoleWriter::Red);
+            out << total_points_ << " / " << total_max_points_;
+            writer.SetColor(ConsoleWriter::Black);
+            out << std::endl;
+            
+            // Wait for user confirmation
+            out << std::endl << "Press enter to exit." << std::endl;
+            std::cin.get();
         }
 
         if(filename_ != "")
