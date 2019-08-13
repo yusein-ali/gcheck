@@ -1,95 +1,10 @@
 #include "json.h"
-#include <vector>
+#include "user_object.h"
+#include "gcheck.h"
 
 namespace gcheck {
 
-std::string to_string(bool b) {
-    return std::string(b ? "true" : "false");
-}
-
-JSON& JSON::Remove(std::string key) {
-    items_.erase(key);
-    return *this;
-}
-
-std::any& JSON::Get(std::string key) {
-    auto it = items_.find(key);
-    if(it != items_.end()) {
-        return it->second;
-    } else
-        throw; //TODO: proper exception
-}
-
-std::any JSON::Get(std::string key) const {
-    auto it = items_.find(key);
-    if(it != items_.end()) {
-        return it->second;
-    } else
-        throw; //TODO: proper exception
-}
-
-std::string JSON::AsString(const std::any& item) {
-    std::string out;
-    if(auto s = std::any_cast<bool>(&item))
-        out += to_string(*s);
-    else if(auto s = std::any_cast<int>(&item))
-        out += std::to_string(*s);
-    else if(auto s = std::any_cast<char>(&item))
-        out += '\"' + Escape(std::string()+*s) + '\"';
-    else if(auto s = std::any_cast<double>(&item))
-        out += std::to_string(*s);
-    else if(auto s = std::any_cast<std::string>(&item))
-        out += "\"" + Escape(*s) + "\"";
-    else if(auto s = std::any_cast<JSON>(&item))
-        out += s->AsString();
-    else if(auto s = std::any_cast<std::vector<JSON>>(&item)) {
-        out += "[";
-        for(auto it2 = s->begin(); it2 != s->end();) {
-            out += it2->AsString();
-            if(++it2 != s->end())
-                out += ", ";
-        }
-        out += "]";
-    } else if(auto s = std::any_cast<std::vector<std::any>>(&item)) {
-        out += "[";
-        for(auto it2 = s->begin(); it2 != s->end();) {
-            out += AsString(*it2);
-            if(++it2 != s->end())
-                out += ", ";
-        }
-        out += "]";
-    } else
-        out += "null";
-
-    return out;//Escape(out);
-}
-
-std::string JSON::AsString(bool strip_ends) const {
-
-    std::string out;
-    if(!strip_ends) out += "{";
-
-    for(auto it = items_.begin(); it != items_.end();) {
-
-        out += "\"" + it->first + "\":";
-        out += AsString(it->first);
-
-        if(++it != items_.end())
-            out += ", ";
-    }
-    if(!strip_ends) out += "}";
-    return out;
-}
-
-std::string JSON::AsString(const char* key) const {
-    return AsString(std::string(key));
-}
-
-std::string JSON::AsString(std::string key) const {
-    return JSON::AsString(Get(key));
-}
-
-std::string JSON::Escape(std::string str) {
+std::string JSONEscape(std::string str) {
     
     std::string escapees = "\\\n\t\b\f\r\"";
     std::vector<std::string> replacees{"\\\\", "\\n", "\\t", "\\b", "\\f", "\\r", "\\\""};
@@ -121,6 +36,91 @@ std::string JSON::Escape(std::string str) {
     }
     
     return str;
+}
+
+std::string toJSON(std::string key, bool value) {
+    return "\"" + key + "\":" + (value ? "true" : "false");
+}
+
+std::string toJSON(std::string key, std::string value) {
+    return "\"" + key + "\":\"" + JSONEscape(value) + "\"";
+}
+
+std::string toJSON(std::string key, const char* value) {
+    return "\"" + key + "\":\"" + JSONEscape(value) + "\"";
+}
+
+std::string toJSON(const std::string& str) {
+    return str;
+}
+
+std::string toJSON(const UserObject& o) {
+    return JSONEscape(o.string());
+}
+
+std::string toJSON(const TestReport::CaseEntry& e) {
+    std::string out = "{";
+    
+    out += toJSON("output", e.output) + ',';
+    out += toJSON("result", e.result) + ',';
+    out += toJSON("input", e.input) + ',';//"\"input\":" + toJSON(e.input) + ',';
+    out += toJSON("correct", e.correct);
+    
+    out += "}";
+    return out;
+}
+
+std::string toJSON(const TestReport& r) {
+    
+    std::string out = "{";
+    
+    if(const auto d = std::get_if<TestReport::EqualsData>(&r.data)) {
+        out += toJSON("type", "EE") + ',';
+        
+        out += toJSON("left", d->left.string()) + ',';
+        out += toJSON("right", d->right.string()) + ',';
+        out += toJSON("result", d->result) + ',';
+        out += toJSON("descriptor", d->descriptor) + ',';
+    } else if(const auto d = std::get_if<TestReport::TrueData>(&r.data)) {
+        out += toJSON("type", "ET") + ',';
+        
+        out += toJSON("value", d->value) + ',';
+        out += toJSON("result", d->result) + ',';
+        out += toJSON("descriptor", d->descriptor) + ',';
+    } else if(const auto d = std::get_if<TestReport::FalseData>(&r.data)) {
+        out += toJSON("type", "EF") + ',';
+        
+        out += toJSON("value", d->value) + ',';
+        out += toJSON("result", d->result) + ',';
+        out += toJSON("descriptor", d->descriptor) + ',';
+    } else if(const auto d = std::get_if<TestReport::CaseData>(&r.data)) {
+        out += toJSON("type", "TC") + ',';
+        
+        out += "\"cases\":" + toJSON(*d) + ',';
+    }
+    
+    out += toJSON("info", r.info_stream->str());
+    
+    out += "}";
+    return out;
+}
+
+std::string toJSON(const TestData& data) {
+    
+    std::string out = "{";
+    
+    out += "\"results\":" + toJSON(data.reports) + ',';
+    out += toJSON("grading_method", data.grading_method) + ',';
+    out += toJSON("format", data.output_format) + ',';
+    out += toJSON("points", data.points) + ',';
+    out += toJSON("max_points", data.max_points) + ',';
+    out += toJSON("stdout", data.sout) + ',';
+    out += toJSON("stderr", data.serr) + ',';
+    out += toJSON("correct", data.correct) + ',';
+    out += toJSON("incorrect", data.incorrect);
+    
+    out += "}";
+    return out;
 }
 
 }

@@ -6,9 +6,9 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest='out', type=str, default="stdout")
 parser.add_argument("-i", dest='input', type=str, default="report.json")
+parser.add_argument("-p", dest='max_points', type=float, default=-1)
 args = parser.parse_args()
 
-default_grading_method = "partial"
 default_format = "list"
 
 template_location = sys.path[0] + "/templates/"
@@ -20,33 +20,64 @@ template_filenames = {
     }
 report_filename = args.input
 output_filename = args.out
+max_points = args.max_points
 templates = {}
 
 def differences(correct, answer):
     """Returns a tuple with two lists of tuples with the difference locations and lengths"""
+
+    n = 0
+    while n < len(correct) and n < len(answer) and correct[n] == answer[n]:
+        n+=1
+    start = correct[:n]
+    
+    n = 0
+    while n < len(correct) and n < len(answer) and correct[-n-1] == answer[-n-1]:
+        n+=1
+    if n != 0:
+        end = correct[-n:]
+        correct = correct[len(start):-len(end)]
+        answer = answer[len(start):-len(end)]
+    else:
+        end = ""
+        correct = correct[len(start):]
+        answer = answer[len(start):]
+    
+    mem = [[None] * len(answer)] * len(correct)
+    
     def LCS(n, m):
         nonlocal correct, answer
         if n < 0 or m < 0:
             return ""
+        elif mem[n][m] is not None:
+            pass
         elif correct[n] == answer[m]:
-            return LCS(n-1, m-1) + correct[n]
+            mem[n][m] = LCS(n-1, m-1) + correct[n]
         else:
-            return max(LCS(n-1, m), LCS(n, m-1), key=len)
+            mem[n][m] = max(LCS(n-1, m), LCS(n, m-1), key=len)
+        return mem[n][m]
 
     lcs = LCS(len(correct)-1, len(answer)-1)
+
+    correct = start + correct + end
+    answer = start + answer + end
+    lcs = start + lcs + end
 
     def diffs(string):
         nonlocal lcs
         i = 0
+        i2 = 0
         diff = []
-        for c in lcs:
+        while len(lcs) > i and len(string) > i2:
             length = 0
-            while c != string[i+length]:
+            while string[i2+length] != lcs[i] and len(string) > i2+length:
                 length += 1
-            if(length != 0):
-                diff.append((i, length))
-                i += length
-            i += 1
+            if length != 0:
+                diff.append((i2, length))
+            i2 += length + 1
+            i+=1
+        if i2 != len(string):
+            diff.append((i2, len(string)-i2))
             
         return diff
 
@@ -72,11 +103,11 @@ def replace_entries(template, input_data, correct_data, output_data):
         input = str(input_data[0])
     else:
         input = str(input_data)
-    if input[-1] == '\n': # html pre tags need two newlines at the end to place a newline
+    if len(input) > 0 and input[-1] == '\n': # html pre tags need two newlines at the end to place a newline
         input += '\n'
-    if output[-1] == '\n':
+    if len(output) > 0 and output[-1] == '\n':
         output += '\n'
-    if correct[-1] == '\n':
+    if len(correct) > 0 and correct[-1] == '\n':
         correct += '\n'
     templ = template.replace("{{{input}}}", input)
     templ = templ.replace("{{{output}}}", output)
@@ -113,6 +144,8 @@ def get_table(template, results, replace_func):
         if pos == -1:
             break
         end = hor.find("-->", pos)
+        if end == -1:
+            break
 
         content = ""
         for result in results:
@@ -125,18 +158,44 @@ def get_table(template, results, replace_func):
     
     return hor
 
+def replace(templ, results, typ, func, input_text, output_text, correct_text):
+    templ = templates[format_name].replace("{{{input_header}}}", input_text)
+    templ = templ.replace("{{{output_header}}}", output_text)
+    templ = templ.replace("{{{correct_header}}}", correct_text)
+    return get_table(templ, [res for res in results if res["type"] == typ], func)
+
 for key, file_name in template_filenames.items():
     with open(template_location + file_name, 'r') as f:
         templates[key] = f.read()
 
 with open(report_filename, 'r') as f:
-    report_data = json.load(f)["test_results"]
+    report_data = json.load(f)
+    test_results = report_data["test_results"]
+    total_max_points = report_data["max_points"]
 
+if max_points == -1:
+    point_multiplier = 1
+else:
+    point_multiplier = max_points/total_max_points
+
+#TODO: sanitize html
 tests = ""
-for suite_name, suite_data in report_data.items():
+for suite_name, suite_data in test_results.items():
     for test_name, test_data in suite_data.items():
         format_name = default_format if 'format' not in test_data else test_data['format']
 
+        def ET_func(template, result):
+            """Function for replacing condition case data"""
+            return replace_entries(template, result["descriptor"], result["value"], result["result"])
+            
+        def EF_func(template, result):
+            """Function for replacing condition case data"""
+            return replace_entries(template, result["descriptor"], result["value"], result["result"])
+        
+        def EE_func(template, result):
+            """Function for replacing condition case data"""
+            return replace_entries(template, result["descriptor"], result["right"], result["left"])
+            
         def TC_func(template, result):
             """Function for replacing test case data"""
             content = ""
@@ -144,22 +203,13 @@ for suite_name, suite_data in report_data.items():
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
 
-        templ = templates[format_name].replace("{{{input_header}}}", "Input")
-        templ = templ.replace("{{{output_header}}}", "Output")
-        templ = templ.replace("{{{correct_header}}}", "Correct")
-        content = get_table(templ, [res for res in test_data['results'] if res["type"] == "TC"], TC_func)
-            
-        def nTC_func(template, result):
-            """Function for replacing condition case data"""
-            return replace_entries(template, result["condition"], result["right"], result["left"])
-
-        templ = templates[format_name].replace("{{{input_header}}}", "Condition")
-        templ = templ.replace("{{{output_header}}}", "Right (Correct)")
-        templ = templ.replace("{{{correct_header}}}", "Left (Output)")
-        content += get_table(templ, [res for res in test_data['results'] if res["type"] != "TC"], nTC_func)
+        content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Input", "Output", "Correct")
+        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Left (Output)", "Right (Correct)")
+        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Left (Output)", "Right (Correct)")
+        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Left (Output)", "Right (Correct)")
 
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
-        testbody = testbody.replace('{{{points}}}', str(test_data["points"]) + "/" + str(test_data['max_points']))
+        testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier) + "/" + str(test_data['max_points']*point_multiplier))
         testbody = testbody.replace('{{{testid}}}', suite_name+test_name)
         testbody = testbody.replace('{{{testcontent}}}', content)
 

@@ -1,73 +1,67 @@
+/*
+    Collection of functions for converting objects to JSON string format. 
+*/
+
+#pragma once
 
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 namespace gcheck {
 
-/*
-    Class for holding multiple types of data in a json-like structure.
-*/
-class JSON {
-    std::unordered_map<std::string, std::any> items_;
+// Escapes special JSON characters from 'str'
+std::string JSONEscape(std::string str);
+template<typename T>
+std::string toJSON(std::string key, T value);
+std::string toJSON(std::string key, bool value);
+std::string toJSON(std::string key, std::string value);
+std::string toJSON(std::string key, const char* value);
+std::string toJSON(const std::string& str);
 
-public:
-    static std::string AsString(const std::any& item);
+struct TestReport;
+struct CaseEntry;
+struct TestData;
+class UserObject;
+std::string toJSON(const TestReport& r);
+std::string toJSON(const CaseEntry& e);
+std::string toJSON(const TestData& data);
+std::string toJSON(const UserObject& o);
 
-    template <typename A>
-    JSON& Set(const std::string& name, const A& value) {
-        items_.insert_or_assign(name, value);
-        return *this;
-    }
-    JSON& Set(const std::string& name, std::vector<std::any> value) {
-        items_.insert_or_assign(name, value);
-        //for(auto it = std::any_cast<std::vector<std::any>>(&items_[name])->begin(); it != std::any_cast<std::vector<std::any>>(&items_[name])->end(); ++it)
-            //std::cout << JSON::AsString(*it) << " ";
-        return *this;
-    }
-    JSON& Set(const std::string& name, const char value[]) {
-        items_.insert_or_assign(name, std::string(value));
-        return *this;
-    }
+template<typename T>
+std::string toJSON(std::string key, T value) {
+    return "\"" + key + "\":" + JSONEscape(std::to_string(value));
+}
 
-    JSON& Set(JSON json);
-    JSON& Remove(std::string key);
-
-    bool Contains(std::string key) { return items_.find(key) != items_.end(); }
-    std::any& Get(std::string key);
-    std::any Get(std::string key) const;
+template<typename T>
+std::string toJSON(const std::vector<T>& v) {
+    std::string out = "[";
     
-    template<typename A>
-    A& Get(std::string key) {
-        auto out = std::any_cast<A>(&Get(key));
-
-        if(out == NULL) {
-            throw; //TODO: an actual exception
-        }
-
-        return *out;
+    for(auto it = v.begin(); it != v.end();) {
+        out += toJSON(*it);
+        if(++it != v.end())
+            out += ", ";
     }
+    
+    out += "]";
+    return out;
+}
 
-    template<typename A>
-    A Get(std::string key) const {
-        auto item = Get(key);
-        auto out = std::any_cast<A>(&item);
+template<typename T>
+std::string toJSON(std::vector<std::pair<std::string, T>> v) {
+    
+    std::string out = "{";
 
-        if(out == NULL) {
-            throw; //TODO: an actual exception
-        }
+    for(auto it = v.begin(); it != v.end();) {
 
-        return *out;
+        out += "\"" + JSONEscape(it->first) + "\":";
+        out += toJSON(it->second);
+
+        if(++it != v.end())
+            out += ", ";
     }
+    out += "}";
+    
+    return out;
+}
 
-    // Returns the object as a json string with or without the starting/ending {} characters
-    std::string AsString(bool strip_ends = false) const;
-    // Returns the item corresponding to key as a json string
-    std::string AsString(const char* key) const;
-    std::string AsString(std::string key) const;
-    // Escapes all special json characters
-    static std::string Escape(std::string str);
-
-    auto begin() { return items_.begin(); }
-    auto end() { return items_.end(); }
-};
 }

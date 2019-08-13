@@ -6,115 +6,115 @@
 
 #include "argument.h"
 #include "redirectors.h"
+#include "console_writer.h"
 
 namespace gcheck {
 namespace {
-/*
-    Static class for keeping track of and logging test results.
-*/
-class Formatter {
-    static std::vector<std::pair<std::string, JSON>> tests_;
+    /*
+        Static class for keeping track of and logging test results.
+    */
+    class Formatter {
+        typedef std::vector<std::pair<std::string, TestData>> TestVector;
+        static std::vector<std::pair<std::string, TestVector>> suites_;
 
-    static double total_points_;
-    static double total_max_points_;
+        static double total_points_;
+        static double total_max_points_;
 
-    static std::string default_format_;
+        static std::string default_format_;
 
-    Formatter() {}; //Disallows instantiation of this class
+        Formatter() {}; //Disallows instantiation of this class
 
 public:
 
-    static bool pretty_;
-    static std::string filename_;
+        static bool pretty_;
+        static std::string filename_;
 
-    static void SetTestData(std::string suite, std::string test, JSON& data);
-    static void SetTotal(double points, double max_points);
-    // Writes the test results to stdout
-    static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
-};
+        static void SetTestData(std::string suite, std::string test, TestData& data);
+        static void SetTotal(double points, double max_points);
+        // Writes the test results to stdout
+        static void WriteReport(bool is_finished = true, std::string suite = "", std::string test = "");
+    };
 
-double Formatter::total_points_ = 0;
-double Formatter::total_max_points_ = 0;
-bool Formatter::pretty_ = true;
-std::string Formatter::filename_ = "";
-std::string Formatter::default_format_ = "horizontal";
-std::vector<std::pair<std::string, JSON>> Formatter::tests_ = std::vector<std::pair<std::string, JSON>>();
+    double Formatter::total_points_ = 0;
+    double Formatter::total_max_points_ = 0;
+    bool Formatter::pretty_ = true;
+    std::string Formatter::filename_ = "";
+    std::string Formatter::default_format_ = "horizontal";
+    std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
 
-void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
-
-    std::fstream file;
-    auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
-
-    if(!pretty_) { //if not pretty, print out the whole json
-        JSON results;
-        for(auto it = tests_.begin(); it != tests_.end(); it++) {
-            results.Set(it->first, it->second);
-        }
-        JSON wrapper;
-        wrapper.Set("points", total_points_)
-            .Set("max_points", total_max_points_)
-            .Set("test_results", results);
         
-        if(!is_finished) {
-            wrapper.Set("ERROR", "Crashed before finished all the tests.");
-            out << wrapper.AsString() << std::endl << std::endl;
-        } else {
-            out << wrapper.AsString()<< std::endl << std::endl;
-        }
-    } else if(!is_finished) { //if pretty and not finished, print out only current test
+    void Formatter::WriteReport(bool is_finished, std::string suite, std::string test) {
 
-        auto it = std::find_if(tests_.begin(), tests_.end(), [suite](std::pair<std::string, JSON> a){ return a.first == suite; });
+        std::fstream file;
+        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
+
+        if(!pretty_) { //if not pretty, print out the whole json
+            std::vector<std::pair<std::string, std::string>> output;
+            output.push_back({"test_results", toJSON(suites_)});
+            output.push_back({"points", std::to_string(total_points_)});
+            output.push_back({"max_points", std::to_string(total_max_points_)});
         
-        auto it2 = std::find_if(it->second.begin(), it->second.end(), 
-            [test](const std::pair<std::string, std::any>& a){ 
-                const JSON* data = std::any_cast<JSON>(&a.second);
-                return data != NULL && a.first == test; 
-            });
-        if(it2 == it->second.end()) {
-            out << "error" << std::endl; //TODO actual error processing
-            return;
-        }
+            if(!is_finished) {
+                output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
+            }
+            
+            out << toJSON(output) << std::endl << std::endl;
+        } else if(!is_finished) { //if pretty and not finished, print out only current test
+
+            auto it = std::find_if(suites_.begin(), suites_.end(), 
+                    [suite](std::pair<std::string, TestVector> a){ return a.first == suite; }
+                );
+            
+            auto it2 = std::find_if(it->second.begin(), it->second.end(), 
+                    [test](const std::pair<std::string, TestData>& a){ 
+                        return a.first == test; 
+                    }
+                );
+                
+            if(it2 == it->second.end()) {
+                out << "error" << std::endl; //TODO actual error processing
+                return;
+            }
 
         out << "suite: " << suite << ", test: " << test << std::endl;
 
-        JSON* test_data = std::any_cast<JSON>(&it2->second);
+        TestData test_data = it2->second;
 
-        out << '\t' << "max_points: " << test_data->Get<double>("max_points") << std::endl;
-        out << '\t' << "format: " << test_data->Get<std::string>("format") << std::endl;
-        out << '\t' << "results: " << test_data->AsString("results") << std::endl;
-    } else { //if pretty and finished, print totals
+        out << '\t' << "max_points: " << test_data.max_points << std::endl;
+        out << '\t' << "format: " << test_data.output_format << std::endl;
+        out << '\t' << "results: " << toJSON(test_data.reports) << std::endl;
+        } else { //if pretty and finished, print totals
         out <<  "total points: " << total_points_ << " / " << total_max_points_ << std::endl;
+        }
+
+        if(filename_ != "")
+            file.close();
     }
 
-    if(filename_ != "")
-        file.close();
-}
+    void Formatter::SetTestData(std::string suite, std::string test, TestData& data) {
 
-void Formatter::SetTestData(std::string suite, std::string test, JSON& data) {
+        auto it = std::find_if(suites_.begin(), suites_.end(), [suite](std::pair<std::string, TestVector> item){ return suite == item.first; });
 
-    auto it = std::find_if(tests_.begin(), tests_.end(), [suite](std::pair<std::string, JSON> item){ return suite == item.first; });
-
-    if(it == tests_.end()) {
-        tests_.push_back({ suite, JSON() });
-        it = tests_.end()-1;
+        if(it == suites_.end()) {
+            suites_.push_back({ suite, TestVector() });
+            it = suites_.end()-1;
+        }
+        it->second.push_back({test, data});
+        
+        WriteReport(false, suite, test);
     }
-    
-    it->second.Set(test, data);
-    
-    WriteReport(false, suite, test);
+
+    void Formatter::SetTotal(double points, double max_points) {
+        total_max_points_ = max_points;
+        total_points_ = points;
+    }
 }
 
-void Formatter::SetTotal(double points, double max_points) {
-    total_max_points_ = max_points;
-    total_points_ = points;
-}
-}
 
 double Test::default_points_ = 1;
 
-Test::Test(std::string suite, std::string test, double points, int priority) : points_(points), suite_(suite), test_(test), priority_(priority) {
-    data_.Set("results", std::vector<JSON>());
-    data_.Set("max_points", points);
+Test::Test(std::string suite, std::string test, double points, int priority) : suite_(suite), test_(test), priority_(priority) {
+    data_.max_points = points;
     test_list_().push_back(this);
 }
 
@@ -127,96 +127,70 @@ double Test::RunTest() {
     
     tout.Restore();
     terr.Restore();
-    data_.Set("cout", tout.str());
-    data_.Set("cerr", terr.str());
+    data_.sout = tout.str();
+    data_.serr = terr.str();
     
-    std::vector<JSON>& results =  data_.Get<std::vector<JSON>>("results");
-    for(auto it = results.begin(); it != results.end(); it++) {
-        if(it->Contains("info_stream")) {
-            it->Set("info", it->Get<std::shared_ptr<std::stringstream>>("info_stream")->str());
-            it->Remove("info_stream");
-        }
-    }
+    data_.CalculatePoints();
     
-    data_.Set("grading_method", grading_method_);
-    data_.Set("format", output_format_);
-    
-    double points = 0;
-    if(grading_method_ == "partial")
-        points = correct_/double(correct_+incorrect_)*points_;
-    else if(grading_method_ == "binary")
-        points = incorrect_ == 0 ? points_ : 0;
-    else if(grading_method_ == "most")
-        points = incorrect_ <= correct_ ? points_ : 0;
-    else if(grading_method_ == "strict_most")
-        points = incorrect_ < correct_ ? points_ : 0;
-    else
-        points = 0;
-    
-    if(std::isinf(points) || std::isnan(points))
-        points = points_;
-        
-    data_.Set("points", points);
-
     Formatter::SetTestData(suite_, test_, data_);
 
-    return points;
+    return data_.points;
 }
 
-void Test::AddReport(JSON data) {
+TestReport& Test::AddReport(TestReport& report) {
     
-    auto increment_correct = [this](JSON& json) { 
-        if(json.Get<bool>("result"))
-            correct_++;
-        else
-            incorrect_++;
+    report.test_class = typeid(*this).name(); 
+    
+    auto increment_correct = [this](bool b) { 
+        b ? data_.correct++ : data_.incorrect++;
     };
 
-    if(data.Get<std::string>("type") == "TC") {
-        std::vector<JSON>& cases = data.Get<std::vector<JSON>>("cases");
-        for(auto it = cases.begin(); it != cases.end(); it++) {
-            it->Set("result", it->AsString("correct") == it->AsString("output"));
-            increment_correct(*it);
+    if(const auto d = std::get_if<TestReport::EqualsData>(&report.data)) {
+        increment_correct(d->result);
+    } else if(const auto d = std::get_if<TestReport::TrueData>(&report.data)) {
+        increment_correct(d->result);
+    } else if(const auto d = std::get_if<TestReport::FalseData>(&report.data)) {
+        increment_correct(d->result);
+    } else if(const auto cases = std::get_if<TestReport::CaseData>(&report.data)) {
+        for(auto it = cases->begin(); it != cases->end(); it++) {
+            increment_correct(it->result);
         }
-    } else
-        increment_correct(data);
+        }
+    data_.reports.push_back(report);
 
-    std::vector<JSON>& results =  data_.Get<std::vector<JSON>>("results");
-    results.push_back(data);
+    return data_.reports[data_.reports.size()-1];
 }
 
 void Test::GradingMethod(std::string method) {
-    grading_method_ = method; 
+    data_.grading_method = method; 
 }
 
 void Test::OutputFormat(std::string format) { 
-    output_format_ = format; 
+    data_.output_format = format; 
 }
 
-std::stringstream& Test::ExpectTrue(bool b, std::string descriptor, JSON json) {
+std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
 
-    auto ss = std::make_shared<std::stringstream>();
-    json.Set("info_stream", ss);
-    json.Set("left", b);
-    json.Set("right", true);
-    json.Set("type", "ET");
-    json.Set("condition", descriptor);
-    AddReport(json.Set("result", b));
+    TestReport report = TestReport::Make<TestReport::TrueData>();
+    auto& data = report.Get<TestReport::TrueData>();
     
-    return *ss;
+    data.value = b;
+    data.descriptor = descriptor;
+    data.result = b;
+    
+    return *AddReport(report).info_stream;
 }
 
-std::stringstream& Test::ExpectFalse(bool b, std::string descriptor, JSON json) {
+std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     
-    auto ss = std::make_shared<std::stringstream>();
-    json.Set("info_stream", ss);
-    json.Set("left", b);
-    json.Set("right", false);
-    json.Set("type", "EF");
-    json.Set("condition", descriptor);
-    AddReport(json.Set("result", !b));
+    TestReport report = TestReport::Make<TestReport::FalseData>();
+    auto& data = report.Get<TestReport::FalseData>();
     
-    return *ss;
+    data.value = b;
+    data.descriptor = descriptor;
+    data.result = !b;
+    
+    return *AddReport(report).info_stream;
 }
 
 void Test::RunTests() {
@@ -226,7 +200,7 @@ void Test::RunTests() {
 
     double total_max = 0;
     for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
-        total_max += (*it)->points_;
+        total_max += (*it)->data_.max_points;
     }
 
     double total = 0;
@@ -240,7 +214,7 @@ void Test::RunTests() {
             c_priority = (*it)->priority_;
         }
         total += (*it)->RunTest();
-        max_so_far += (*it)->points_;
+        max_so_far += (*it)->data_.max_points;
         Formatter::SetTotal(total, total_max);
     }
 }
