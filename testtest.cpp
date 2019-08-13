@@ -45,24 +45,25 @@ std::string asd4(std::list<char> a) {
 }
 
 TEST(suite1, test1) {
-    GradingMethod("partial");
+    
     RangeDistribution<char> dist('a', 'z');
     ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
-    RandomArgument<char> rng(dist);
-    RandomContainerArgument<std::list, char, ChoiceDistribution> rng2(std::list<char>(10), dist2);
-    ConstantArgument cnt(1);
-    //TestCase(10, asd, asd3, RandomArgument<char>(dist), cnt);
+    Random<char> rng(dist);
+    RandomContainer<char, std::list, ChoiceDistribution> rng2(10, dist2);
+    Constant cnt(1);
+    //TestCase(10, asd, asd3, Random<char>(dist), cnt);
     TestCase(1, asd2, asd4, rng2);
     //EXPECT_EQ(true, true);
 }
+/*
 TEST(suite1, test2) {
     Rnd<int> asds;
     RangeDistribution<char> dist('a', 'z');
     ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
-    RandomArgument<char> rng(dist);
-    RandomContainerArgument<std::list, char, ChoiceDistribution> rng2(std::list<char>(100), dist2);
+    Random<char> rng(dist);
+    RandomContainer<char, std::list, ChoiceDistribution> rng2(100, dist2);
     TestCase(1, asd2, asd4, rng2);
-}
+}*/
 /*
 TEST(suite1, test2) {
     OutputFormat("vertical");

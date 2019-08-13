@@ -5,7 +5,8 @@
 #include <any>
 #include <vector>
 #include <type_traits>
-#include "utility.h"
+
+#include "argument.h"
 
 namespace gcheck {
 
@@ -162,11 +163,10 @@ AddToUserObjectList(std::vector<UserObject>& container, C<T> first){
 
 void AddToUserObjectList(std::vector<UserObject>& container, std::string str);
 
-// If the item to be added is a RandomContainerArgument
+// If the item to be added is a RandomContainer
 // Get the value container and call the container version of AddToUserObjectList
-template<template<class> class T, class S, template<typename> class B>
-typename std::enable_if<has_begin_end<T<S>>::value>::type
-AddToUserObjectList(std::vector<UserObject>& container, RandomContainerArgument<T, S, B> first) {
+template <class... Args>
+void AddToUserObjectList(std::vector<UserObject>& container, RandomContainer<Args...> first) {
     AddToUserObjectList(container, first());
 }
 
