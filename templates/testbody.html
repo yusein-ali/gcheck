@@ -1,8 +1,10 @@
-<div id="{{{testid}}}">
-    <div style="width: 100%; padding-left: 20px; background-color: grey;" ng-click="$ctrl.{{{testid}}}=!$ctrl.{{{testid}}}">
-        + {{{testname}}} {{{points}}}
+<div id="{{{testid}}}" class="gcheck gcheck-testbody">
+    <div  class="gcheck gcheck-header gcheck-{{{point_state}}}" ng-init="$ctrl.{{{testid}}}={{{points}}}!={{{max_points}}}" ng-click="$ctrl.{{{testid}}}=!$ctrl.{{{testid}}}">
+        <div style="float: left; width: 30px; text-align: center;" ng-hide="$ctrl.{{{testid}}}">+</div>
+        <div style="float: left; width: 30px; text-align: center;" ng-show="$ctrl.{{{testid}}}">-</div>
+        {{{testname}}} {{{points}}}/{{{max_points}}}
     </div>
-    <div id="{{{testid}}}-content" ng-show="$ctrl.{{{testid}}}" class="ng-hide" style="width: 100%;">
+    <div id="{{{testid}}}-content" ng-show="$ctrl.{{{testid}}}" class="gcheck gcheck-content">
         {{{testcontent}}}
     </div>
 </div>

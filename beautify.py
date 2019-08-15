@@ -56,7 +56,7 @@ def differences(correct, answer):
         else:
             mem[n][m] = max(LCS(n-1, m), LCS(n, m-1), key=len)
         return mem[n][m]
-
+    
     lcs = LCS(len(correct)-1, len(answer)-1)
 
     correct = start + correct + end
@@ -172,18 +172,28 @@ with open(report_filename, 'r') as f:
     report_data = json.load(f)
     test_results = report_data["test_results"]
     total_max_points = report_data["max_points"]
-
+    
 if max_points == -1:
     point_multiplier = 1
 else:
     point_multiplier = max_points/total_max_points
 
 #TODO: sanitize html
+stdio = ""
 tests = ""
 for suite_name, suite_data in test_results.items():
     for test_name, test_data in suite_data.items():
+        
+        if ("stdout" in test_data and test_data["stdout"] != "") or ("stderr" in test_data and test_data["stderr"] != ""):
+            stdio += "Test: " + test_name + "\n"
+            if ("stdout" in test_data and test_data["stdout"] != ""):
+                stdio += "Stdout: " + test_data["stdout"] + "\n"
+            if ("stderr" in test_data and test_data["stderr"] != ""):
+                stdio += "Stderr: " + test_data["stderr"] + "\n"
+            stdio += "--------------------------------------------------------------\n"
+        
         format_name = default_format if 'format' not in test_data else test_data['format']
-
+        
         def ET_func(template, result):
             """Function for replacing condition case data"""
             return replace_entries(template, result["descriptor"], result["value"], result["result"])
@@ -202,20 +212,29 @@ for suite_name, suite_data in test_results.items():
             for case in result.get("cases", []):
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
-
+            
         content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Input", "Output", "Correct")
         content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Left (Output)", "Right (Correct)")
         content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Left (Output)", "Right (Correct)")
         content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Left (Output)", "Right (Correct)")
-
+        
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
-        testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier) + "/" + str(test_data['max_points']*point_multiplier))
+        testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))
+        testbody = testbody.replace('{{{max_points}}}', str(test_data['max_points']*point_multiplier))
+        testbody = testbody.replace('{{{point_state}}}', 
+            "full-points" if test_data["points"] == test_data['max_points'] else 
+            "zero-points" if test_data["points"] == 0 else 
+            "partial-points")
         testbody = testbody.replace('{{{testid}}}', suite_name+test_name)
         testbody = testbody.replace('{{{testcontent}}}', content)
 
         tests += testbody
 
-main = templates["main"].replace('{{{tests}}}', tests)
+if "ERROR" in report_data:
+    stdio += report_data["ERROR"]
+
+main = templates["main"].replace('{{{stdio}}}', stdio)
+main = main.replace('{{{tests}}}', tests)
 
 if output_filename == "stdout":
     print(main)
