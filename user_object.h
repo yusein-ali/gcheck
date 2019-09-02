@@ -119,6 +119,8 @@ UserObject MakeUserObject(const UserObject& v);
 
 UserObject MakeUserObject(const std::vector<UserObject>& v);
 
+UserObject MakeUserObject(const char* v);
+
 template <class T>
 UserObject MakeUserObject(const T& v) {
     return UserObject(v);
@@ -158,6 +160,9 @@ typename std::enable_if<!is_Argument<T>::value && !has_begin_end<T>::value>::typ
 AddToUserObjectList(std::vector<UserObject>& container, T first) {
     container.push_back(MakeUserObject(first));
 }
+
+void AddToUserObjectList(std::vector<UserObject>& container, const std::string& first);
+
 // If the item to be added is an Argument class type (but not container, that comes later)
 // Get the value and put it in the container
 template<class T>
@@ -174,8 +179,6 @@ AddToUserObjectList(std::vector<UserObject>& container, C<T> first){
     std::vector<UserObject> cont(first.begin(), first.end());
     container.push_back(MakeUserObject(cont));
 }
-
-void AddToUserObjectList(std::vector<UserObject>& container, std::string str);
 
 // If the item to be added is a RandomContainer
 // Get the value container and call the container version of AddToUserObjectList

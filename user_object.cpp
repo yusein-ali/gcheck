@@ -22,6 +22,10 @@ UserObject::UserObject(std::vector<UserObject> cont) {
     any_ = std::make_any<std::vector<UserObject>>(cont);
 }
 
+UserObject MakeUserObject(const char* v) {
+    return UserObject(std::string(v));
+}
+
 UserObject MakeUserObject(const UserObject& v) {
     return v;
 }
@@ -30,7 +34,7 @@ UserObject MakeUserObject(const std::vector<UserObject>& v) {
     return UserObject(v);
 }
 
-void AddToUserObjectList(std::vector<UserObject>& container, std::string str) {
+void AddToUserObjectList(std::vector<UserObject>& container, const std::string& str) {
     container.push_back(MakeUserObject(str));
 }
 
