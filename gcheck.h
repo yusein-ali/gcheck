@@ -22,25 +22,45 @@ struct Result {
     Result() : output() { }
     Result(T out) : output(out) { }
     
-    Result(const Result<T, S>& r) { 
-        output = r.output;
-        error = r.error;
-        input = r.input;
-        input_set = r.input_set;
+    Result(const Result<T, S>& r) 
+        : output(r.output), error(r.error), input(r.input), input_set(r.input_set),
+        input_params(r.input_params), input_params_set(r.input_params_set), 
+        output_params(r.output_params), output_params_set(r.output_params_set) { 
     }
     
     Result<T, S>& operator=(const T& item) {
         output = item;
         return *this;
     }
+    Result<T, S>& operator=(const Result<T, S>& r) {
+        output = r.output;
+        error = r.error;
+        input = r.input;
+        input_set = r.input_set;
+        input_params = r.input_params;
+        input_params_set = r.input_params_set; 
+        output_params = r.output_params;
+        output_params_set = r.output_params_set;
+        return *this;
+    }
     
     void SetInput(S data) { input = data; input_set = true; }
     const S& GetInput() const { return input; }
+    void SetInputParams(std::string data) { input_params = data; input_params_set = true; }
+    std::string GetInputParams() const { return input_params; }
+    void SetOutputParams(std::string data) { output_params = data; output_params_set = true; }
+    std::string GetOutputParams() const { return output_params; }
     
     bool IsSet() { return input_set; }
+    bool IsInputParamsSet() { return input_params_set; }
+    bool IsOutputParamsSet() { return output_params_set; }
 private:
     S input;
     bool input_set = false;
+    std::string input_params;
+    bool input_params_set;
+    std::string output_params;
+    bool output_params_set;
 };
 
 struct TestReport {
@@ -77,9 +97,12 @@ struct TestReport {
     struct CaseEntry {
         std::vector<UserObject> input_args;
         std::string correct;
-        std::string input;
+        JSON input;
+        std::string input_params;
+        std::string output_params;
         std::string error;
         std::string output;
+        JSON output_json;
         bool result;
     };
     typedef std::vector<CaseEntry> CaseData;
@@ -266,18 +289,26 @@ typename std::enable_if<is_callable<F, Args...>::value>
         gcheck::advance(args...); 
         
         it->input_args = MakeUserObjectList(args...);
-        auto correct_ans = Result(correct(args...)).output;
+        auto correct_res = Result(correct(args...));
+        auto correct_ans = correct_res.output;
         it->correct = MakeUserObject(correct_ans).string();
         
-        Result res(under_test(args...));
-        if(res.IsSet())
-            it->input = res.GetInput();
+        if(correct_res.IsSet())
+            it->input = toJSON(correct_res.GetInput());
         else
             it->input = toJSON(it->input_args);
         
+        if(correct_res.IsInputParamsSet())
+            it->input_params = correct_res.GetInputParams();
+        
+        Result res(under_test(args...));
         it->error = res.error;
         it->output = MakeUserObject(res.output).string();
+        it->output_json = MakeUserObject(res.output).json();
         it->result = res.output == correct_ans;
+            
+        if(correct_res.IsOutputParamsSet())
+            it->output_params = correct_res.GetOutputParams();
     }
     AddReport(report);
 }

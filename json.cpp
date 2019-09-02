@@ -66,8 +66,12 @@ JSON toJSON(const TestReport::CaseEntry& e) {
     std::string out = "{";
     
     out += toJSON("output", e.output) + ',';
+    out += toJSON("output_json", e.output_json) + ',';
     out += toJSON("result", e.result) + ',';
     out += toJSON("input", e.input) + ',';//"\"input\":" + toJSON(e.input) + ',';
+    out += toJSON("input_args", toJSON(e.input_args)) + ',';
+    out += toJSON("input_params", toJSON(e.input_params)) + ',';
+    out += toJSON("output_params", toJSON(e.output_params)) + ',';
     out += toJSON("correct", e.correct);
     
     out += "}";
