@@ -13,32 +13,81 @@
 #endif
 #include <string>
 #include <sstream>
+#include <iostream>
 
 namespace gcheck {
     
-FileInjecter::FileInjecter(FILE* stream, std::string str) {
+FileInjecter::FileInjecter(FILE* stream, std::string str, std::istream* associate) 
+        : swapped_(false), closed_(true), associate_(associate) {
+            
+    if(associate_ != nullptr)
+        original_state_ = associate_->rdstate();
+    
     original_ = stream;
     save_ = dup(fileno(stream));
-    int fds[2];
-    pipe(fds);
-    out_ = fdopen(fds[1], "w");
-    dup2(fds[0], fileno(stream));
-    close(fds[0]);
+    
+    Capture();
     
     if(str.length() != 0)
         Write(str);
 }
 
 FileInjecter::~FileInjecter() {
-    dup2(save_, fileno(original_));
-    fclose(out_);
+    Restore();
     close(save_);
 }
 
-void FileInjecter::Write(std::string str) {
+FileInjecter& FileInjecter::Write(std::string str) {
+    if(!swapped_ || closed_) Capture();
+    
     fputs(str.c_str(), out_);
     fflush(out_);
+    
+    return *this;
 }
+
+FileInjecter& FileInjecter::Capture() {
+    if(swapped_) {
+        if(!closed_) return *this;
+        
+        Restore();
+    } else if(!closed_) {
+        Close();
+    }
+    
+    int fds[2];
+    pipe(fds);
+    out_ = fdopen(fds[1], "w");
+    dup2(fds[0], fileno(original_));
+    close(fds[0]);
+    
+    swapped_ = true;
+    closed_ = false;
+    
+    return *this;
+}
+
+FileInjecter& FileInjecter::Restore() {
+    if(!closed_) Close();
+    if(!swapped_) return *this;
+        
+    dup2(save_, fileno(original_));
+    
+    swapped_ = false;
+    associate_->clear(original_state_);
+    
+    return *this;
+}
+
+FileInjecter& FileInjecter::Close() {
+    if(closed_) return *this;
+    
+    fclose(out_);
+    closed_ = true;
+    
+    return *this;
+}
+
 
 
 FileCapturer::FileCapturer(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
@@ -96,26 +145,30 @@ std::string FileCapturer::str() {
     return ss.str();
 }
 
-void FileCapturer::Restore() {
-    if(!is_swapped_) return;
+FileCapturer& FileCapturer::Restore() {
+    if(!is_swapped_) return *this;
     is_swapped_ = false;
 
     fflush(original_);
     dup2(save_, fileno_);
     close(save_);
+    
+    return *this;
 }
 
-void FileCapturer::Capture() {
+FileCapturer& FileCapturer::Capture() {
     if(new_ == NULL) throw; // TODO: better exception
-    if(is_swapped_) return;
+    if(is_swapped_) return *this;
     is_swapped_ = true;
     
     fflush(original_);
     save_ = dup(fileno_);
     dup2(fileno(new_), fileno_);
+    
+    return *this;
 }
 
-StdinInjecter::StdinInjecter(std::string str) : FileInjecter(stdin, str) {}
+StdinInjecter::StdinInjecter(std::string str) : FileInjecter(stdin, str, &std::cin) {}
 StdoutCapturer::StdoutCapturer() : FileCapturer(stdout) {}
 StderrCapturer::StderrCapturer() : FileCapturer(stderr) {}
 

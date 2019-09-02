@@ -2,29 +2,40 @@
 
 #include <string>
 #include <stdio.h>
+#include <ios>
 
 namespace gcheck {
     
 /* 
     Class for injecting input from a file (e.g. stdin).
+    State of associate istream gets reset back to the original after Restore().
 */
 class FileInjecter {
+    bool swapped_;
+    bool closed_;
     int save_;
     FILE* original_;
     FILE* out_;
+    std::istream* associate_;
+    std::ios_base::iostate original_state_;
 public:
     /*
         Constructs an injector to stream 'stream'.
         FileInjecter(stdin) or StdinInjecter() for standard input injection.
     */
-    FileInjecter(FILE* stream, std::string str = "");
+    FileInjecter(FILE* stream, std::string str = "", std::istream* associate = nullptr);
     ~FileInjecter();
 
-    void Write(std::string str);
+    FileInjecter& Write(std::string str);
+    FileInjecter& Capture();
+    FileInjecter& Restore();
+    FileInjecter& Close();
+    
+    FileInjecter& operator<<(std::string str) { return Write(str); }
 };
 /*
     Injects to stdin.
-    Equivalent to FileInjecter(stdin).
+    Equivalent to FileInjecter(stdin, str, &std::cin).
 */
 class StdinInjecter : public FileInjecter {
 public:
@@ -52,8 +63,8 @@ public:
     ~FileCapturer();
     
     std::string str();
-    void Restore();
-    void Capture();
+    FileCapturer& Restore();
+    FileCapturer& Capture();
 };
 
 /*
