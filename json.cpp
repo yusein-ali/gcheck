@@ -4,7 +4,7 @@
 
 namespace gcheck {
 
-std::string JSONEscape(std::string str) {
+JSON JSONEscape(std::string str) {
     
     std::string escapees = "\\\n\t\b\f\r\"";
     std::vector<std::string> replacees{"\\\\", "\\n", "\\t", "\\b", "\\f", "\\r", "\\\""};
@@ -38,27 +38,29 @@ std::string JSONEscape(std::string str) {
     return str;
 }
 
-std::string toJSON(std::string key, bool value) {
-    return "\"" + key + "\":" + (value ? "true" : "false");
+JSON toJSON(const std::string& key, const JSON& value) {
+    return "\"" + key + "\":" + value;
 }
 
-std::string toJSON(std::string key, std::string value) {
-    return "\"" + key + "\":\"" + JSONEscape(value) + "\"";
+JSON toJSON(const std::string& key, const char* value) {
+    return toJSON(key, std::string(value));
 }
 
-std::string toJSON(std::string key, const char* value) {
-    return "\"" + key + "\":\"" + JSONEscape(value) + "\"";
+JSON toJSON(const std::string& str) {
+    return "\"" + JSONEscape(str) + "\"";
 }
 
-std::string toJSON(const std::string& str) {
+JSON toJSON(const JSON& str) {
     return str;
 }
 
+JSON toJSON(bool value) {
+    return value ? "true" : "false";
 std::string toJSON(const UserObject& o) {
     return JSONEscape(o.string());
 }
 
-std::string toJSON(const TestReport::CaseEntry& e) {
+JSON toJSON(const TestReport::CaseEntry& e) {
     std::string out = "{";
     
     out += toJSON("output", e.output) + ',';
@@ -70,7 +72,7 @@ std::string toJSON(const TestReport::CaseEntry& e) {
     return out;
 }
 
-std::string toJSON(const TestReport& r) {
+JSON toJSON(const TestReport& r) {
     
     std::string out = "{";
     
@@ -105,7 +107,7 @@ std::string toJSON(const TestReport& r) {
     return out;
 }
 
-std::string toJSON(const TestData& data) {
+JSON toJSON(const TestData& data) {
     
     std::string out = "{";
     

@@ -50,10 +50,10 @@ namespace {
         auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
 
         if(!pretty_) { //if not pretty, print out the whole json
-            std::vector<std::pair<std::string, std::string>> output;
+            std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", toJSON(suites_)});
-            output.push_back({"points", std::to_string(total_points_)});
-            output.push_back({"max_points", std::to_string(total_max_points_)});
+            output.push_back({"points", toJSON(total_points_)});
+            output.push_back({"max_points", toJSON(total_max_points_)});
             
             if(!ran_all)
                 output.push_back({"WARNING", "\"Some tests weren't run because prerequisite tests weren't passed first.\""});
@@ -82,10 +82,10 @@ namespace {
         auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
 
         if(!pretty_) { //if not pretty, print out the whole json
-            std::vector<std::pair<std::string, std::string>> output;
+            std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", toJSON(suites_)});
-            output.push_back({"points", std::to_string(total_points_)});
-            output.push_back({"max_points", std::to_string(total_max_points_)});
+            output.push_back({"points", toJSON(total_points_)});
+            output.push_back({"max_points", toJSON(total_max_points_)});
             
             output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
             
