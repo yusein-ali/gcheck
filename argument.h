@@ -294,8 +294,8 @@ advance(T& item) { (void)item; }
 // Calls .Next() on all arguments inheriting from NextType
 template<class T, class... Args>
 void advance(T& first, Args&... rest) {
-    advance(first);
-    advance(rest...);
+    gcheck::advance(first);
+    gcheck::advance(rest...);
 }
 
 // Shorthand for Random, Note: no template argument deduction
