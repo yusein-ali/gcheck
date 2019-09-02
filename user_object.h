@@ -8,37 +8,11 @@
 #include <sstream>
 
 #include "argument.h"
+#include "json.h"
 
 namespace gcheck {
 
-namespace detail{
-    
-    template<class>
-    struct sfinae_bool {};
-    template<class T>
-    struct sfinae_true : sfinae_bool<T>, std::true_type{};
-    template<class T>
-    struct sfinae_false : sfinae_bool<T>, std::false_type{};
-    
-    // AND operator
-    template<class T, class S>
-    sfinae_false<T> operator*(sfinae_bool<T>, sfinae_bool<S>);
-    template<class T, class S>
-    sfinae_true<T> operator*(sfinae_true<T>, sfinae_true<S>);
-    
-    template<class T>
-    static auto has_string_operator(int) -> sfinae_true<decltype(T::operator std::string)>;
-    template<class T>
-    static auto has_string_operator(long) -> sfinae_false<T>;
-    template<class T>
-    static auto has_tostring(int) -> sfinae_true<decltype(to_string(std::declval<T>()))>;
-    template<class T>
-    static auto has_tostring(long) -> sfinae_false<T>;
-    template<class T>
-    static auto has_std_tostring(int) -> sfinae_true<decltype(std::to_string(std::declval<T>()))>;
-    template<class T>
-    static auto has_std_tostring(long) -> sfinae_false<T>;
-    
+namespace detail {
     template<class T>
     static auto has_begin(int) -> sfinae_true<decltype(std::declval<T>().begin())>;
     template<class T>
@@ -49,13 +23,6 @@ namespace detail{
     static auto has_end(long) -> sfinae_false<T>;
 }
 
-template<class T>
-struct has_string_operator : decltype(detail::has_tostring<T>(0)){};
-template<class T>
-struct has_tostring : decltype(detail::has_tostring<T>(0)){};
-template<class T>
-struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
-
 /*
     Wrapper class for anything passed by users from tests.
     Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "", 
@@ -64,6 +31,7 @@ struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
 class UserObject {
     std::any any_;
     std::string as_string_;
+    JSON as_json_;
     
     void SetString(std::string item) { as_string_ = item; }
     void SetString(const char* item) { as_string_ = item; }
@@ -78,12 +46,14 @@ class UserObject {
     template<typename T>
     typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value>::type
     SetString(T* item) {
-        if(item == nullptr)
+        if(item == nullptr) {
             as_string_ = "nullptr";
-        else {
+            as_json_ = "null";
+        } else {
             std::stringstream ss;
             ss << static_cast<const void*>(item);
             as_string_ = ss.str(); 
+            as_json_ = "\"" + as_string_ + "\"";
         }
     }
     template<typename T>
@@ -98,6 +68,7 @@ class UserObject {
     }
     void SetString(decltype(nullptr)) {
         as_string_ = "nullptr";
+        as_json_ = "null";
     }
 public:
     UserObject() {}
@@ -106,10 +77,13 @@ public:
 
     template<typename T>
     UserObject(T item) {
+        as_json_ = toJSON(item);
         SetString(item);
         any_ = std::make_any<T>(item);
     }
     
+    
+    std::string json() const { return as_json_; }
     std::string string() const { return as_string_; }
     std::any& any() { return any_; }
     const std::any& any() const { return any_; }

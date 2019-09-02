@@ -56,8 +56,10 @@ JSON toJSON(const JSON& str) {
 
 JSON toJSON(bool value) {
     return value ? "true" : "false";
-std::string toJSON(const UserObject& o) {
-    return JSONEscape(o.string());
+}
+
+JSON toJSON(const UserObject& o) {
+    return o.json();
 }
 
 JSON toJSON(const TestReport::CaseEntry& e) {
