@@ -28,8 +28,8 @@ class Distribution {
 protected:
     std::default_random_engine generator_; 
 public:
-    Distribution() {}
-    Distribution(unsigned int seed) : generator_(seed) {}
+    Distribution() : generator_(std::random_device()()) {}
+    Distribution(uint32_t seed) : generator_(seed == UINT32_MAX ? std::random_device()() : seed) {}
 
     //virtual Distribution Clone() = 0;
     virtual A operator()() = 0;
@@ -41,9 +41,9 @@ class ChoiceDistribution : public Distribution<A> {
     std::vector<A> choices_;
     std::uniform_int_distribution<int> distribution_;
 public:
-    ChoiceDistribution(const DistributionInfo<A, ChoiceDistribution>& info) : choices_(info.choices), distribution_(0, info.choices.size()-1) {}
-    ChoiceDistribution(const std::vector<A>& choices) : choices_(choices), distribution_(0, choices.size()-1) {}
-    ChoiceDistribution(const std::initializer_list<A>& choices) : choices_(choices), distribution_(0, choices_.size()-1) {}
+    ChoiceDistribution(const DistributionInfo<A, ChoiceDistribution>& info) : Distribution<A>(info.seed), choices_(info.choices), distribution_(0, info.choices.size()-1) {}
+    ChoiceDistribution(const std::vector<A>& choices, uint32_t seed = UINT32_MAX) : Distribution<A>(seed), choices_(choices), distribution_(0, choices.size()-1) {}
+    ChoiceDistribution(const std::initializer_list<A>& choices, uint32_t seed = UINT32_MAX) : Distribution<A>(seed), choices_(choices), distribution_(0, choices_.size()-1) {}
     A operator()() { return choices_[distribution_(Distribution<A>::generator_)]; }
 };
 
@@ -65,9 +65,9 @@ class RangeDistribution<A, typename std::enable_if<std::is_floating_point<A>::va
     
 public:
 
-    RangeDistribution(const DistributionInfo<A, RangeDistribution>& info) : start_(info.start), end_(info.end), distribution_(info.start, info.end) {}
-    RangeDistribution(A start = std::numeric_limits<A>::min(), A end = std::numeric_limits<A>::max()) : start_(start), end_(end), distribution_(start, end) {}
-    RangeDistribution(A start, A end, unsigned int seed) : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
+    RangeDistribution(const DistributionInfo<A, RangeDistribution>& info) : Distribution<A>(info.seed), start_(info.start), end_(info.end), distribution_(info.start, info.end) {}
+    RangeDistribution(A start = std::numeric_limits<A>::min(), A end = std::numeric_limits<A>::max(), uint32_t seed = UINT32_MAX) 
+        : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
     RangeDistribution(const RangeDistribution<A>& dist) : Distribution<A>(dist), start_(dist.start_), end_(dist.end_), distribution_(dist.distribution_) {}
     A operator()() { return distribution_(Distribution<A>::generator_); }
 };
@@ -84,7 +84,6 @@ class RangeDistribution<A, typename std::enable_if<!std::is_floating_point<A>::v
 public:
 
     RangeDistribution(const DistributionInfo<A, RangeDistribution>& info) : start_(info.start), end_(info.end), distribution_(0, (dist_t)(info.end-info.start)) {}
-    RangeDistribution(A start, A end) : start_(start), end_(end), distribution_(0, (dist_t)(end-start)) {}
     RangeDistribution(A start, A end, uint32_t seed) : Distribution<A>(seed), start_(start), end_(end), distribution_(0, (dist_t)(end-start)) {}
     A operator()() { return start_+distribution_(Distribution<A>::generator_); }
 };
@@ -93,7 +92,7 @@ template<typename T>
 struct DistributionInfo<T, ChoiceDistribution> {
     std::vector<T> choices;
     uint32_t seed;
-    DistributionInfo(const std::initializer_list<T>& list, uint32_t seed = UINT32_MAX) : choices(list), seed(seed) {}
+    DistributionInfo(const std::vector<T>& list, uint32_t seed = UINT32_MAX) : choices(list), seed(seed) {}
 };
 
 template<typename T>
@@ -104,6 +103,8 @@ struct DistributionInfo<T, RangeDistribution> {
     DistributionInfo(T start, T end, uint32_t seed = UINT32_MAX) : start(start), end(end), seed(seed) {}
 };
 
+template<typename T>
+DistributionInfo(const std::vector<T>& list, uint32_t seed = UINT32_MAX) -> DistributionInfo<T, ChoiceDistribution>;
 template<typename T>
 DistributionInfo(const std::initializer_list<T>& list, uint32_t seed = UINT32_MAX) -> DistributionInfo<T, ChoiceDistribution>;
 template<typename T>
@@ -144,14 +145,20 @@ template <typename A, template<typename> class B = RangeDistribution>
 class Random : public Argument<A>, public NextType<A> {
     B<A> distribution_;
 public:
-    template<typename... Args>
-    Random(const Args&... args) : distribution_(args...) {}
+    Random(const A& start, const A& end, uint32_t seed = UINT32_MAX) : distribution_(start, end, seed) {}
+    Random(const std::vector<A>& choices, uint32_t seed = UINT32_MAX) : distribution_(choices, seed) {}
     Random(const DistributionInfo<A, B>& info) : distribution_(info) {}
     Random(Random<A, B>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
     Random(const Random<A, B>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
     
     A Next() { return this->value_ = distribution_(); };
 };
+template<typename A>
+Random(const A& start, const A& end, uint32_t seed = UINT32_MAX) -> Random<A, RangeDistribution>;
+template<typename A>
+Random(const std::vector<A>& choices, uint32_t seed = UINT32_MAX) -> Random<A, ChoiceDistribution>;
+template<typename A>
+Random(const std::initializer_list<A>& choices, uint32_t seed = UINT32_MAX) -> Random<A, ChoiceDistribution>;
 
 /*
     An argument that fills a container with random values from a distribution.
@@ -159,10 +166,10 @@ public:
 template <typename T, template <typename> class Container = std::vector, template<typename> class Distribution = RangeDistribution>
 class RandomContainer : public Argument<Container<T>>, public NextType<Container<T>> {
 public:
-    template<typename... Args>
-    RandomContainer(size_t size, Args... args) : Argument<Container<T>>(Container<T>(size)), distribution_(args...) {}
-    template<typename... Args>
-    RandomContainer(const Container<T>& container, Args... args) : Argument<Container<T>>(container), distribution_(args...) {}
+    RandomContainer(size_t size, const std::vector<T>& choices) : Argument<Container<T>>(Container<T>(size)), distribution_(choices) {}
+    RandomContainer(size_t size, const T& start, const T& end) : Argument<Container<T>>(Container<T>(size)), distribution_(start, end) {}
+    RandomContainer(const Container<T>& container, const std::vector<T>& choices) : Argument<Container<T>>(container), distribution_(choices) {}
+    RandomContainer(const Container<T>& container, const T& start, const T& end) : Argument<Container<T>>(container), distribution_(start, end) {}
     RandomContainer(size_t size, const DistributionInfo<T, Distribution>& info) : Argument<Container<T>>(Container<T>(size)), distribution_(info) {}
     RandomContainer(const Container<T>& container, const DistributionInfo<T, Distribution>& info) : Argument<Container<T>>(container), distribution_(info) {}
     RandomContainer(RandomContainer<T, Container, Distribution>& rnd) : Argument<Container<T>>(rnd()), distribution_(rnd.distribution_) {}
@@ -187,9 +194,13 @@ private:
 };
 
 template<typename T>
+RandomContainer(size_t size, const std::vector<T>& choices) -> RandomContainer<T, std::vector, ChoiceDistribution>;
+template<typename T>
 RandomContainer(size_t size, const std::initializer_list<T>& choices) -> RandomContainer<T, std::vector, ChoiceDistribution>;
 template<typename T>
 RandomContainer(size_t size, const T& start, const T& end) -> RandomContainer<T, std::vector, RangeDistribution>;
+template<typename T, template <typename> class Container>
+RandomContainer(const Container<T>& container, const std::vector<T>& choices) -> RandomContainer<T, Container, ChoiceDistribution>;
 template<typename T, template <typename> class Container>
 RandomContainer(const Container<T>& container, const std::initializer_list<T>& choices) -> RandomContainer<T, Container, ChoiceDistribution>;
 template<typename T, template <typename> class Container>
@@ -200,10 +211,10 @@ template <typename T, template <typename> class Container = std::vector, templat
 class RandomSizeContainer : public RandomContainer<T, Container, ContentDistribution>  {
 public:
 
-    template<class... Args>
-    RandomSizeContainer(size_t min_size, size_t max_size, const Args&... args) : RandomContainer<T, Container, ContentDistribution>(0, args...), rnd_(min_size, max_size) {}
-    template<class... Args>
-    RandomSizeContainer(std::vector<size_t> choices, const Args&... args) : RandomContainer<T, Container, ContentDistribution>(0, args...), rnd_(choices) {}
+    RandomSizeContainer(size_t min_size, size_t max_size, const std::vector<T>& choices2) : RandomContainer<T, std::vector, ContentDistribution>(0, choices2), rnd_(min_size, max_size) {}
+    RandomSizeContainer(size_t min_size, size_t max_size, const T& start, const T& end) : RandomContainer<T, std::vector, ContentDistribution>(0, start, end), rnd_(min_size, max_size) {}
+    RandomSizeContainer(std::vector<size_t> choices, const std::vector<T>& choices2) : RandomContainer<T, std::vector, ContentDistribution>(0, choices2), rnd_(choices) {}
+    RandomSizeContainer(std::vector<size_t> choices, const T& start, const T& end) : RandomContainer<T, std::vector, ContentDistribution>(0, start, end), rnd_(choices) {}
     RandomSizeContainer(const DistributionInfo<size_t, SizeDistribution>& size_info, const DistributionInfo<T, ContentDistribution>& content_info) : RandomContainer<T, Container, ContentDistribution>(0, content_info), rnd_(size_info) {}
     RandomSizeContainer(RandomSizeContainer<T, Container, SizeDistribution, ContentDistribution>&& rnd) : RandomContainer<T, Container, ContentDistribution>(rnd), rnd_(rnd.rnd_) {}
     RandomSizeContainer(const RandomSizeContainer<T, Container, SizeDistribution, ContentDistribution>& rnd) : RandomContainer<T, Container, ContentDistribution>(rnd), rnd_(rnd.rnd_) {}
@@ -218,13 +229,23 @@ private:
 };
 
 template<typename T>
+RandomSizeContainer(size_t min_size, size_t max_size, const std::vector<T>& choices) -> RandomSizeContainer<T, std::vector, RangeDistribution, ChoiceDistribution>;
+template<typename T>
 RandomSizeContainer(size_t min_size, size_t max_size, const std::initializer_list<T>& choices) -> RandomSizeContainer<T, std::vector, RangeDistribution, ChoiceDistribution>;
 template<typename T>
 RandomSizeContainer(size_t min_size, size_t max_size, const T& start, const T& end) -> RandomSizeContainer<T, std::vector, RangeDistribution, RangeDistribution>;
 template<typename T>
+RandomSizeContainer(std::vector<size_t> choices, const std::vector<T>& choices2) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, ChoiceDistribution>;
+template<typename T>
 RandomSizeContainer(std::vector<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, ChoiceDistribution>;
 template<typename T>
+RandomSizeContainer(std::initializer_list<size_t> choices, const std::vector<T>& choices2) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, ChoiceDistribution>;
+template<typename T>
+RandomSizeContainer(std::initializer_list<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, ChoiceDistribution>;
+template<typename T>
 RandomSizeContainer(std::vector<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, RangeDistribution>;
+template<typename T>
+RandomSizeContainer(std::initializer_list<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector, ChoiceDistribution, RangeDistribution>;
 
 // An argument that sequentially takes items from a vector
 template <class T>
@@ -244,7 +265,9 @@ public:
 };
 
 template <class T>
-SequenceArgument(const std::initializer_list<T>& list) -> SequenceArgument<T>;
+SequenceArgument(const std::vector<T>& v) -> SequenceArgument<T>;
+template <class T>
+SequenceArgument(const std::initializer_list<T>& v) -> SequenceArgument<T>;
 
 // is_Random<A>::value; true if A is Random or RandomContainer, false otherwise
 template<typename A>
