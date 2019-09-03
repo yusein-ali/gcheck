@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import argparse
+import html
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest='out', type=str, default="stdout")
@@ -22,6 +23,10 @@ report_filename = args.input
 output_filename = args.out
 max_points = args.max_points
 templates = {}
+
+def sanitize_replace(original, substr, replacor):
+    replacor = html.escape(replacor)
+    return original.replace(substr, html.escape(replacor))
 
 def differences(correct, answer):
     """Returns a tuple with two lists of tuples with the difference locations and lengths"""
@@ -159,9 +164,9 @@ def get_table(template, results, replace_func):
     return hor
 
 def replace(templ, results, typ, func, input_text, output_text, correct_text):
-    templ = templates[format_name].replace("{{{input_header}}}", input_text)
-    templ = templ.replace("{{{output_header}}}", output_text)
-    templ = templ.replace("{{{correct_header}}}", correct_text)
+    templ = sanitize_replace(templates[format_name], "{{{input_header}}}", input_text)
+    templ = sanitize_replace(templ, "{{{output_header}}}", output_text)
+    templ = sanitize_replace(templ, "{{{correct_header}}}", correct_text)
     return get_table(templ, [res for res in results if res["type"] == typ], func)
 
 for key, file_name in template_filenames.items():
@@ -214,9 +219,9 @@ for suite_name, suite_data in test_results.items():
             return content
             
         content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Input", "Output", "Correct")
-        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Left (Output)", "Right (Correct)")
-        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Left (Output)", "Right (Correct)")
-        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Left (Output)", "Right (Correct)")
+        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Right (Output)", "Left (Correct)")
+        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Right (Output)", "Left (Correct)")
+        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Right (Output)", "Left (Correct)")
         
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
         testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))
@@ -225,7 +230,7 @@ for suite_name, suite_data in test_results.items():
             "full-points" if test_data["points"] == test_data['max_points'] else 
             "zero-points" if test_data["points"] == 0 else 
             "partial-points")
-        testbody = testbody.replace('{{{testid}}}', suite_name+test_name)
+        testbody = sanitize_replace(testbody, '{{{testid}}}', suite_name+test_name)
         testbody = testbody.replace('{{{testcontent}}}', content)
 
         tests += testbody
@@ -233,7 +238,7 @@ for suite_name, suite_data in test_results.items():
 if "ERROR" in report_data:
     stdio += report_data["ERROR"]
 
-main = templates["main"].replace('{{{stdio}}}', stdio)
+main = sanitize_replace(templates["main"], '{{{stdio}}}', stdio)
 main = main.replace('{{{tests}}}', tests)
 
 if output_filename == "stdout":
