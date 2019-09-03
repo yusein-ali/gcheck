@@ -1,13 +1,33 @@
 #include "json.h"
+
+#include <cstdio>
+
 #include "user_object.h"
 #include "gcheck.h"
 
 namespace gcheck {
+    
+std::string Escapees() {
+    std::string escapees = "\\\"";
+    for(char c = 0; c < 0x20; c++) {
+        escapees.push_back(c);
+    }
+    return escapees;
+}
+std::vector<std::string> Replacees() {
+    std::vector<std::string> replacees{"\\\\", "\\\""};
+    for(char c = 0; c < 0x20; c++) {
+        replacees.push_back("\\u0000");
+        std::sprintf((char*)replacees.back().data()+2, "%.4X", c);
+    }
+    return replacees;
+}
 
 JSON JSONEscape(std::string str) {
     
-    std::string escapees = "\\\n\t\b\f\r\"";
-    std::vector<std::string> replacees{"\\\\", "\\n", "\\t", "\\b", "\\f", "\\r", "\\\""};
+    static const std::string escapees = Escapees();
+    static const std::vector<std::string> replacees = Replacees();
+    
     size_t pos = 0;
     int index = 0;
     size_t min = std::string::npos;
