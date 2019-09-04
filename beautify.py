@@ -209,7 +209,7 @@ for suite_name, suite_data in test_results.items():
         
         def EE_func(template, result):
             """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["right"], result["left"])
+            return replace_entries(template, result["descriptor"], result["left"], result["right"])
             
         def TC_func(template, result):
             """Function for replacing test case data"""
@@ -221,7 +221,7 @@ for suite_name, suite_data in test_results.items():
         content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Input", "Output", "Correct")
         content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Right (Output)", "Left (Correct)")
         content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Right (Output)", "Left (Correct)")
-        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Right (Output)", "Left (Correct)")
+        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
         
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
         testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))
