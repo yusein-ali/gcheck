@@ -19,9 +19,6 @@ namespace gcheck {
     
 FileInjecter::FileInjecter(FILE* stream, std::string str, std::istream* associate) 
         : swapped_(false), closed_(true), associate_(associate) {
-            
-    if(associate_ != nullptr)
-        original_state_ = associate_->rdstate();
     
     original_ = stream;
     save_ = dup(fileno(stream));
@@ -55,6 +52,9 @@ FileInjecter& FileInjecter::Capture() {
         Close();
     }
     
+    if(associate_ != nullptr)
+        original_state_ = associate_->rdstate();
+    
     int fds[2];
     pipe(fds);
     out_ = fdopen(fds[1], "w");
@@ -71,10 +71,14 @@ FileInjecter& FileInjecter::Restore() {
     if(!closed_) Close();
     if(!swapped_) return *this;
         
+    char buffer[1024];
+    while(fgets(buffer, 1024, original_) != NULL);
+    
     dup2(save_, fileno(original_));
     
     swapped_ = false;
-    associate_->clear(original_state_);
+    if(associate_ != nullptr)
+        associate_->clear(original_state_);
     
     return *this;
 }
