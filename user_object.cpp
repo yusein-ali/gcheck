@@ -3,12 +3,6 @@
 
 namespace gcheck {
     
-UserObject::UserObject(std::any item) {
-    SetString(item);
-    as_json_ = "null";
-    any_ = item;
-}
-
 UserObject::UserObject(std::vector<UserObject> cont) {
     as_string_ = "[";
     for(auto it = cont.begin(); it != cont.end();) {
@@ -21,7 +15,6 @@ UserObject::UserObject(std::vector<UserObject> cont) {
     }
     as_string_ += "]";
     as_json_ = toJSON(cont);
-    any_ = std::make_any<std::vector<UserObject>>(cont);
 }
 
 UserObject MakeUserObject(const char* v) {

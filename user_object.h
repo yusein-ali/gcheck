@@ -2,7 +2,6 @@
 
 #include <string>
 #include <unordered_map>
-#include <any>
 #include <vector>
 #include <type_traits>
 #include <sstream>
@@ -29,7 +28,6 @@ namespace detail {
         in that order by first available method.
  */
 class UserObject {
-    std::any any_;
     std::string as_string_;
     JSON as_json_;
     
@@ -72,21 +70,16 @@ class UserObject {
     }
 public:
     UserObject() {}
-    UserObject(std::any item);
     UserObject(std::vector<UserObject> cont);
 
     template<typename T>
     UserObject(T item) {
         as_json_ = toJSON(item);
         SetString(item);
-        any_ = std::make_any<T>(item);
     }
-    
     
     std::string json() const { return as_json_; }
     std::string string() const { return as_string_; }
-    std::any& any() { return any_; }
-    const std::any& any() const { return any_; }
 };
 
 UserObject MakeUserObject(const UserObject& v);
@@ -125,7 +118,7 @@ UserObject MakeUserObject(const std::tuple<Args...>& v) {
 template<class T>
 struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0)){};
 
-// MakeUserObjectList: function for making a vector containing std::any types from any number of any types of arguments
+// MakeUserObjectList: function for making a vector containing UserObject types from any number of any types of arguments
 // If the type is an argument type, insert its value instead of the object itself
 
 // If the item to be added is not an Argument class type, just add it to the list
