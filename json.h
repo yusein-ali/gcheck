@@ -134,4 +134,20 @@ JSON toJSON(const std::vector<std::pair<std::string, T>>& v) {
     return out;
 }
 
+// Theoretically improves compile times with precompiled gcheck TODO: benchmark
+extern template JSON toJSON(const std::string& key, const int& value);
+extern template JSON toJSON(const int& v);
+extern template JSON toJSON(const std::string& key, const unsigned int& value);
+extern template JSON toJSON(const unsigned int& v);
+extern template JSON toJSON(const std::string& key, const long& value);
+extern template JSON toJSON(const long& v);
+extern template JSON toJSON(const std::string& key, const unsigned long& value);
+extern template JSON toJSON(const unsigned long& v);
+extern template JSON toJSON(const std::string& key, const double& value);
+extern template JSON toJSON(const double& v);
+extern template JSON toJSON(const std::string& key, const float& value);
+extern template JSON toJSON(const float& v);
+extern template JSON toJSON(const std::string& key, const std::string& value);
+extern template JSON toJSON(const std::string& v);
+
 }

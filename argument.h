@@ -274,4 +274,16 @@ void advance(T& first, Args&... rest) {
     gcheck::advance(rest...);
 }
 
+// Theoretically improves compile times with precompiled gcheck TODO: benchmark
+extern template class RandomSizeContainer<int>;
+extern template class RandomSizeContainer<unsigned int>;
+extern template class RandomSizeContainer<double>;
+extern template class RandomSizeContainer<float>;
+extern template class RandomSizeContainer<std::string>;
+extern template class SequenceArgument<int>;
+extern template class SequenceArgument<unsigned int>;
+extern template class SequenceArgument<double>;
+extern template class SequenceArgument<float>;
+extern template class SequenceArgument<std::string>;
+
 }

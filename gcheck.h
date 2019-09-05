@@ -343,7 +343,7 @@ std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     return *AddReport(report).info_stream;
 }
 
-//Theoretically improves test compile times by moving template instantiation to gcheck
+// Theoretically improves compile times with precompiled gcheck TODO: benchmark
 extern template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
 extern template std::stringstream& Test::ExpectEqual(int left, int right, std::string descriptor);
 extern template std::stringstream& Test::ExpectEqual(float left, float right, std::string descriptor);

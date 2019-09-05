@@ -151,4 +151,19 @@ JSON toJSON(const TestData& data) {
     return out;
 }
 
+template JSON toJSON(const std::string& key, const int& value);
+template JSON toJSON(const int& v);
+template JSON toJSON(const std::string& key, const unsigned int& value);
+template JSON toJSON(const unsigned int& v);
+template JSON toJSON(const std::string& key, const long& value);
+template JSON toJSON(const long& v);
+template JSON toJSON(const std::string& key, const unsigned long& value);
+template JSON toJSON(const unsigned long& v);
+template JSON toJSON(const std::string& key, const double& value);
+template JSON toJSON(const double& v);
+template JSON toJSON(const std::string& key, const float& value);
+template JSON toJSON(const float& v);
+template JSON toJSON(const std::string& key, const std::string& value);
+template JSON toJSON(const std::string& v);
+
 }
