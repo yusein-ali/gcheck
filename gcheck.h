@@ -316,7 +316,7 @@ typename std::enable_if<is_callable<F, Args...>::value>
 template <class T, class S, class... Args>
 typename std::enable_if<!is_callable<T, Args...>::value>
 ::type Test::TestCase(int num, const T& correct, const S& under_test, Args&... args) {
-    auto forwarder = [correct](auto... params) -> T { return correct; };
+    auto forwarder = [correct](auto...) -> T { return correct; };
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
@@ -324,7 +324,7 @@ typename std::enable_if<!is_callable<T, Args...>::value>
 template <class T, class S, class... Args>
 void Test::TestCase(int num, const std::vector<T>& correct, const S& under_test, Args&... args) {
     int index = 0;
-    auto forwarder = [&index, &correct](auto... params) -> T { return correct[index++]; };
+    auto forwarder = [&index, &correct](auto...) -> T { return correct[index++]; };
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
