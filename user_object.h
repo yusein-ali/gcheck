@@ -140,9 +140,9 @@ AddToUserObjectList(std::vector<UserObject>& container, T first) {
 
 // If the item to be added is a container with begin() and end()
 // Transform it to a vector and put it in the container
-template<class T, template <class> class C>
-typename std::enable_if<!is_Argument<C<T>>::value && has_begin_end<C<T>>::value>::type
-AddToUserObjectList(std::vector<UserObject>& container, C<T> first){
+template<class C>
+typename std::enable_if<!is_Argument<C>::value && has_begin_end<C>::value>::type
+AddToUserObjectList(std::vector<UserObject>& container, C first){
     std::vector<UserObject> cont(first.begin(), first.end());
     container.push_back(MakeUserObject(cont));
 }
