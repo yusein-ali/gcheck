@@ -54,9 +54,56 @@ class UserObject {
             as_json_ = "\"" + as_string_ + "\"";
         }
     }
-    template<typename T>
+    /*template<typename T>
     typename std::enable_if<!has_tostring<T>::value && has_std_tostring<T>::value>::type
     SetString(T item) {
+        as_string_ = std::to_string(item);
+    }
+    
+    For some reason the above doesn't work on all systems, so make it explicit*/
+    template<typename T = int>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(int item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = long>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(long item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = long long>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(long long item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = unsigned>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(unsigned item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = unsigned long>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(unsigned long item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = unsigned long long>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(unsigned long long item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = float>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(float item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = double>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(double item) {
+        as_string_ = std::to_string(item);
+    }
+    template<typename T = long double>
+    typename std::enable_if<!has_tostring<T>::value>::type
+    SetString(long double item) {
         as_string_ = std::to_string(item);
     }
     template<typename T>
