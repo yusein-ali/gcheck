@@ -168,10 +168,4 @@ std::vector<UserObject> MakeUserObjectList(Args... args) {
     return out;
 }
 
-// Theoretically improves compile times with precompiled gcheck TODO: benchmark
-extern template UserObject MakeUserObject(const int& v);
-extern template UserObject MakeUserObject(const float& v);
-extern template UserObject MakeUserObject(const double& v);
-extern template UserObject MakeUserObject(const std::string& v);
-extern template UserObject MakeUserObject(const std::vector<std::string>& v);
-}
+} // gcheck

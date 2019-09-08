@@ -33,10 +33,4 @@ void AddToUserObjectList(std::vector<UserObject>& container, const std::string& 
     container.push_back(MakeUserObject(str));
 }
 
-template UserObject MakeUserObject(const int& v);
-template UserObject MakeUserObject(const float& v);
-template UserObject MakeUserObject(const double& v);
-template UserObject MakeUserObject(const std::string& v);
-template UserObject MakeUserObject(const std::vector<std::string>& v);
-
-}
+} // gcheck
