@@ -36,7 +36,7 @@ private:
     std::vector<std::string> headers_;
     std::vector<int> header_widths_;
     
-    bool terminating_newline = false;
+    bool terminating_newline_ = false;
     
     int GetWidth();
     

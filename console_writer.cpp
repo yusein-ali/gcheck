@@ -5,21 +5,21 @@
 
 namespace gcheck {
     
-int ConsoleWriter::GetWidth() {
+int GetWidth_() {
 #if defined(_WIN32) || defined(WIN32)  
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
     if(csbi.dwSize.X > 0) {
-        terminating_newline = false;
+        terminating_newline_ = false;
         return csbi.dwSize.X;
     } else if(csbi.srWindow.Right - csbi.srWindow.Left > 0) {
-        terminating_newline = false;
+        terminating_newline_ = false;
         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
     } else if(csbi.dwMaximumWindowSize.X > 0) {
-        terminating_newline = true;
+        terminating_newline_ = true;
         return csbi.dwMaximumWindowSize.X;
     } else {
-        terminating_newline = true;
+        terminating_newline_ = true;
         return 128;
     }
 #else //lets hope it is unix
@@ -28,6 +28,10 @@ int ConsoleWriter::GetWidth() {
     
     return size.ws_col;
 #endif
+}
+int ConsoleWriter::GetWidth() {
+    int w = GetWidth_();
+    return w < 5 ? w = 128 : w;
 }
     
 std::vector<int> ConsoleWriter::CalcWidths(const std::vector<std::string>& strs, std::vector<int> widths) {
@@ -50,6 +54,10 @@ std::vector<int> ConsoleWriter::CalcWidths(const std::vector<std::string>& strs,
 }
     
 void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, const std::vector<int>& widths, const std::vector<int>& cuts) {
+    
+    if(width < 5) {
+        width = 128;
+    }
     
     int totalwidth = 0;
     for(auto& e : widths)
@@ -92,7 +100,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
             t_width += w + 1;
             std::cout << std::string(w, '-') << '+';
         }
-        if(terminating_newline || t_width != totalwidth)
+        if(terminating_newline_ || t_width != totalwidth)
             std::cout << std::endl;
         for(auto& row : parts) {
             
@@ -126,7 +134,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
                     t_width += w + 1;
                     std::cout << std::string(w-row[pos+i].length(), ' ') << '|';
                 }
-                if(terminating_newline || t_width != totalwidth)
+                if(terminating_newline_ || t_width != totalwidth)
                     std::cout << std::endl;
             }
         }
@@ -154,7 +162,7 @@ void ConsoleWriter::SetColor(Color color) {
 void ConsoleWriter::WriteSeparator() {
     int width = GetWidth();
     std::cout << std::string(width, '*');
-    if(terminating_newline)
+    if(terminating_newline_)
         std::cout << std::endl;
 }
 
