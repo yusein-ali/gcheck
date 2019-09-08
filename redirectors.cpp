@@ -73,6 +73,7 @@ FileInjecter& FileInjecter::Restore() {
         
     char buffer[1024];
     while(fgets(buffer, 1024, original_) != NULL);
+    clearerr(original_);
     
     dup2(save_, fileno(original_));
     
