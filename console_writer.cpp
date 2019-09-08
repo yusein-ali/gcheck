@@ -6,7 +6,7 @@
 namespace gcheck {
     
 int GetWidth_() {
-#if defined(_WIN32) || defined(WIN32)  
+    #if defined(_WIN32) || defined(WIN32)  
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
     if(csbi.dwSize.X > 0) {
@@ -145,18 +145,20 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
 }
 
 void ConsoleWriter::SetColor(Color color) {
-    std::cout.flush();
+    if(use_colors_) {
+        std::cout.flush();
 #if defined(_WIN32) || defined(WIN32)  
-    if(color == Original)
-        color = Black;
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hConsole, (WORD)color);
+        if(color == Original)
+            color = Black;
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(hConsole, (WORD)color);
 #else //lets hope it is unix
-    if(color == Original)
-        std::cout << "\033[0m";
-    else
-        std::cout << "\033[48;5;" + std::to_string((int)color) + "m";
+        if(color == Original)
+            std::cout << "\033[0m";
+        else
+            std::cout << "\033[48;5;" + std::to_string((int)color) + "m";
 #endif
+    }
 }
     
 void ConsoleWriter::WriteSeparator() {

@@ -37,6 +37,7 @@ private:
     std::vector<int> header_widths_;
     
     bool terminating_newline_ = false;
+    bool use_colors_ = false; // TODO: determine if terminal supports colors
     
     int GetWidth();
     
