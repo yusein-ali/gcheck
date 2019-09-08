@@ -11,6 +11,7 @@
 #include "argument.h"
 #include "json.h"
 #include "user_object.h"
+#include "sfinae.h"
 
 namespace gcheck {
 
@@ -169,6 +170,7 @@ struct TestData {
     }
 };
 
+namespace {
 namespace detail {
     
     template<class F, class... T>
@@ -179,6 +181,7 @@ namespace detail {
 template<class F, class... T>
 struct is_callable : decltype(detail::is_callable<F, T...>(0)){};
 
+}
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
 */

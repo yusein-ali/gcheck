@@ -7,22 +7,12 @@
 #include <string>
 #include <vector>
 
+#include "sfinae.h"
+
 namespace gcheck {
-    
+
+namespace {
 namespace detail{
-    
-    template<class>
-    struct sfinae_bool {};
-    template<class T>
-    struct sfinae_true : sfinae_bool<T>, std::true_type{};
-    template<class T>
-    struct sfinae_false : sfinae_bool<T>, std::false_type{};
-    
-    // AND operator
-    template<class T, class S>
-    sfinae_false<T> operator*(sfinae_bool<T>, sfinae_bool<S>);
-    template<class T, class S>
-    sfinae_true<T> operator*(sfinae_true<T>, sfinae_true<S>);
     
     template<class T>
     static auto has_string_operator(int) -> sfinae_true<decltype(T::operator std::string)>;
@@ -40,7 +30,7 @@ namespace detail{
     static auto has_tojson(int) -> sfinae_true<decltype(to_json(std::declval<T>()))>;
     template<class T>
     static auto has_tojson(long) -> sfinae_false<T>;
-}
+} // detail
 
 template<class T>
 struct has_string_operator : decltype(detail::has_tostring<T>(0)){};
@@ -50,6 +40,8 @@ template<class T>
 struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
 template<class T>
 struct has_tojson : decltype(detail::has_tojson<T>(0)){};
+
+} // anonymous
 
 struct JSON : public std::string {
     JSON() {}
@@ -150,4 +142,4 @@ extern template JSON toJSON(const float& v);
 extern template JSON toJSON(const std::string& key, const std::string& value);
 extern template JSON toJSON(const std::string& v);
 
-}
+} // gcheck

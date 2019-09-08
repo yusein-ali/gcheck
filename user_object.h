@@ -5,12 +5,14 @@
 #include <vector>
 #include <type_traits>
 #include <sstream>
+#include <utility>
 
 #include "argument.h"
 #include "json.h"
+#include "sfinae.h"
 
 namespace gcheck {
-
+namespace {
 namespace detail {
     template<class T>
     static auto has_begin(int) -> sfinae_true<decltype(std::declval<T>().begin())>;
@@ -20,7 +22,13 @@ namespace detail {
     static auto has_end(int) -> sfinae_true<decltype(std::declval<T>().end())>;
     template<class T>
     static auto has_end(long) -> sfinae_false<T>;
-}
+} // detail
+
+template<class T>
+struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0)){};
+
+} // anonymous
+
 
 /*
     Wrapper class for anything passed by users from tests.
@@ -161,9 +169,6 @@ UserObject MakeUserObject(const std::tuple<Args...>& v) {
     }
     return MakeUserObject(cont);
 }
-
-template<class T>
-struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0)){};
 
 // MakeUserObjectList: function for making a vector containing UserObject types from any number of any types of arguments
 // If the type is an argument type, insert its value instead of the object itself
