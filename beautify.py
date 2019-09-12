@@ -48,10 +48,9 @@ def differences(correct, answer):
         correct = correct[len(start):]
         answer = answer[len(start):]
     
-    mem = [[None] * len(answer)] * len(correct)
+    mem = [[None for n in range(len(answer))] for n in range(len(correct))]
     
     def LCS(n, m):
-        nonlocal correct, answer
         if n < 0 or m < 0:
             return ""
         elif mem[n][m] is not None:
@@ -69,7 +68,6 @@ def differences(correct, answer):
     lcs = start + lcs + end
 
     def diffs(string):
-        nonlocal lcs
         i = 0
         i2 = 0
         diff = []
