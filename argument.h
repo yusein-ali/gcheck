@@ -88,6 +88,10 @@ std::shared_ptr<Distribution<T>> MakeDistribution(const std::vector<T>& choices,
     return std::shared_ptr<Distribution<T>>(new ChoiceDistribution<T>(choices, seed));
 }
 template<typename T>
+std::shared_ptr<Distribution<T>> MakeDistribution(const std::initializer_list<T>& choices, uint32_t seed = UINT32_MAX) {
+    return std::shared_ptr<Distribution<T>>(new ChoiceDistribution<T>(choices, seed));
+}
+template<typename T>
 std::shared_ptr<Distribution<T>> MakeDistribution(const T& start, const T& end, uint32_t seed = UINT32_MAX) {
     return std::shared_ptr<Distribution<T>>(new RangeDistribution<T>(start, end, seed));
 }
@@ -204,18 +208,20 @@ private:
 
 template<typename T>
 RandomSizeContainer(size_t min_size, size_t max_size, const std::initializer_list<T>& choices) -> RandomSizeContainer<T, std::vector>;
+template<typename T, template <typename...> class Container>
+RandomSizeContainer(size_t min_size, size_t max_size, const Container<T>& choices) -> RandomSizeContainer<T, std::vector>;
 template<typename T>
 RandomSizeContainer(size_t min_size, size_t max_size, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
 template<typename T>
 RandomSizeContainer(std::vector<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector>;
-template<typename T, template <typename> class Container>
+template<typename T, template <typename...> class Container>
 RandomSizeContainer(std::vector<size_t> choices, const Container<T>& choices2) -> RandomSizeContainer<T, Container>;
 template<typename T>
 RandomSizeContainer(std::vector<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
-template<typename T, template <typename> class Container>
-RandomSizeContainer(std::initializer_list<size_t> choices, const Container<T>& choices2) -> RandomSizeContainer<T, Container>;
 template<typename T>
 RandomSizeContainer(std::initializer_list<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector>;
+template<typename T, template <typename...> class Container>
+RandomSizeContainer(std::initializer_list<size_t> choices, const Container<T>& choices2) -> RandomSizeContainer<T, Container>;
 template<typename T>
 RandomSizeContainer(std::initializer_list<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
 
