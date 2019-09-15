@@ -47,6 +47,21 @@ struct JSON : public std::string {
     JSON() {}
     JSON(const std::string& str) : std::string(str) {}
     JSON(const char* str) : std::string(str) {}
+    
+    std::string Unescape() {
+        std::string out = *this;
+        size_t pos = 0;
+        while((pos = out.find('\\', pos)) != npos) {
+            if(out[pos+1] == 'u') {
+                char c;
+                std::sscanf(out.c_str()+pos+2, "%4hhX", (unsigned char*)&c);
+                out.replace(pos, 6, &c, 1);
+            } else {
+                out.erase(pos);
+            }
+        }
+        return out;
+    }
 };
 
 // Escapes special JSON characters from 'str'

@@ -116,10 +116,6 @@ namespace {
             out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
             writer.SetColor(ConsoleWriter::Black);
             
-            //out << '\t' << "max_points: " << test_data.max_points << std::endl;
-            //out << '\t' << "format: " << test_data.output_format << std::endl;
-            //out << '\t' << "results: " << toJSON(test_data.reports) << std::endl;
-            
             for(auto it = test_data.reports.begin(); it != test_data.reports.end(); it++) {
                 std::vector<std::vector<std::string>> cells;
                 if(const auto d = std::get_if<TestReport::EqualsData>(&it->data)) {
@@ -158,7 +154,7 @@ namespace {
                         cells.push_back({});
                         auto& row = cells[cells.size()-1];
                         row.push_back(it2->result ? "correct" : "incorrect");
-                        row.push_back(it2->input);
+                        row.push_back(it2->input.Unescape());
                         row.push_back(it2->correct);
                         row.push_back(it2->output);
                         
