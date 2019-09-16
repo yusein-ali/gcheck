@@ -5,32 +5,29 @@
 
 namespace gcheck {
     
-int GetWidth_() {
-    #if defined(_WIN32) || defined(WIN32)  
+int ConsoleWriter::GetWidth() {
+    int w = 0;
+#if defined(_WIN32) || defined(WIN32)  
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
     if(csbi.dwSize.X > 0) {
         terminating_newline_ = false;
-        return csbi.dwSize.X;
+        w =  csbi.dwSize.X;
     } else if(csbi.srWindow.Right - csbi.srWindow.Left > 0) {
         terminating_newline_ = false;
-        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        w =  csbi.srWindow.Right - csbi.srWindow.Left + 1;
     } else if(csbi.dwMaximumWindowSize.X > 0) {
         terminating_newline_ = true;
-        return csbi.dwMaximumWindowSize.X;
+        w =  csbi.dwMaximumWindowSize.X;
     } else {
         terminating_newline_ = true;
-        return 128;
     }
 #else //lets hope it is unix
     winsize size;
     ioctl(STDOUT_FILENO,TIOCGWINSZ,&size);
     
-    return size.ws_col;
+    w = size.ws_col;
 #endif
-}
-int ConsoleWriter::GetWidth() {
-    int w = GetWidth_();
     return w < 5 ? w = 128 : w;
 }
     
