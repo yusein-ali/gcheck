@@ -199,11 +199,11 @@ for suite_name, suite_data in test_results.items():
         
         def ET_func(template, result):
             """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["value"], result["result"])
+            return replace_entries(template, result["descriptor"], result["result"], "True")
             
         def EF_func(template, result):
             """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["value"], result["result"])
+            return replace_entries(template, result["descriptor"], result["result"], "True")
         
         def EE_func(template, result):
             """Function for replacing condition case data"""
@@ -216,9 +216,9 @@ for suite_name, suite_data in test_results.items():
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
             
-        content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Input", "Output", "Correct")
-        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Input", "Right (Output)", "Left (Correct)")
-        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Input", "Right (Output)", "Left (Correct)")
+        content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Condition", "Output", "Should be")
+        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Condition", "Output", "Should be")
+        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Condition", "Right (Output)", "Left (Correct)")
         content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
         
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
