@@ -160,13 +160,20 @@ UserObject MakeUserObject(const std::vector<T>& v) {
     }
     return MakeUserObject(cont);
 }
+template <size_t index, class... Args>
+std::enable_if_t<index == 0> TupleToUserObject(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
+    cont[index] = MakeUserObject(std::get<index>(t));
+}
+template <size_t index, class... Args>
+std::enable_if_t<index != 0>  TupleToUserObject(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
+    cont[index] = MakeUserObject(std::get<index>(t));
+    TupleToUserObject<index-1>(cont, t);
+}
 template <class... Args>
-UserObject MakeUserObject(const std::tuple<Args...>& v) {
-    const std::size_t n = sizeof...(Args);
+UserObject MakeUserObject(const std::tuple<Args...>& t) {
+    constexpr size_t n = sizeof...(Args);
     std::vector<UserObject> cont(n);
-    for(unsigned int i = 0; i < n; i++) {
-        cont[i] = MakeUserObject(std::get<i>(v));
-    }
+    TupleToUserObject<n-1>(cont, t);
     return MakeUserObject(cont);
 }
 
