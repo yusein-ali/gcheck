@@ -120,7 +120,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
                     std::cout << row[pos].substr(p, len);
                 }
                 SetColor(Black);
-                std::cout << std::string(p-row[pos].length()-1, ' ') << '|';
+                std::cout << std::string(std::max(p-row[pos].length(), 1ul)-1, ' ') << '|';
             } else {
                 t_width = (pos == 0 ? 1 : 2);
                 for(int i = 0; i < *it; ++i) {
