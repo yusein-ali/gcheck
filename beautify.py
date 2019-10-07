@@ -30,61 +30,101 @@ def sanitize_replace(original, substr, replacor):
 
 def differences(correct, answer):
     """Returns a tuple with two lists of tuples with the difference locations and lengths"""
+    
+    def split(s):
+        res = []
+        pos = 0
+        pos2 = 0
+        while len(s) > pos2:
+            while len(s) > pos2 and not s[pos2].isspace():
+                pos2 += 1
+            if pos != pos2:
+                res.append(s[pos:pos2])
+            pos = pos2
+            while len(s) > pos2 and s[pos2].isspace():
+                pos2 += 1
+            if pos != pos2:
+                res.append(s[pos:pos2])
+            pos = pos2
+        return res
+
+    c_words = split(correct)
+    a_words = split(answer)
 
     n = 0
-    while n < len(correct) and n < len(answer) and correct[n] == answer[n]:
+    while n < len(c_words) and n < len(a_words) and c_words[n] == a_words[n]:
         n+=1
-    start = correct[:n]
+    start = c_words[:n]
     
     n = 0
-    while n < len(correct) and n < len(answer) and correct[-n-1] == answer[-n-1]:
+    while n < len(c_words) and n < len(a_words) and c_words[-n-1] == a_words[-n-1]:
         n+=1
     if n != 0:
-        end = correct[-n:]
-        correct = correct[len(start):-len(end)]
-        answer = answer[len(start):-len(end)]
+        end = c_words[-n:]
+        c_words = c_words[len(start):-len(end)]
+        a_words = a_words[len(start):-len(end)]
     else:
-        end = ""
-        correct = correct[len(start):]
-        answer = answer[len(start):]
-    
-    mem = [[None for n in range(len(answer))] for n in range(len(correct))]
-    
-    def LCS(n, m):
-        if n < 0 or m < 0:
-            return ""
-        elif mem[n][m] is not None:
-            pass
-        elif correct[n] == answer[m]:
-            mem[n][m] = LCS(n-1, m-1) + correct[n]
-        else:
-            mem[n][m] = max(LCS(n-1, m), LCS(n, m-1), key=len)
-        return mem[n][m]
-    
-    lcs = LCS(len(correct)-1, len(answer)-1)
+        end = []
+        c_words = c_words[len(start):]
+        a_words = a_words[len(start):]
 
-    correct = start + correct + end
-    answer = start + answer + end
-    lcs = start + lcs + end
+    def lcslengths(b,a):
+        lengths = [[0] * (len(a)+1) for _ in range(len(b)+1)]
+        for i, x in enumerate(b, 1):
+            for j, y in enumerate(a, 1):
+                if x == y:
+                    lengths[i][j] = lengths[i-1][j-1] + 1
+                else:
+                    lengths[i][j] = max(lengths[i][j-1], lengths[i-1][j])
+        return lengths
 
-    def diffs(string):
-        i = 0
-        i2 = 0
-        diff = []
-        while len(lcs) > i and len(string) > i2:
-            length = 0
-            while string[i2+length] != lcs[i] and len(string) > i2+length:
-                length += 1
-            if length != 0:
-                diff.append((i2, length))
-            i2 += length + 1
-            i+=1
-        if i2 != len(string):
-            diff.append((i2, len(string)-i2))
-            
-        return diff
+    def get_indices(arr, res, pos):
+        li = 0
+        tres = []
+        for k in res:
+            while li < k:
+              pos += len(arr[li])
+              li+=1
+            tres.append((pos, len(arr[li])))
+        return tres
 
-    return diffs(correct), diffs(answer)
+    def diffs(arr1, arr2):
+        lengths = lcslengths(arr1,arr2)
+        res1 = []
+        res2 = []
+        i = len(arr1)
+        j = len(arr2)
+        while i != 0 or j != 0:
+            if i == 0:
+                j -= 1
+                res2.append(j)
+            elif j == 0:
+                i -= 1
+                res1.append(i)
+            elif arr1[i-1] == arr2[j-1]:
+                i -= 1
+                j -= 1
+            elif lengths[i][j-1] > lengths[i-1][j]:
+                j -= 1
+                res2.append(j)
+            else:
+                i -= 1
+                res1.append(i)
+        res1.reverse()
+        res2.reverse()
+        return res1, res2
+
+    dc, da = diffs(c_words, a_words)
+    offset = sum([len(s) for s in start])
+    '''
+    if len(da) != 0 and len(da) == len(dc):
+        ds = [diffs(c_words[dc[i]], a_words[da[i]]) for i in range(len(da))]
+        print(ds)
+        dc2, da2 = list(zip(*ds))
+        print(dc2, da2)
+    '''
+    
+    return get_indices(c_words, dc, offset), get_indices(a_words, da, offset)
 
 def mark_differences(correct, answer):
     """Returns a tuple the differences between the two strings highlighted with html and css"""
@@ -92,8 +132,9 @@ def mark_differences(correct, answer):
         offset = 0
         marker_length = len(start_marker) + len(end_marker)
         for pos, length in positions:
-            string = string[:pos+offset] + start_marker + string[pos+offset:pos+offset+length] + end_marker + string[pos+offset+length:]
-            offset += marker_length
+            hl = string[pos+offset:pos+offset+length]
+            string = string[:pos+offset] + start_marker + hl.replace('\n',' \n') + end_marker + string[pos+offset+length:]
+            offset += marker_length + hl.count('\n')
         return string
 
     cor_diff, ans_diff = differences(correct, answer)
@@ -215,12 +256,12 @@ for suite_name, suite_data in test_results.items():
             for case in result.get("cases", []):
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
-            
+        
         if test_data['finished']:
-        content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Condition", "Output", "Should be")
-        content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Condition", "Output", "Should be")
-        content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Condition", "Right (Output)", "Left (Correct)")
-        content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
+            content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Condition", "Output", "Should be")
+            content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Condition", "Output", "Should be")
+            content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Condition", "Right (Output)", "Left (Correct)")
+            content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
         else:
             content = "Crashed or timed out while running this test."
         
