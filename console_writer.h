@@ -2,7 +2,8 @@
 #include <vector>
 #include <string>
 
-#if defined(_WIN32) || defined(WIN32)  
+#if defined(_WIN32) || defined(WIN32)
+    #define NOMINMAX
     #include <windows.h>
 #else //lets hope it's unix
     #include <sys/ioctl.h>
