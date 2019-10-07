@@ -178,13 +178,18 @@ namespace {
 
     void Formatter::SetTestData(std::string suite, std::string test, TestData& data) {
 
-        auto it = std::find_if(suites_.begin(), suites_.end(), [suite](std::pair<std::string, TestVector> item){ return suite == item.first; });
-
+        auto it = std::find_if(suites_.begin(), suites_.end(), [&suite](const std::pair<std::string, TestVector>& item){ return suite == item.first; });
         if(it == suites_.end()) {
             suites_.push_back({ suite, TestVector() });
             it = suites_.end()-1;
         }
-        it->second.push_back({test, data});
+        
+        auto it2 = std::find_if(it->second.begin(), it->second.end(), [&test](const std::pair<std::string, TestData>& p) { return p.first == test; });
+        if(it2 == it->second.end()) {
+            it->second.push_back({test, data});
+        } else {
+            it2->second = data;
+        }
         
         WriteReport(suite, test);
     }
@@ -205,6 +210,8 @@ Test::Test(std::string suite, std::string test, double points, int priority) : s
 
 double Test::RunTest() {
     
+    Formatter::SetTestData(suite_, test_, data_);
+    
     StdoutCapturer tout;
     StderrCapturer terr;
     
@@ -216,7 +223,7 @@ double Test::RunTest() {
     data_.serr = terr.str();
     
     data_.CalculatePoints();
-
+    
     Formatter::SetTestData(suite_, test_, data_);
 
     return data_.points;

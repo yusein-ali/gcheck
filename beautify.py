@@ -216,10 +216,13 @@ for suite_name, suite_data in test_results.items():
                 content += replace_entries(template, case["input"], case["correct"], case["output"])
             return content
             
+        if test_data['finished']:
         content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Condition", "Output", "Should be")
         content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Condition", "Output", "Should be")
         content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Condition", "Right (Output)", "Left (Correct)")
         content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
+        else:
+            content = "Crashed or timed out while running this test."
         
         testbody = templates["testbody"].replace('{{{testname}}}',test_name)
         testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))

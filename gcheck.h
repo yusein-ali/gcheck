@@ -142,12 +142,13 @@ struct TestData {
     std::vector<TestReport> reports;
     GradingMethod grading_method = Partial;
     std::string output_format = "horizontal";
+    bool finished = false;
     
     double points = 0;
-    double max_points;
+    double max_points = 0;
     
-    std::string sout;
-    std::string serr;
+    std::string sout = "";
+    std::string serr = "";
 
     int correct = 0;
     int incorrect = 0;
@@ -167,6 +168,8 @@ struct TestData {
         
         if(std::isinf(points) || std::isnan(points))
             points = max_points;
+            
+        finished = true;
     }
 };
 

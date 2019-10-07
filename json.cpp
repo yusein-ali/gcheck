@@ -145,7 +145,8 @@ JSON toJSON(const TestData& data) {
     out += toJSON("stdout", data.sout) + ',';
     out += toJSON("stderr", data.serr) + ',';
     out += toJSON("correct", data.correct) + ',';
-    out += toJSON("incorrect", data.incorrect);
+    out += toJSON("incorrect", data.incorrect) + ',';
+    out += toJSON("finished", data.finished);
     
     out += "}";
     return out;
