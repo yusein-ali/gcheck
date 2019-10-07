@@ -191,7 +191,8 @@ namespace {
             it2->second = data;
         }
         
-        WriteReport(suite, test);
+        if(!pretty_ || data.finished)
+            WriteReport(suite, test);
     }
 
     void Formatter::SetTotal(double points, double max_points) {
