@@ -224,7 +224,8 @@ for suite_name, suite_data in test_results.items():
         else:
             content = "Crashed or timed out while running this test."
         
-        testbody = templates["testbody"].replace('{{{testname}}}',test_name)
+        testbody = templates["testbody"].replace('{{{testname}}}', test_name)
+        testbody = testbody.replace('{{{suitename}}}', suite_name)
         testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))
         testbody = testbody.replace('{{{max_points}}}', str(test_data['max_points']*point_multiplier))
         testbody = testbody.replace('{{{point_state}}}', 

@@ -2,7 +2,7 @@
     <div  class="gcheck gcheck-header gcheck-{{{point_state}}}" ng-init="$ctrl.{{{testid}}}={{{points}}}!={{{max_points}}}" ng-click="$ctrl.{{{testid}}}=!$ctrl.{{{testid}}}">
         <div style="float: left; width: 30px; text-align: center;" ng-hide="$ctrl.{{{testid}}}">+</div>
         <div style="float: left; width: 30px; text-align: center;" ng-show="$ctrl.{{{testid}}}">-</div>
-        {{{testname}}} {{{points}}}/{{{max_points}}}
+        {{{suitename}}}, {{{testname}}} {{{points}}}/{{{max_points}}}
     </div>
     <div id="{{{testid}}}-content" ng-show="$ctrl.{{{testid}}}" class="gcheck gcheck-content">
         {{{testcontent}}}
