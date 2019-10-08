@@ -134,7 +134,7 @@ namespace {
                     auto& row = cells[cells.size()-1];
                     row.push_back(d->result ? "correct" : "incorrect");
                     row.push_back(d->descriptor);
-                    row.push_back(d->value ? "true" : "false");
+                    row.push_back(d->result ? "true" : "false");
                     row.push_back(it->info_stream->str());
                     
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
@@ -144,7 +144,7 @@ namespace {
                     auto& row = cells[cells.size()-1];
                     row.push_back(d->result ? "correct" : "incorrect");
                     row.push_back(d->descriptor);
-                    row.push_back(d->value ? "true" : "false");
+                    row.push_back(d->result ? "true" : "false");
                     row.push_back(it->info_stream->str());
                     
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
