@@ -240,11 +240,11 @@ for suite_name, suite_data in test_results.items():
         
         def ET_func(template, result):
             """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["result"], "True")
+            return replace_entries(template, result["descriptor"], "True", result["result"])
             
         def EF_func(template, result):
             """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["result"], "True")
+            return replace_entries(template, result["descriptor"], "True", result["result"])
         
         def EE_func(template, result):
             """Function for replacing condition case data"""
