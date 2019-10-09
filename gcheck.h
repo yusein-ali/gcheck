@@ -59,9 +59,9 @@ private:
     S input;
     bool input_set = false;
     std::string input_params;
-    bool input_params_set;
+    bool input_params_set = false;
     std::string output_params;
-    bool output_params_set;
+    bool output_params_set = false;
 };
 
 struct TestReport {
