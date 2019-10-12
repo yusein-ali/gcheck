@@ -3,7 +3,9 @@
 #include <string>
 
 #if defined(_WIN32) || defined(WIN32)
-    #define NOMINMAX
+    #ifndef NOMINMAX
+        #define NOMINMAX 1
+    #endif
     #include <windows.h>
 #else //lets hope it's unix
     #include <sys/ioctl.h>
