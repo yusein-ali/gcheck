@@ -48,6 +48,10 @@
         "condition_variable": "cpp",
         "mutex": "cpp",
         "string": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "algorithm": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "random": "cpp"
     }
 }

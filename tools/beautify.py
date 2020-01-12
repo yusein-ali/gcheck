@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 default_format = "list"
 
-template_location = sys.path[0] + "/templates/"
+template_location = os.path.join(sys.path[0], "../templates/")
 template_filenames = {
     "vertical": "vertical.html", 
     "horizontal": "horizontal.html",

@@ -1,2 +1,4 @@
-testtest
-*.o
+build/*
+lib/*
+tests/build/*
+tests/bin/*
