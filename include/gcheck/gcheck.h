@@ -297,7 +297,7 @@ typename std::enable_if<is_callable<F, Args...>::value>
         it->input_args = MakeUserObjectList(args...);
         auto correct_res = Result(correct(args...));
         auto correct_ans = correct_res.output;
-        it->correct = MakeUserObject(correct_ans).string();
+        it->correct = UserObject(correct_ans).string();
         
         if(correct_res.IsSet())
             it->input = toJSON(correct_res.GetInput());
@@ -309,8 +309,8 @@ typename std::enable_if<is_callable<F, Args...>::value>
         
         Result res(under_test(args...));
         it->error = res.error;
-        it->output = MakeUserObject(res.output).string();
-        it->output_json = MakeUserObject(res.output).json();
+        it->output = UserObject(res.output).string();
+        it->output_json = UserObject(res.output).json();
         it->result = res.output == correct_ans;
             
         if(correct_res.IsOutputParamsSet())
@@ -341,8 +341,8 @@ std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     TestReport report = TestReport::Make<TestReport::EqualsData>();
     auto& data = report.Get<TestReport::EqualsData>();
     
-    data.left = MakeUserObject(left);
-    data.right = MakeUserObject(right);
+    data.left = UserObject(left);
+    data.right = UserObject(right);
     data.descriptor = descriptor;
     data.result = left == right;
     

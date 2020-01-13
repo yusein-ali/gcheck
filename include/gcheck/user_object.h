@@ -12,6 +12,7 @@
 #include "sfinae.h"
 
 namespace gcheck {
+class UserObject;
 namespace {
 namespace detail {
     template<class T>
@@ -29,6 +30,15 @@ struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0))
 
 } // anonymous
 
+template <size_t index, class... Args>
+std::enable_if_t<index == 0> TupleToUserObjectVector(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
+    cont[index] = UserObject(std::get<index>(t));
+}
+template <size_t index, class... Args>
+std::enable_if_t<index != 0>  TupleToUserObjectVector(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
+    cont[index] = UserObject(std::get<index>(t));
+    TupleToUserObjectVector<index-1>(cont, t);
+}
 
 /*
     Wrapper class for anything passed by users from tests.
@@ -41,6 +51,7 @@ class UserObject {
     
     void SetString(std::string item) { as_string_ = item; }
     void SetString(const char* item) { as_string_ = item; }
+    void SetString(char* item) { as_string_ = item; }
     void SetString(char item) { as_string_ = item; }
     void SetString(bool b) { as_string_ = b ? "true" : "false"; }
     
@@ -125,7 +136,34 @@ class UserObject {
     }
 public:
     UserObject() {}
-    UserObject(std::vector<UserObject> cont);
+    UserObject(const std::vector<UserObject>& cont);
+    UserObject(const UserObject& v) {
+        *this = v;
+    }
+    
+    template <class T, class S>
+    UserObject(const std::pair<T, S>& v) {
+        std::vector<UserObject> cont = { UserObject(v.first), UserObject(v.second) };
+        *this = UserObject(cont);
+    }
+    
+    template <class T>
+    UserObject(const std::vector<T>& v) {
+        std::vector<UserObject> cont;
+        cont.reserve(v.size());
+        for(auto& i : v) {
+            cont.emplace_back(i);
+        }
+        *this = UserObject(cont);
+    }
+    
+    template <class... Args>
+    UserObject(const std::tuple<Args...>& t) {
+        constexpr size_t n = sizeof...(Args);
+        std::vector<UserObject> cont(n);
+        TupleToUserObjectVector<n-1>(cont, t);
+        *this = UserObject(cont);
+    }
 
     template<typename T>
     UserObject(T item) {
@@ -137,93 +175,55 @@ public:
     std::string string() const { return as_string_; }
 };
 
-UserObject MakeUserObject(const UserObject& v);
-
-UserObject MakeUserObject(const std::vector<UserObject>& v);
-
-UserObject MakeUserObject(const char* v);
-
-template <class T>
-UserObject MakeUserObject(const T& v) {
-    return UserObject(v);
-}
-template <class T, class S>
-UserObject MakeUserObject(const std::pair<T, S>& v) {
-    std::vector<UserObject> cont{ MakeUserObject(v.first), MakeUserObject(v.second) };
-    return MakeUserObject(cont);
-}
-template <class T>
-UserObject MakeUserObject(const std::vector<T>& v) {
-    std::vector<UserObject> cont(v.size());
-    for(unsigned int i = 0; i < v.size(); i++) {
-        cont[i] = MakeUserObject(v[i]);
-    }
-    return MakeUserObject(cont);
-}
-template <size_t index, class... Args>
-std::enable_if_t<index == 0> TupleToUserObject(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
-    cont[index] = MakeUserObject(std::get<index>(t));
-}
-template <size_t index, class... Args>
-std::enable_if_t<index != 0>  TupleToUserObject(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
-    cont[index] = MakeUserObject(std::get<index>(t));
-    TupleToUserObject<index-1>(cont, t);
-}
-template <class... Args>
-UserObject MakeUserObject(const std::tuple<Args...>& t) {
-    constexpr size_t n = sizeof...(Args);
-    std::vector<UserObject> cont(n);
-    TupleToUserObject<n-1>(cont, t);
-    return MakeUserObject(cont);
-}
-
-// MakeUserObjectList: function for making a vector containing UserObject types from any number of any types of arguments
-// If the type is an argument type, insert its value instead of the object itself
 
 // If the item to be added is not an Argument class type, just add it to the list
 template<class T>
 typename std::enable_if<!is_Argument<T>::value && !has_begin_end<T>::value>::type
-AddToUserObjectList(std::vector<UserObject>& container, T first) {
-    container.push_back(MakeUserObject(first));
+AddToUserObjectVector(std::vector<UserObject>& container, T first) {
+    container.emplace_back(first);
 }
 
-void AddToUserObjectList(std::vector<UserObject>& container, const std::string& first);
+void AddToUserObjectVector(std::vector<UserObject>& container, const std::string& first);
 
 // If the item to be added is an Argument class type (but not container, that comes later)
 // Get the value and put it in the container
 template<class T>
 typename std::enable_if<is_Argument<T>::value>::type
-AddToUserObjectList(std::vector<UserObject>& container, T first) {
-    AddToUserObjectList(container, first());
+AddToUserObjectVector(std::vector<UserObject>& container, T first) {
+    AddToUserObjectVector(container, first());
 }
 
 // If the item to be added is a container with begin() and end()
 // Transform it to a vector and put it in the container
 template<class C>
 typename std::enable_if<!is_Argument<C>::value && has_begin_end<C>::value>::type
-AddToUserObjectList(std::vector<UserObject>& container, C first){
+AddToUserObjectVector(std::vector<UserObject>& container, C first){
     std::vector<UserObject> cont(first.begin(), first.end());
-    container.push_back(MakeUserObject(cont));
+    container.emplace_back(cont);
 }
 
 // If the item to be added is a RandomContainer
-// Get the value container and call the container version of AddToUserObjectList
+// Get the value container and call the container version of AddToUserObjectVector
 template <class... Args>
-void AddToUserObjectList(std::vector<UserObject>& container, RandomContainer<Args...> first) {
-    AddToUserObjectList(container, first());
+void AddToUserObjectVector(std::vector<UserObject>& container, RandomContainer<Args...> first) {
+    AddToUserObjectVector(container, first());
 }
 
 // Called when there are multiple items to be added
 template<class T, class... Args>
-void AddToUserObjectList(std::vector<UserObject>& container, T first, Args... rest) {
-    AddToUserObjectList(container, first);
-    AddToUserObjectList(container, rest...);
+void AddToUserObjectVector(std::vector<UserObject>& container, T first, Args... rest) {
+    AddToUserObjectVector(container, first);
+    AddToUserObjectVector(container, rest...);
 }
 
+/* 
+    MakeUserObjectList: function for making a vector containing UserObject types from any number of arguments of any types 
+    If the type is an argument type, insert its value instead of the object itself
+ */
 template<class... Args>
 std::vector<UserObject> MakeUserObjectList(Args... args) {
     std::vector<UserObject> out;
-    AddToUserObjectList(out, args...);
+    AddToUserObjectVector(out, args...);
     return out;
 }
 
