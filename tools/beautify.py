@@ -8,17 +8,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest='out', type=str, default="stdout")
 parser.add_argument("-i", dest='input', type=str, default="report.json")
 parser.add_argument("-p", dest='max_points', type=float, default=-1)
+parser.add_argument("-t", dest='template_dir', type=str, default=os.path.join(sys.path[0], "../templates/"))
 args = parser.parse_args()
 
 default_format = "list"
 
-template_location = os.path.join(sys.path[0], "../templates/")
 template_filenames = {
     "vertical": "vertical.html", 
     "horizontal": "horizontal.html",
     "main": "main.html",
     "testbody": "testbody.html"
     }
+template_location = args.template_dir
 report_filename = args.input
 output_filename = args.out
 max_points = args.max_points
