@@ -254,7 +254,7 @@ TestReport& Test::AddReport(TestReport& report) {
     return data_.reports[data_.reports.size()-1];
 }
 
-void Test::GradingMethod(gcheck::GradingMethod method) {
+void Test::SetGradingMethod(gcheck::GradingMethod method) {
     data_.grading_method = method; 
 }
 

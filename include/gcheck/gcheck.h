@@ -173,18 +173,6 @@ struct TestData {
     }
 };
 
-namespace {
-namespace detail {
-    
-    template<class F, class... T>
-    static auto is_callable(int) -> sfinae_true<decltype(std::declval<F>()(std::declval<T>()...))>;
-    template<class F, class... T>
-    static auto is_callable(long) -> sfinae_false<F>;
-}
-template<class F, class... T>
-struct is_callable : decltype(detail::is_callable<F, T...>(0)){};
-
-}
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
 */
@@ -208,25 +196,23 @@ protected:
     int priority_;
 
     TestReport& AddReport(TestReport& report);
-    void GradingMethod(GradingMethod method);
+    void SetGradingMethod(GradingMethod method);
     void OutputFormat(std::string format);
     
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class F, class S, class... Args>
-    typename std::enable_if<is_callable<F, Args...>::value>
-    ::type TestCase(int num, const F& correct, const S& under_test, Args&... args);
+    void CompareWithCallable(int num, const F& correct, const S& under_test, Args&... args);
     
     /* Runs num tests with correct being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class T, class S, class... Args>
-    typename std::enable_if<!is_callable<T, Args...>::value>
-    ::type TestCase(int num, const T& correct, const S& under_test, Args&... args);
+    void CompareWithAnswer(int num, const T& correct, const S& under_test, Args&... args);
     
     /* Runs num tests with the item with corresponding index in correct vector being the correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
     template <class T, class S, class... Args>
-    void TestCase(int num, const std::vector<T>& correct, const S& under_test, Args&... args);
+    void CompareWithAnswer(int num, const std::vector<T>& correct, const S& under_test, Args&... args);
     
     std::stringstream& ExpectTrue(bool b, std::string descriptor);
     std::stringstream& ExpectFalse(bool b, std::string descriptor);
@@ -282,8 +268,7 @@ public:
     ExpectTrue(false, "FAIL")
 
 template <class F, class S, class... Args>
-typename std::enable_if<is_callable<F, Args...>::value>
-::type Test::TestCase(int num, const F& correct, const S& under_test, Args&... args) {
+void Test::CompareWithCallable(int num, const F& correct, const S& under_test, Args&... args) {
     
     TestReport report = TestReport::Make<TestReport::CaseData>();
     auto& data = report.Get<TestReport::CaseData>();
@@ -320,15 +305,14 @@ typename std::enable_if<is_callable<F, Args...>::value>
 }
 
 template <class T, class S, class... Args>
-typename std::enable_if<!is_callable<T, Args...>::value>
-::type Test::TestCase(int num, const T& correct, const S& under_test, Args&... args) {
+void Test::CompareWithAnswer(int num, const T& correct, const S& under_test, Args&... args) {
     auto forwarder = [correct](auto...) -> T { return correct; };
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
 
 template <class T, class S, class... Args>
-void Test::TestCase(int num, const std::vector<T>& correct, const S& under_test, Args&... args) {
+void Test::CompareWithAnswer(int num, const std::vector<T>& correct, const S& under_test, Args&... args) {
     int index = 0;
     auto forwarder = [&index, &correct](auto...) -> T { return correct[index++]; };
     TestCase(num, forwarder, under_test, args...);
