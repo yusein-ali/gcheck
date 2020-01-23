@@ -325,6 +325,7 @@ template std::stringstream& Test::ExpectEqual(const char* left, std::string righ
 
 }
 
+#ifndef GCHECK_NOMAIN
 int main(int argc, char** argv) {
 
     using namespace gcheck;
@@ -335,11 +336,10 @@ int main(int argc, char** argv) {
     }
     if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
 
-    //printf(" \r");
-    //std::cout << " \r";
     bool ran_all = Test::RunTests();
 
     Formatter::WriteFinalReport(ran_all);
 
     return 0;
 }
+#endif
