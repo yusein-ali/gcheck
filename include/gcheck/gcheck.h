@@ -253,7 +253,7 @@ public:
     ExpectFalse(b, "!" #b)
 
 #define EXPECT_EQ(left, right) \
-    ExpectEqual(left, right, #left " = " #right)
+    ExpectEqual(left, right, #left " == " #right)
 
 #define ASSERT_TRUE(b) \
     ExpectTrue(b, #b); \
