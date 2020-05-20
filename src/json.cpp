@@ -1,6 +1,8 @@
 #include "json.h"
 
 #include <cstdio>
+#include <stack>
+#include <cstring>
 
 #include "user_object.h"
 #include "gcheck.h"
@@ -16,8 +18,12 @@ std::string Escapees() {
 }
 
 std::string Replacee(char val) {
+    static const char* digits = "0123456789ABCDEF";
+    
     std::string ret = "\\u0000";
-    std::sprintf(ret.data()+2, "%.4X", val);
+    //TODO: test
+    for (size_t i = 0; i < 2; ++i)
+        ret[i+4] = digits[(val >> (1-i)) & 0xf];
     return ret;
 }
 std::vector<std::string> Replacees() {
@@ -61,6 +67,7 @@ JSON JSONEscape(std::string str) {
     }
     
     // encode non-utf-8 characters
+    std::stack<size_t> positions;
     for(size_t pos = 0; pos < str.length(); pos++) {
         int num = 0;
         while((str[pos] << num) & 0b10000000) num++;
@@ -74,9 +81,24 @@ JSON JSONEscape(std::string str) {
                 continue;
             }
         }
+        positions.push(pos);
+    }
+    
+    str.resize(str.length()+positions.size()*5); // add space for encoding
+    //TODO: test
+    size_t epos = str.length()-1;
+    size_t offset = positions.size()*5;
+    char* cstr = str.data();
+    while(!positions.empty()) {
+        size_t pos = positions.top();
         auto repl = Replacee(str[pos]);
-        str.replace(pos, 1, repl);
-        pos += repl.length()-1;
+        
+        std::memmove(cstr+offset+pos+1, cstr+pos+1, epos-offset-pos);
+        offset -= 5;
+        std::copy(repl.data(), repl.data()+6, cstr+offset+pos);
+        epos = offset+pos-1;
+        
+        positions.pop();
     }
     
     return str;
