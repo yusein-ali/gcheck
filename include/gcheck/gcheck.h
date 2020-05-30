@@ -138,12 +138,17 @@ enum GradingMethod {
     Most,
     StrictMost
 };
+enum TestStatus : int {
+    NotStarted,
+    Started,
+    Finished
+};
 
 struct TestData {
     std::vector<TestReport> reports;
     GradingMethod grading_method = Partial;
     std::string output_format = "horizontal";
-    bool finished = false;
+    TestStatus status = NotStarted;
     
     double points = 0;
     double max_points = 0;
@@ -170,7 +175,7 @@ struct TestData {
         if(std::isinf(points) || std::isnan(points))
             points = max_points;
             
-        finished = true;
+        status = Finished;
     }
 };
 

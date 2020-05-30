@@ -162,6 +162,23 @@ JSON::JSON(const TestReport& r) {
     Set(out);
 }
 
+JSON::JSON(const TestStatus& status) {
+    switch (status) {
+    case TestStatus::NotStarted:
+        *this = JSON("NotStarted");
+        break;
+    case TestStatus::Started:
+        *this = JSON("Started");
+        break;
+    case TestStatus::Finished:
+        *this = JSON("Finished");
+        break;
+    default:
+        *this = JSON("ERROR");
+        break;
+    }
+}
+
 JSON::JSON(const TestData& data) {
     
     std::string out = "{";
@@ -175,7 +192,7 @@ JSON::JSON(const TestData& data) {
     out += JSON("stderr", data.serr) + ',';
     out += JSON("correct", data.correct) + ',';
     out += JSON("incorrect", data.incorrect) + ',';
-    out += JSON("finished", data.finished);
+    out += JSON("status", data.status);
     
     out += "}";
     

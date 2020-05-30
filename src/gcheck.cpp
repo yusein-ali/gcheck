@@ -191,7 +191,7 @@ namespace {
             it2->second = data;
         }
         
-        if(!pretty_ || data.finished)
+        if(!pretty_ || data.status == Finished)
             WriteReport(suite, test);
     }
 
@@ -347,10 +347,10 @@ bool Test::RunTests() {
     do {
         counter = 0;
         for(auto it = test_list.begin(); it != test_list.end(); it++) {
-            if(!(*it)->data_.finished && (*it)->prerequisite_.IsFulfilled()) {
+            if((*it)->data_.status != Finished && (*it)->prerequisite_.IsFulfilled()) {
+                (*it)->data_.status = Started;
                 total += (*it)->RunTest();
                 max_so_far += (*it)->data_.max_points;
-                Formatter::SetTotal(total, total_max);
                 counter++;
                 finished++;
             }
