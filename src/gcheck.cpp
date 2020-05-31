@@ -51,14 +51,14 @@ namespace {
 
         if(!pretty_) { //if not pretty, print out the whole json
             std::vector<std::pair<std::string, JSON>> output;
-            output.push_back({"test_results", toJSON(suites_)});
-            output.push_back({"points", toJSON(total_points_)});
-            output.push_back({"max_points", toJSON(total_max_points_)});
+            output.push_back({"test_results", JSON(suites_)});
+            output.push_back({"points", JSON(total_points_)});
+            output.push_back({"max_points", JSON(total_max_points_)});
             
             if(!ran_all)
                 output.push_back({"WARNING", "\"Some tests weren't run because prerequisite tests weren't passed first.\""});
             
-            out << toJSON(output) << std::endl << std::endl;
+            out << JSON(output) << std::endl << std::endl;
         } else {
             ConsoleWriter writer;
             writer.WriteSeparator();
@@ -83,13 +83,13 @@ namespace {
 
         if(!pretty_) { //if not pretty, print out the whole json
             std::vector<std::pair<std::string, JSON>> output;
-            output.push_back({"test_results", toJSON(suites_)});
-            output.push_back({"points", toJSON(total_points_)});
-            output.push_back({"max_points", toJSON(total_max_points_)});
+            output.push_back({"test_results", suites_});
+            output.push_back({"points", total_points_});
+            output.push_back({"max_points", total_max_points_});
             
             output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
             
-            out << toJSON(output) << std::endl << std::endl;
+            out << JSON(output) << std::endl << std::endl;
         } else { //if pretty and not finished, print out only current test
 
             auto it = std::find_if(suites_.begin(), suites_.end(), 

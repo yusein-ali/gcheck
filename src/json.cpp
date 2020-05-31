@@ -34,7 +34,7 @@ std::vector<std::string> Replacees() {
     return replacees;
 }
 
-JSON JSONEscape(std::string str) {
+JSON JSON::Escape(std::string str) {
     
     static const std::string escapees = Escapees();
     static const std::vector<std::string> replacees = Replacees();
@@ -101,116 +101,100 @@ JSON JSONEscape(std::string str) {
         positions.pop();
     }
     
-    return str;
+    JSON json;
+    return json.Set(str);
 }
 
-JSON toJSON(const std::string& key, const JSON& value) {
-    return "\"" + key + "\":" + value;
+JSON::JSON(const UserObject& o) {
+    Set(o.json());
 }
 
-JSON toJSON(const std::string& key, const char* value) {
-    return toJSON(key, std::string(value));
-}
-
-JSON toJSON(const std::string& str) {
-    return "\"" + JSONEscape(str) + "\"";
-}
-
-JSON toJSON(const JSON& str) {
-    return str;
-}
-
-JSON toJSON(bool value) {
-    return value ? "true" : "false";
-}
-
-JSON toJSON(const UserObject& o) {
-    return o.json();
-}
-
-JSON toJSON(const TestReport::CaseEntry& e) {
+JSON::JSON(const CaseEntry& e) {
     std::string out = "{";
     
-    out += toJSON("output", e.output) + ',';
-    out += toJSON("output_json", e.output_json) + ',';
-    out += toJSON("result", e.result) + ',';
-    out += toJSON("input", e.input) + ',';//"\"input\":" + toJSON(e.input) + ',';
-    out += toJSON("input_args", toJSON(e.input_args)) + ',';
-    out += toJSON("input_params", toJSON(e.input_params)) + ',';
-    out += toJSON("output_params", toJSON(e.output_params)) + ',';
-    out += toJSON("correct", e.correct);
+    out += JSON("output", e.output) + ',';
+    out += JSON("output_json", e.output_json) + ',';
+    out += JSON("result", e.result) + ',';
+    out += JSON("input", e.input) + ',';
+    out += JSON("input_args", JSON(e.input_args)) + ',';
+    out += JSON("input_params", JSON(e.input_params)) + ',';
+    out += JSON("output_params", JSON(e.output_params)) + ',';
+    out += JSON("correct", e.correct);
     
     out += "}";
-    return out;
+    
+    Set(out);
 }
 
-JSON toJSON(const TestReport& r) {
+JSON::JSON(const TestReport& r) {
     
     std::string out = "{";
     
     if(const auto d = std::get_if<TestReport::EqualsData>(&r.data)) {
-        out += toJSON("type", "EE") + ',';
+        out += JSON("type", "EE") + ',';
         
-        out += toJSON("left", d->left.string()) + ',';
-        out += toJSON("right", d->right.string()) + ',';
-        out += toJSON("result", d->result) + ',';
-        out += toJSON("descriptor", d->descriptor) + ',';
+        out += JSON("left", d->left.string()) + ',';
+        out += JSON("right", d->right.string()) + ',';
+        out += JSON("result", d->result) + ',';
+        out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TestReport::TrueData>(&r.data)) {
-        out += toJSON("type", "ET") + ',';
+        out += JSON("type", "ET") + ',';
         
-        out += toJSON("value", d->value) + ',';
-        out += toJSON("result", d->result) + ',';
-        out += toJSON("descriptor", d->descriptor) + ',';
+        out += JSON("value", d->value) + ',';
+        out += JSON("result", d->result) + ',';
+        out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TestReport::FalseData>(&r.data)) {
-        out += toJSON("type", "EF") + ',';
+        out += JSON("type", "EF") + ',';
         
-        out += toJSON("value", d->value) + ',';
-        out += toJSON("result", d->result) + ',';
-        out += toJSON("descriptor", d->descriptor) + ',';
+        out += JSON("value", d->value) + ',';
+        out += JSON("result", d->result) + ',';
+        out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TestReport::CaseData>(&r.data)) {
-        out += toJSON("type", "TC") + ',';
+        out += JSON("type", "TC") + ',';
         
-        out += "\"cases\":" + toJSON(*d) + ',';
+        out += JSON("cases", *d) + ',';
     }
     
-    out += toJSON("info", r.info_stream->str());
+    out += JSON("info", r.info_stream->str());
     
     out += "}";
-    return out;
+    
+    Set(out);
 }
 
-JSON toJSON(const TestData& data) {
+JSON::JSON(const TestData& data) {
     
     std::string out = "{";
     
-    out += "\"results\":" + toJSON(data.reports) + ',';
-    out += toJSON("grading_method", data.grading_method) + ',';
-    out += toJSON("format", data.output_format) + ',';
-    out += toJSON("points", data.points) + ',';
-    out += toJSON("max_points", data.max_points) + ',';
-    out += toJSON("stdout", data.sout) + ',';
-    out += toJSON("stderr", data.serr) + ',';
-    out += toJSON("correct", data.correct) + ',';
-    out += toJSON("incorrect", data.incorrect) + ',';
-    out += toJSON("finished", data.finished);
+    out += JSON("results", data.reports) + ',';
+    out += JSON("grading_method", data.grading_method) + ',';
+    out += JSON("format", data.output_format) + ',';
+    out += JSON("points", data.points) + ',';
+    out += JSON("max_points", data.max_points) + ',';
+    out += JSON("stdout", data.sout) + ',';
+    out += JSON("stderr", data.serr) + ',';
+    out += JSON("correct", data.correct) + ',';
+    out += JSON("incorrect", data.incorrect) + ',';
+    out += JSON("finished", data.finished);
     
     out += "}";
-    return out;
+    
+    Set(out);
 }
 
-template JSON toJSON(const std::string& key, const int& value);
-template JSON toJSON(const int& v);
-template JSON toJSON(const std::string& key, const unsigned int& value);
-template JSON toJSON(const unsigned int& v);
-template JSON toJSON(const std::string& key, const long& value);
-template JSON toJSON(const long& v);
-template JSON toJSON(const std::string& key, const unsigned long& value);
-template JSON toJSON(const unsigned long& v);
-template JSON toJSON(const std::string& key, const double& value);
-template JSON toJSON(const double& v);
-template JSON toJSON(const std::string& key, const float& value);
-template JSON toJSON(const float& v);
-template JSON toJSON(const std::string& key, const std::string& value);
-template JSON toJSON(const std::string& v);
+template JSON::JSON(const std::string& key, const int& value);
+template JSON::JSON(const int& v);
+template JSON::JSON(const std::string& key, const unsigned int& value);
+template JSON::JSON(const unsigned int& v);
+template JSON::JSON(const std::string& key, const long& value);
+template JSON::JSON(const long& v);
+template JSON::JSON(const std::string& key, const unsigned long& value);
+template JSON::JSON(const unsigned long& v);
+template JSON::JSON(const std::string& key, const double& value);
+template JSON::JSON(const double& v);
+template JSON::JSON(const std::string& key, const float& value);
+template JSON::JSON(const float& v);
+template JSON::JSON(const std::string& key, const std::string& value);
+template JSON::JSON(const std::string& v);
 
 }

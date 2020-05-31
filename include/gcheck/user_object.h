@@ -167,7 +167,7 @@ public:
 
     template<typename T>
     UserObject(T item) {
-        as_json_ = toJSON(item);
+        as_json_ = JSON(item);
         SetString(item);
     }
     

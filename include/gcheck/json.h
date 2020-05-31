@@ -12,6 +12,7 @@
 namespace gcheck {
 
 namespace {
+    
 namespace detail{
     
     template<class T>
@@ -43,12 +44,145 @@ struct has_tojson : decltype(detail::has_tojson<T>(0)){};
 
 } // anonymous
 
-struct JSON : public std::string {
-    JSON() {}
-    JSON(const std::string& str) : std::string(str) {}
-    JSON(const char* str) : std::string(str) {}
+struct TestReport;
+struct CaseEntry;
+struct TestData;
+class UserObject;
+
+class JSON : public std::string {
+public:
+    JSON() : std::string("null") {}
+    JSON(const std::string& str) : std::string("\"" + Escape(str) + "\"") {}
+    JSON(const char* str) : JSON(std::string(str)) {}
+    JSON(const std::string& key, const JSON& value) : std::string(JSON(key) + ":" + value) {}
+    JSON(const std::string& key, const char* value) : JSON(key, JSON(value)) {}
+    JSON(const JSON& str) = default;
+    JSON(bool b) : std::string(b ? "true" : "false") {}
     
-    std::string Unescape() {
+    JSON(const TestReport& r);
+    JSON(const CaseEntry& e);
+    JSON(const TestData& data);
+    JSON(const UserObject& o);
+    
+    template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && !has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE, typename A3 = SFINAE>
+    JSON(const T&) : JSON() {}
+    
+    template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE>
+    JSON(const T& value) : JSON(std::to_string(value)) {}
+    
+    template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && has_tostring<T>::value>, typename A = SFINAE>
+    JSON(const T& value) : JSON(to_string(value)) {}
+    
+    template<typename T, typename = typename std::enable_if_t<has_tojson<T>::value>>
+    JSON(const T& value) : std::string(to_json(value)) {}
+    
+    template<typename T>
+    JSON(const std::string& key, const T& value) : std::string("\"" + key + "\":" + JSON(value)) {}
+
+    template<typename T>
+    JSON(const std::vector<T>& v) {
+        std::string ret = "[";
+        for(auto it = v.begin(); it != v.end();) {
+            ret += JSON(*it);
+            if(++it != v.end())
+                ret += ",";
+        }
+        ret += "]";
+        
+        Set(ret);
+    }
+
+    template<typename T>
+    JSON(const std::vector<std::pair<std::string, T>>& v) {
+        std::string ret = "{";
+
+        for(auto it = v.begin(); it != v.end();) {
+            ret += JSON(it->first, it->second);
+            if(++it != v.end())
+                ret += ",";
+        }
+        ret += "}";
+        
+        Set(ret);
+    }
+    
+    template<typename T>
+    JSON(const std::vector<std::pair<const char*, T>>& v) {
+        std::string ret = "{";
+
+        for(auto it = v.begin(); it != v.end();) {
+            ret += JSON(it->first, it->second);
+            if(++it != v.end())
+                ret += ",";
+        }
+        ret += "}";
+        
+        Set(ret);
+    }
+
+    
+    template<typename... Args>
+    JSON(const std::tuple<Args...>& v) {
+        std::string ret = "[";
+
+        for_each(v, [&ret](int index, const auto& item) {
+            ret += JSON(item);
+            if(index != sizeof...(Args)-1)
+                ret += ",";
+        });
+        ret += "]";
+        
+        Set(ret);
+    }
+    
+    JSON(const std::tuple<>&) {
+        Set("[]");
+    }
+    
+    template<typename... Args>
+    JSON(const std::tuple<std::pair<std::string, Args>...>& v) {
+        std::string ret = "{";
+
+        for_each(v, [&ret](int index, const auto& item) {
+            ret += JSON(item.first, item.second);
+            if(index != sizeof...(Args)-1)
+                ret += ",";
+        });
+        ret += "}";
+        
+        Set(ret);
+    }
+    
+    template<typename... Args>
+    JSON(const std::tuple<std::pair<const char*, Args>...>& v) {
+        std::string ret = "{";
+
+        for_each(v, [&ret](int index, const auto& item) {
+            ret += JSON(item.first, item.second);
+            if(index != sizeof...(Args))
+                ret += ",";
+        });
+        ret += "}";
+        
+        Set(ret);
+    }
+
+    JSON& Set(const std::string& str) {
+        std::string::operator=(str);
+        return *this;
+    }
+
+    JSON& operator=(const JSON& val) = default;
+    template<typename T>
+    JSON& operator=(const T& val) {
+        return *this = JSON(val); 
+    }
+    
+    // Escapes special JSON characters from 'str'
+    static JSON Escape(std::string str);
+    static std::string Unescape(const JSON& json) { return json.Unescape(); }
+    
+    std::string Unescape() const {
         std::string out = *this;
         size_t pos = 0;
         while((pos = out.find('\\', pos)) != npos) {
@@ -64,97 +198,20 @@ struct JSON : public std::string {
     }
 };
 
-// Escapes special JSON characters from 'str'
-JSON JSONEscape(std::string str);
-template<typename T>
-JSON toJSON(const std::string& key, const T& value);
-JSON toJSON(const std::string& key, const JSON& value);
-JSON toJSON(const std::string& key, const char* value);
-JSON toJSON(const std::string& str);
-JSON toJSON(const JSON& str);
-JSON toJSON(bool b);
-
-struct TestReport;
-struct CaseEntry;
-struct TestData;
-class UserObject;
-JSON toJSON(const TestReport& r);
-JSON toJSON(const CaseEntry& e);
-JSON toJSON(const TestData& data);
-JSON toJSON(const UserObject& o);
-
-template<typename T>
-typename std::enable_if<!has_tojson<T>::value && !has_tostring<T>::value && !has_std_tostring<T>::value, JSON>::type
-toJSON(const T&) {
-    return "null";
-}
-template<typename T>
-typename std::enable_if<!has_tojson<T>::value && !has_tostring<T>::value && has_std_tostring<T>::value, JSON>::type
-toJSON(const T& value) {
-    return JSONEscape(std::to_string(value));
-}
-template<typename T>
-typename std::enable_if<!has_tojson<T>::value && has_tostring<T>::value, JSON>::type
-toJSON(const T& value) {
-    return toJSON(to_string(value));
-}
-template<typename T>
-typename std::enable_if<has_tojson<T>::value, JSON>::type
-toJSON(const T& value) {
-    return to_json(value);
-}
-
-template<typename T>
-JSON toJSON(const std::string& key, const T& value) {
-    return "\"" + key + "\":" + toJSON(value);
-}
-
-template<typename T>
-JSON toJSON(const std::vector<T>& v) {
-    std::string out = "[";
-    
-    for(auto it = v.begin(); it != v.end();) {
-        out += toJSON(*it);
-        if(++it != v.end())
-            out += ", ";
-    }
-    
-    out += "]";
-    return out;
-}
-
-template<typename T>
-JSON toJSON(const std::vector<std::pair<std::string, T>>& v) {
-    
-    std::string out = "{";
-
-    for(auto it = v.begin(); it != v.end();) {
-
-        out += "\"" + JSONEscape(it->first) + "\":";
-        out += toJSON(it->second);
-
-        if(++it != v.end())
-            out += ", ";
-    }
-    out += "}";
-    
-    return out;
-}
-
 // Theoretically improves compile times with precompiled gcheck TODO: benchmark
-extern template JSON toJSON(const std::string& key, const int& value);
-extern template JSON toJSON(const int& v);
-extern template JSON toJSON(const std::string& key, const unsigned int& value);
-extern template JSON toJSON(const unsigned int& v);
-extern template JSON toJSON(const std::string& key, const long& value);
-extern template JSON toJSON(const long& v);
-extern template JSON toJSON(const std::string& key, const unsigned long& value);
-extern template JSON toJSON(const unsigned long& v);
-extern template JSON toJSON(const std::string& key, const double& value);
-extern template JSON toJSON(const double& v);
-extern template JSON toJSON(const std::string& key, const float& value);
-extern template JSON toJSON(const float& v);
-extern template JSON toJSON(const std::string& key, const std::string& value);
-extern template JSON toJSON(const std::string& v);
+extern template JSON::JSON(const std::string& key, const int& value);
+extern template JSON::JSON(const int& v);
+extern template JSON::JSON(const std::string& key, const unsigned int& value);
+extern template JSON::JSON(const unsigned int& v);
+extern template JSON::JSON(const std::string& key, const long& value);
+extern template JSON::JSON(const long& v);
+extern template JSON::JSON(const std::string& key, const unsigned long& value);
+extern template JSON::JSON(const unsigned long& v);
+extern template JSON::JSON(const std::string& key, const double& value);
+extern template JSON::JSON(const double& v);
+extern template JSON::JSON(const std::string& key, const float& value);
+extern template JSON::JSON(const float& v);
+extern template JSON::JSON(const std::string& key, const std::string& value);
+extern template JSON::JSON(const std::string& v);
 
 } // gcheck

@@ -64,6 +64,18 @@ private:
     bool output_params_set = false;
 };
 
+struct CaseEntry {
+    std::vector<UserObject> input_args;
+    std::string correct;
+    JSON input;
+    std::string input_params;
+    std::string output_params;
+    std::string error;
+    std::string output;
+    JSON output_json;
+    bool result;
+};
+    
 struct TestReport {
     
     std::string test_class;
@@ -95,17 +107,6 @@ struct TestReport {
         bool result;
     };
 
-    struct CaseEntry {
-        std::vector<UserObject> input_args;
-        std::string correct;
-        JSON input;
-        std::string input_params;
-        std::string output_params;
-        std::string error;
-        std::string output;
-        JSON output_json;
-        bool result;
-    };
     typedef std::vector<CaseEntry> CaseData;
     
     std::variant<EqualsData, TrueData, FalseData, CaseData> data;
@@ -285,9 +286,9 @@ void Test::CompareWithCallable(int num, const F& correct, const S& under_test, A
         it->correct = UserObject(correct_ans).string();
         
         if(correct_res.IsSet())
-            it->input = toJSON(correct_res.GetInput());
+            it->input = JSON(correct_res.GetInput());
         else
-            it->input = toJSON(it->input_args);
+            it->input = JSON(it->input_args);
         
         if(correct_res.IsInputParamsSet())
             it->input_params = correct_res.GetInputParams();
