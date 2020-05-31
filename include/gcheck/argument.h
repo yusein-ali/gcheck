@@ -234,6 +234,8 @@ public:
     T Next() {
         this->value_ = *it_;
         it_++;
+        if(it_ == sequence_.end())
+            it_ = sequence_.begin();
         
         return this->value_;
     }
