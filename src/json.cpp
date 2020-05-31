@@ -105,9 +105,12 @@ JSON JSON::Escape(std::string str) {
     return json.Set(str);
 }
 
-JSON::JSON(const UserObject& o) {
-    Set(o.json());
-}
+JSON::JSON(const UserObject& o) 
+        : JSON(std::vector{
+            std::pair("json", o.json()), 
+            std::pair("construct", JSON(o.construct())),
+            std::pair("string", JSON(o.string())),
+        }) {}
 
 JSON::JSON(const CaseEntry& e) {
     std::string out = "{";
@@ -133,8 +136,8 @@ JSON::JSON(const TestReport& r) {
     if(const auto d = std::get_if<TestReport::EqualsData>(&r.data)) {
         out += JSON("type", "EE") + ',';
         
-        out += JSON("left", d->left.string()) + ',';
-        out += JSON("right", d->right.string()) + ',';
+        out += JSON("left", d->left) + ',';
+        out += JSON("right", d->right) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TestReport::TrueData>(&r.data)) {

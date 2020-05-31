@@ -14,31 +14,12 @@ namespace gcheck {
 namespace {
     
 namespace detail{
-    
-    template<class T>
-    static auto has_string_operator(int) -> sfinae_true<decltype(T::operator std::string)>;
-    template<class T>
-    static auto has_string_operator(long) -> sfinae_false<T>;
-    template<class T>
-    static auto has_tostring(int) -> sfinae_true<decltype(to_string(std::declval<T>()))>;
-    template<class T>
-    static auto has_tostring(long) -> sfinae_false<T>;
-    template<class T>
-    static auto has_std_tostring(int) -> sfinae_true<decltype(std::to_string(std::declval<T>()))>;
-    template<class T>
-    static auto has_std_tostring(long) -> sfinae_false<T>;
     template<class T>
     static auto has_tojson(int) -> sfinae_true<decltype(to_json(std::declval<T>()))>;
     template<class T>
     static auto has_tojson(long) -> sfinae_false<T>;
 } // detail
 
-template<class T>
-struct has_string_operator : decltype(detail::has_tostring<T>(0)){};
-template<class T>
-struct has_tostring : decltype(detail::has_tostring<T>(0)){};
-template<class T>
-struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
 template<class T>
 struct has_tojson : decltype(detail::has_tojson<T>(0)){};
 

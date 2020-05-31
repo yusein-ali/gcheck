@@ -10,9 +10,9 @@
 #include "argument.h"
 #include "json.h"
 #include "sfinae.h"
+#include "stringify.h"
 
 namespace gcheck {
-class UserObject;
 namespace {
 namespace detail {
     template<class T>
@@ -30,149 +30,37 @@ struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0))
 
 } // anonymous
 
-template <size_t index, class... Args>
-std::enable_if_t<index == 0> TupleToUserObjectVector(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
-    cont[index] = UserObject(std::get<index>(t));
-}
-template <size_t index, class... Args>
-std::enable_if_t<index != 0>  TupleToUserObjectVector(std::vector<UserObject>& cont, const std::tuple<Args...>& t) {
-    cont[index] = UserObject(std::get<index>(t));
-    TupleToUserObjectVector<index-1>(cont, t);
-}
-
 /*
     Wrapper class for anything passed by users from tests.
     Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "", 
         in that order by first available method.
  */
 class UserObject {
-    std::string as_string_;
-    JSON as_json_;
-    
-    void SetString(std::string item) { as_string_ = item; }
-    void SetString(const char* item) { as_string_ = item; }
-    void SetString(char* item) { as_string_ = item; }
-    void SetString(char item) { as_string_ = item; }
-    void SetString(bool b) { as_string_ = b ? "true" : "false"; }
-    
-    template<typename T>
-    typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value>::type
-    SetString(T) {
-        as_string_ = "";
-    }
-    template<typename T>
-    typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value>::type
-    SetString(T* item) {
-        if(item == nullptr) {
-            as_string_ = "nullptr";
-            as_json_ = "null";
-        } else {
-            std::stringstream ss;
-            ss << static_cast<const void*>(item);
-            as_string_ = ss.str(); 
-            as_json_ = "\"" + as_string_ + "\"";
-        }
-    }
-    /*template<typename T>
-    typename std::enable_if<!has_tostring<T>::value && has_std_tostring<T>::value>::type
-    SetString(T item) {
-        as_string_ = std::to_string(item);
-    }
-    
-    For some reason the above doesn't work on all systems, so make it explicit*/
-    template<typename T = int>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(int item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = long>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(long item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = long long>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(long long item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = unsigned>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(unsigned item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = unsigned long>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(unsigned long item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = unsigned long long>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(unsigned long long item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = float>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(float item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = double>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(double item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T = long double>
-    typename std::enable_if<!has_tostring<T>::value>::type
-    SetString(long double item) {
-        as_string_ = std::to_string(item);
-    }
-    template<typename T>
-    typename std::enable_if<has_tostring<T>::value>::type
-    SetString(T item) {
-        as_string_ = to_string(item);
-    }
-    void SetString(decltype(nullptr)) {
-        as_string_ = "nullptr";
-        as_json_ = "null";
-    }
 public:
     UserObject() {}
-    UserObject(const std::vector<UserObject>& cont);
-    UserObject(const UserObject& v) {
-        *this = v;
-    }
+    UserObject(const UserObject& v) = default;
     
-    template <class T, class S>
-    UserObject(const std::pair<T, S>& v) {
-        std::vector<UserObject> cont = { UserObject(v.first), UserObject(v.second) };
-        *this = UserObject(cont);
-    }
-    
-    template <class T>
-    UserObject(const std::vector<T>& v) {
-        std::vector<UserObject> cont;
-        cont.reserve(v.size());
-        for(auto& i : v) {
-            cont.emplace_back(i);
-        }
-        *this = UserObject(cont);
-    }
-    
-    template <class... Args>
-    UserObject(const std::tuple<Args...>& t) {
-        constexpr size_t n = sizeof...(Args);
-        std::vector<UserObject> cont(n);
-        TupleToUserObjectVector<n-1>(cont, t);
-        *this = UserObject(cont);
-    }
-
     template<typename T>
-    UserObject(T item) {
-        as_json_ = JSON(item);
-        SetString(item);
+    UserObject(const T& item) {
+        as_json_ = item;
+        as_string_ = toString(item);
+        construct_ = toConstruct(item);
     }
+    template<typename... Args>
+    UserObject(const Args&... items) : UserObject(std::tuple<Args...>(items...)) {}
     
-    std::string json() const { return as_json_; }
+    JSON json() const { return as_json_; }
     std::string string() const { return as_string_; }
+    std::string construct() const { return construct_; }
+    
+    template<typename T>
+    UserObject& operator=(const T& v) {
+        return *this = UserObject(v); 
+    }
+private:
+    std::string as_string_;
+    JSON as_json_;
+    std::string construct_; // a string representation on how to construct the object e.g. std::vector<int>({0, 1, 2})
 };
 
 
