@@ -57,7 +57,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
         width = 128;
     }
     
-    int totalwidth = 0;
+    int totalwidth = widths.size()+1;
     for(auto& e : widths)
         totalwidth += e;
     if(totalwidth > width) 
@@ -98,7 +98,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
             t_width += w + 1;
             std::cout << std::string(w, '-') << '+';
         }
-        if(terminating_newline_ || t_width != totalwidth)
+        if(terminating_newline_ || t_width != width)
             std::cout << std::endl;
         for(auto& row : parts) {
             
@@ -132,7 +132,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
                     t_width += w + 1;
                     std::cout << std::string(w-row[pos+i].length(), ' ') << '|';
                 }
-                if(terminating_newline_ || t_width != totalwidth)
+                if(terminating_newline_ || t_width != width)
                     std::cout << std::endl;
             }
         }
