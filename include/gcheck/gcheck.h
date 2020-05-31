@@ -243,6 +243,8 @@ public:
     Test(std::string suite, std::string test, double points, Prerequisite prerequisite);
     
     bool IsPassed();
+    const std::string& GetSuite() const { return suite_; }
+    const std::string& GetTest() const { return test_; }
 
     static double default_points_;
 

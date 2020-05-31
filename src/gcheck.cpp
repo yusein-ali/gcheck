@@ -14,7 +14,7 @@ namespace {
         Static class for keeping track of and logging test results.
     */
     class Formatter {
-        typedef std::vector<std::pair<std::string, TestData>> TestVector;
+        typedef std::vector<std::pair<std::string, const TestData&>> TestVector;
         static std::vector<std::pair<std::string, TestVector>> suites_;
 
         static double total_points_;
@@ -23,18 +23,16 @@ namespace {
         static std::string default_format_;
 
         Formatter() {}; //Disallows instantiation of this class
-
+        
+        static TestVector* GetTestVector(const std::string& suite);
+        static const TestData* GetTest(const std::string& suite, const std::string& test);
     public:
-
         static bool pretty_;
         static std::string filename_;
 
-        static void SetTestData(std::string suite, std::string test, TestData& data);
-        static void SetTotal(double points, double max_points);
-        // Writes the test results to stdout
-        static void WriteFinalReport(bool ran_all);
-        // Writes the test results to stdout
-        static void WriteReport(std::string suite = "", std::string test = "");
+        static void AddTest(const std::string& suite, const std::string& test, const TestData& data);
+        static void FinishTest(const std::string& suite, const std::string& test);
+        static void Finish();
     };
 
     double Formatter::total_points_ = 0;
@@ -44,8 +42,39 @@ namespace {
     std::string Formatter::default_format_ = "horizontal";
     std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
     
+    Formatter::TestVector* Formatter::GetTestVector(const std::string& suite) {
+        auto it = std::find_if(suites_.begin(), suites_.end(), [&suite](const std::pair<std::string, TestVector>& item){ return suite == item.first; });
+        if(it == suites_.end())
+            return nullptr;
+        
+        return &it->second;
+    }
     
-    void Formatter::WriteFinalReport(bool ran_all) {
+    const TestData* Formatter::GetTest(const std::string& suite, const std::string& test) {
+        auto tests = GetTestVector(suite);
+        if(!tests)
+            return nullptr;
+        
+        auto it = std::find_if(tests->begin(), tests->end(), [&test](const std::pair<std::string, TestData>& p) { return p.first == test; });
+        if(it == tests->end())
+            return nullptr;
+            
+        return &it->second;
+    }
+    
+    void Formatter::AddTest(const std::string& suite, const std::string& test, const TestData& data) {
+        auto tests = GetTestVector(suite);
+        if(!tests) {
+            suites_.push_back({ suite, TestVector() });
+            tests = &suites_.back().second;
+        }
+        
+        tests->push_back({test, data});
+        
+        total_max_points_ += data.max_points;
+    }
+    
+    void Formatter::Finish() {
         std::fstream file;
         auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
 
@@ -54,9 +83,6 @@ namespace {
             output.push_back({"test_results", JSON(suites_)});
             output.push_back({"points", JSON(total_points_)});
             output.push_back({"max_points", JSON(total_max_points_)});
-            
-            if(!ran_all)
-                output.push_back({"WARNING", "\"Some tests weren't run because prerequisite tests weren't passed first.\""});
             
             out << JSON(output) << std::endl << std::endl;
         } else {
@@ -68,26 +94,30 @@ namespace {
             writer.SetColor(ConsoleWriter::Black);
             out << std::endl;
             
-            if(!ran_all)
-                out << "WARNING: Some tests weren't run because prerequisite tests weren't passed first." << std::endl;
             // Wait for user confirmation
             out << std::endl << "Press enter to exit." << std::endl;
             std::cin.get();
         }
     }
     
-    void Formatter::WriteReport(std::string suite, std::string test) {
+    void Formatter::FinishTest(const std::string& suite, const std::string& test) {
 
         std::fstream file;
         auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
-
+        
+        auto data_ptr = GetTest(suite, test);
+        if(!data_ptr) {
+            out << "error" << std::endl; //TODO actual error processing
+            return;
+        }
+        
+        total_points_ += data_ptr->points;
+        
         if(!pretty_) { //if not pretty, print out the whole json
             std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", suites_});
             output.push_back({"points", total_points_});
             output.push_back({"max_points", total_max_points_});
-            
-            output.push_back({"ERROR", "\"Crashed before finished all the tests. (Possible segmentation fault)\""});
             
             out << JSON(output) << std::endl << std::endl;
         } else { //if pretty and not finished, print out only current test
@@ -110,7 +140,7 @@ namespace {
             ConsoleWriter writer;
             writer.WriteSeparator();
             
-            TestData& test_data = it2->second;
+            const TestData& test_data = *data_ptr;
             
             writer.SetColor(test_data.points == test_data.max_points ? ConsoleWriter::Green : ConsoleWriter::Red);
             out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
@@ -175,30 +205,6 @@ namespace {
         if(filename_ != "")
             file.close();
     }
-
-    void Formatter::SetTestData(std::string suite, std::string test, TestData& data) {
-
-        auto it = std::find_if(suites_.begin(), suites_.end(), [&suite](const std::pair<std::string, TestVector>& item){ return suite == item.first; });
-        if(it == suites_.end()) {
-            suites_.push_back({ suite, TestVector() });
-            it = suites_.end()-1;
-        }
-        
-        auto it2 = std::find_if(it->second.begin(), it->second.end(), [&test](const std::pair<std::string, TestData>& p) { return p.first == test; });
-        if(it2 == it->second.end()) {
-            it->second.push_back({test, data});
-        } else {
-            it2->second = data;
-        }
-        
-        if(!pretty_ || data.status == Finished)
-            WriteReport(suite, test);
-    }
-
-    void Formatter::SetTotal(double points, double max_points) {
-        total_max_points_ = max_points;
-        total_points_ = points;
-    }
 }
 
 
@@ -253,8 +259,6 @@ Test::Test(std::string suite, std::string test, double points, Prerequisite prer
 
 double Test::RunTest() {
     
-    Formatter::SetTestData(suite_, test_, data_);
-    
     StdoutCapturer tout;
     StderrCapturer terr;
     
@@ -266,8 +270,6 @@ double Test::RunTest() {
     data_.serr = terr.str();
     
     data_.CalculatePoints();
-    
-    Formatter::SetTestData(suite_, test_, data_);
 
     return data_.points;
 }
@@ -329,33 +331,32 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
 }
 
 bool Test::IsPassed() {
-    return data_.max_points == data_.points;
+    return data_.status == Finished && data_.max_points == data_.points;
 }
 
 bool Test::RunTests() {
     
     const auto& test_list = test_list_();
 
-    double total_max = 0;
     for(auto it = test_list.begin(); it != test_list.end(); it++) {
-        total_max += (*it)->data_.max_points;
+        Formatter::AddTest((*it)->suite_, (*it)->test_, (*it)->data_);
     }
-    Formatter::SetTotal(0, total_max);
 
-    double total = 0, max_so_far = 0;
     unsigned int counter, finished = 0;
     do {
         counter = 0;
         for(auto it = test_list.begin(); it != test_list.end(); it++) {
             if((*it)->data_.status != Finished && (*it)->prerequisite_.IsFulfilled()) {
                 (*it)->data_.status = Started;
-                total += (*it)->RunTest();
-                max_so_far += (*it)->data_.max_points;
+                (*it)->RunTest();
+                Formatter::FinishTest((*it)->suite_, (*it)->test_);
                 counter++;
                 finished++;
             }
         }
     } while(counter != 0);
+
+    Formatter::Finish();
     
     return test_list.size() == finished;
 }
@@ -390,9 +391,7 @@ int main(int argc, char** argv) {
     }
     if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
 
-    bool ran_all = Test::RunTests();
-
-    Formatter::WriteFinalReport(ran_all);
+    Test::RunTests();
 
     return 0;
 }
