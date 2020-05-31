@@ -174,6 +174,19 @@ struct TestData {
     }
 };
 
+class Test;
+class Prerequisite {
+public:
+    Prerequisite(std::string default_suite, std::string prereqs);
+    
+    bool IsFulfilled();
+private:
+    void FetchTests();
+
+    std::vector<std::pair<std::string, std::string>> names_;
+    std::vector<Test*> tests_;
+};
+
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
 */
@@ -194,7 +207,7 @@ protected:
     std::string suite_;
     std::string test_;
 
-    int priority_;
+    Prerequisite prerequisite_;
 
     TestReport& AddReport(TestReport& report);
     void SetGradingMethod(GradingMethod method);
@@ -221,27 +234,30 @@ protected:
     std::stringstream& ExpectEqual(T left, S right, std::string descriptor);
 
 public:
-
-    Test(std::string suite, std::string test, double points, int priority);
+    Test(std::string suite, std::string test, double points, std::string prerequisite);
+    Test(std::string suite, std::string test, double points, Prerequisite prerequisite);
+    
+    bool IsPassed();
 
     static double default_points_;
 
     static bool RunTests();
+    static Test* FindTest(std::string suite, std::string test);
 };
 
 // Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
-#define PREREQ_TEST(suitename, testname, points, priority) \
+#define PREREQ_TEST(suitename, testname, points, prerequisites) \
     class GCHECK_TEST_##suitename##_##testname : gcheck::Test { \
         void ActualTest(); \
     public: \
-        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points, priority) { } \
+        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points, prerequisites) { } \
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
     void GCHECK_TEST_##suitename##_##testname::ActualTest() 
     
 // Creates a class for a test with specific maximum points
 #define TEST_(suitename, testname, points) \
-    PREREQ_TEST(suitename, testname, points, std::numeric_limits<int>::max())
+    PREREQ_TEST(suitename, testname, points, "")
     
 // Calls TEST_ with the default maximum points
 #define TEST(suitename, testname) \

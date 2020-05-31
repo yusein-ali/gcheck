@@ -202,9 +202,51 @@ namespace {
 }
 
 
+Prerequisite::Prerequisite(std::string default_suite, std::string prereqs) {
+    size_t pos = 0, epos = 0;
+    do {
+        epos = prereqs.find(' ', pos);
+        std::string s = prereqs.substr(pos, epos - pos);
+        if(s.length() != 0) {
+            std::string suitename = default_suite, testname;
+            size_t ppos = s.find('.');
+            if(ppos != std::string::npos) {
+                suitename = s.substr(0, ppos);
+                testname = s.substr(ppos+1);
+            } else {
+                testname = s;
+            }
+            names_.emplace_back(suitename, testname);
+        }
+        pos = epos + 1;
+    } while(epos != std::string::npos);
+}
+
+bool Prerequisite::IsFulfilled() {
+    if(tests_.size() != names_.size())
+        FetchTests();
+    
+    for(auto t : tests_)
+        if(!t->IsPassed())
+            return false;
+    
+    return tests_.size() == names_.size();
+}
+
+void Prerequisite::FetchTests() {
+    tests_.clear();
+    for(auto& p : names_) {
+        Test* t = Test::FindTest(p.first, p.second);
+        if(t) tests_.push_back(t);
+    }
+}
+
+
 double Test::default_points_ = 1;
 
-Test::Test(std::string suite, std::string test, double points, int priority) : suite_(suite), test_(test), priority_(priority) {
+Test::Test(std::string suite, std::string test, double points, std::string prerequisite) : Test(suite, test, points, Prerequisite(suite, prerequisite)) {}
+
+Test::Test(std::string suite, std::string test, double points, Prerequisite prerequisite) : suite_(suite), test_(test), prerequisite_(prerequisite) {
     data_.max_points = points;
     test_list_().push_back(this);
 }
@@ -286,33 +328,45 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     return *AddReport(report).info_stream;
 }
 
+bool Test::IsPassed() {
+    return data_.max_points == data_.points;
+}
+
 bool Test::RunTests() {
     
-    auto& test_list = test_list_();
-    std::sort(test_list.begin(), test_list.end(), [](const Test* a, const Test* b){ return a->priority_ < b->priority_; });
+    const auto& test_list = test_list_();
 
     double total_max = 0;
-    for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
+    for(auto it = test_list.begin(); it != test_list.end(); it++) {
         total_max += (*it)->data_.max_points;
     }
     Formatter::SetTotal(0, total_max);
 
-    double total = 0;
-    double max_so_far = 0;
-    int c_priority = -1;
-    for(auto it = test_list_().begin(); it != test_list_().end(); it++) {
-        if(c_priority != (*it)->priority_) {
-            if(max_so_far != total)
-                return false; // stop if last prerequisite priority level didnt gain full points
-            
-            c_priority = (*it)->priority_;
+    double total = 0, max_so_far = 0;
+    unsigned int counter, finished = 0;
+    do {
+        counter = 0;
+        for(auto it = test_list.begin(); it != test_list.end(); it++) {
+            if(!(*it)->data_.finished && (*it)->prerequisite_.IsFulfilled()) {
+                total += (*it)->RunTest();
+                max_so_far += (*it)->data_.max_points;
+                Formatter::SetTotal(total, total_max);
+                counter++;
+                finished++;
+            }
         }
-        total += (*it)->RunTest();
-        max_so_far += (*it)->data_.max_points;
-        Formatter::SetTotal(total, total_max);
-    }
+    } while(counter != 0);
     
-    return true;
+    return test_list.size() == finished;
+}
+
+Test* Test::FindTest(std::string suite, std::string test) {
+    std::vector<Test*>& tests = test_list_();
+    for(Test* t : tests)
+        if(t->suite_ == suite && t->test_ == test)
+            return t;
+    
+    return nullptr;
 }
 
 template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
@@ -323,7 +377,7 @@ template std::stringstream& Test::ExpectEqual(std::string left, std::string righ
 template std::stringstream& Test::ExpectEqual(std::string left, const char* right, std::string descriptor);
 template std::stringstream& Test::ExpectEqual(const char* left, std::string right, std::string descriptor);
 
-}
+} // gcheck
 
 #ifndef GCHECK_NOMAIN
 int main(int argc, char** argv) {
