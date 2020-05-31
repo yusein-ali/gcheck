@@ -90,10 +90,10 @@ AddToUserObjectVector(std::vector<UserObject>& container, C first){
     container.emplace_back(cont);
 }
 
-// If the item to be added is a RandomContainer
+// If the item to be added is a Container
 // Get the value container and call the container version of AddToUserObjectVector
-template <class... Args>
-void AddToUserObjectVector(std::vector<UserObject>& container, RandomContainer<Args...> first) {
+template <template<typename...> class C, class... Args>
+void AddToUserObjectVector(std::vector<UserObject>& container, Container<C, Args...> first) {
     AddToUserObjectVector(container, first());
 }
 

@@ -3,6 +3,9 @@
 #include <random>
 #include <type_traits>
 #include <memory>
+#include <tuple>
+#include <variant>
+#include <algorithm>
 
 namespace gcheck {
 /*
@@ -19,6 +22,39 @@ template <template <typename...> class C>
 std::false_type is_base_of_template_impl(...);
 template <typename T, template <typename...> class C>
 using is_base_of_template = decltype(is_base_of_template_impl<C>(std::declval<T*>()));
+
+template <typename T, typename... Args>
+struct are_same : std::conjunction<std::is_same<T, Args>...> {};
+
+template<typename T, typename... Args>
+struct are_base_of : std::conjunction<are_base_of<T, Args>...> {};
+template <typename T, typename S>
+struct are_base_of<T, S> : std::is_base_of<T, S> {};
+
+template<template<typename...> class Base, typename... Args>
+std::tuple<Args...> _get_types_of(const Base<Args>&...);
+
+template<template<typename...> class Base, typename... Args>
+struct get_types_of {
+    typedef decltype(_get_types_of<Base>(std::declval<Args>()...)) types;
+};
+
+// Base class used for determining the existence of Next() function in class.
+template<class T>
+class NextType {
+public:
+    virtual T Next() = 0;
+    virtual NextType<T>* Clone() const = 0;
+};
+
+template<typename T>
+struct Continuous : public NextType<T> {
+    virtual double ChoiceLength() = 0;
+};
+template<typename T>
+struct Discrete : public NextType<T> {
+    virtual size_t ChoiceLength() = 0;
+};
 
 // Base class for the different distributions
 template<typename A>
@@ -96,32 +132,24 @@ std::shared_ptr<Distribution<T>> MakeDistribution(const T& start, const T& end, 
     return std::shared_ptr<Distribution<T>>(new RangeDistribution<T>(start, end, seed));
 }
 
-
-// Base class used for determining the existence of Next() function in class.
-template<class T>
-class NextType {
-public:
-    virtual T Next() = 0;
-};
-
 // Base class for different argument types
 template <typename A>
-class Argument {
-protected:
-    A value_;
-
+class Argument : public NextType<A> {
+public:
     Argument() : value_() {};
     Argument(A value) : value_(value) {};
-public:
+    
     operator A() const { return value_; };
     A operator ()() const { return value_; };
-};
-
-// An argument with a constant value
-template <typename A>
-class Constant : public Argument<A> {
-public:
-    Constant(A value) : Argument<A>(value) {}
+    
+    virtual A Next() {
+        return value_;
+    }
+    virtual NextType<A>* Clone() const {
+        return new Argument(*this);
+    }
+protected:
+    A value_;
 };
 
 // An argument that takes a random value from a distribution
@@ -143,23 +171,98 @@ private:
 template<typename A>
 Random(const std::initializer_list<A>& choices, uint32_t seed = UINT32_MAX) -> Random<A>;
 
+template<typename T>
+struct argumentize {
+    typedef typename std::conditional<is_base_of_template<T, Argument>::value, T, Argument<T>>::type type;
+};
+template<typename T>
+struct strip_next {
+    typedef std::conditional<is_base_of_template<T, NextType>::value, typename strip_next<decltype(std::declval<T>().Next())>::type, T> type;
+};
 /*
-    An argument that fills a container with random values from a distribution.
+    An argument that contains a container
 */
-template <typename T, template <typename...> class Container = std::vector>
-class RandomContainer : public Argument<Container<T>>, public NextType<Container<T>> {
+template <template <typename...> class ContainerT, typename T>
+class Container : public Argument<ContainerT<strip_next<T>>> {
+    typedef ContainerT<strip_next<T>> ReturnType;
+    typedef std::vector<NextType<T>*> SourceType;
 public:
-    template <typename... Args>
-    RandomContainer(size_t size, const Args&... args) 
-            : Argument<Container<T>>(Container<T>(size)), distribution_(MakeDistribution(args...)) {}
-    RandomContainer(size_t size, std::shared_ptr<Distribution<T>> distribution) 
-            : Argument<Container<T>>(Container<T>(size)), distribution_(distribution) {}
-    RandomContainer(const Container<T>& container, std::shared_ptr<Distribution<T>> distribution) 
-            : Argument<Container<T>>(container), distribution_(distribution) {}
-    RandomContainer(RandomContainer<T, Container>& rnd) 
-            : Argument<Container<T>>(rnd()), distribution_(rnd.distribution_) {}
-    RandomContainer(const RandomContainer<T, Container>& rnd) 
-            : Argument<Container<T>>(rnd()), distribution_(rnd.distribution_) {}
+    Container(const NextType<size_t>& size, T def = T()) 
+            : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
+        Resize(size, def);
+    }
+    Container(size_t size, T def = T()) 
+            : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
+        Resize(size, def);
+    }
+    Container(const Container<ContainerT, T>& container) 
+            : Argument<ContainerT<T>>(container), size_(container.size_->Clone()) {
+        SetSource(container.source_);
+    }
+    ~Container() {
+        delete size_;
+        for(auto& item : source_) {
+            delete item;
+        }
+    }
+    
+    void Resize(const NextType<size_t>& size, T val = T()) {
+        default_ = val;
+        size_ = size.Clone();
+    }
+    void Resize(size_t size, T val = T()) {
+        default_ = val;
+        size_ = new Argument(size);
+    }
+    size_t GetSize() {
+        return this->value_.size();
+    }
+    void SetSource() {
+        source_.clear();
+    }
+    void SetSource(const std::vector<NextType<T>>& source) {
+        source_.resize(source.size(), nullptr);
+        std::transform(source.begin(), source.end(), source_.begin(), [](const NextType<T>& in){ return in.Clone(); });
+    }
+    void SetSource(const std::vector<NextType<T>*>& source) {
+        source_.resize(source.size(), nullptr);
+        std::transform(source.begin(), source.end(), source_.begin(), [](const NextType<T>* in){ return in->Clone(); });
+    }
+    template<typename S>
+    Container& operator<<(const S* item) {
+        source_.push_back(((typename argumentize<S>::type*)&item).Clone());
+        return *this;
+    }
+    ReturnType Next() {
+        this->value_.resize(size_->Next(), default_);
+        auto it2 = source_.begin();
+        if(it2 != source_.end()) {
+            for(auto it = this->value_.begin(); it != this->value_.end(); ++it, ++it2) {
+                if(it2 == source_.end())
+                    it2 = source_.begin();
+                *it = it2->Next();
+            }
+        }
+        return this->value_;
+    }
+    
+    NextType<ContainerT<strip_next<T>>>* Clone() {
+        return new Container(*this);
+    }
+private:
+    SourceType source_;
+    NextType<size_t>* size_;
+    T default_;
+};
+/*
+class Container<std::basic_string, char> : public Argument<std::string>  {
+    typedef std::string ReturnType;
+    typedef std::vector<NextType<char>*> SourceType;
+public:
+    Container(const Args&... args) 
+            : Argument<ReturnType>(ReturnType(args...)), source_(args...) {}
+    Container(const Container<std::tuple, Args...>& container) 
+            : Argument<ReturnType>(container), source_(container.source_) {}
     
     void Resize(size_t size, T val = T()) {
         this->value_.resize(size, val);
@@ -167,67 +270,34 @@ public:
     size_t GetSize() {
         return this->value_.size();
     }
-    Container<T> Next() {
-        
-        for(auto it = this->value_.begin(); it != this->value_.end(); ++it) {
-            *it = (*distribution_)();
+    void SetSource() {
+        source_.clear();
+    }
+    void SetSource(const std::vector<NextType<char>*>& source) {
+        source_.resize(source.size(), nullptr);
+        std::transform(source.begin(), source.end(), source_.begin(), [](const NextType<char>* in){ return in.Clone(); });
+    }
+    
+    ReturnType Next() {
+        auto it2 = source_.begin();
+        if(it2 != source_.end()) {
+            for(auto it = this->value_.begin(); it != this->value_.end(); ++it, ++it2) {
+                if(it2 == source_.end())
+                    it2 = source_.begin();
+                *it = it2->Next();
+            }
         }
         return this->value_;
     }
-    
 private:
-    std::shared_ptr<Distribution<T>> distribution_;
-};
+    SourceType source_;
+};*/
 
-// An argument that contains a container of random size and content
-template <typename T, template <typename...> class Container = std::vector>
-class RandomSizeContainer : public RandomContainer<T, Container>  {
-public:
 
-    template<typename... Args>
-    RandomSizeContainer(size_t min_size, size_t max_size, const Args&... args) 
-            : RandomContainer<T, Container>(0, args...), rnd_(min_size, max_size) {}
-    template<typename... Args>
-    RandomSizeContainer(std::vector<size_t> choices, const Args&... args) 
-            : RandomContainer<T, Container>(0, args...), rnd_(choices) {}
-    RandomSizeContainer(std::shared_ptr<Distribution<size_t>> size_distribution, std::shared_ptr<Distribution<T>> content_distribution) 
-            : RandomContainer<T, Container>(0, content_distribution), rnd_(size_distribution) {}
-    RandomSizeContainer(RandomSizeContainer<T, Container>&& rnd) 
-            : RandomContainer<T, Container>(rnd), rnd_(rnd.rnd_) {}
-    RandomSizeContainer(const RandomSizeContainer<T, Container>& rnd) 
-            : RandomContainer<T, Container>(rnd), rnd_(rnd.rnd_) {}
-    
-    Container<T> Next() {
-        this->value_.resize(rnd_.Next());
-        return RandomContainer<T, Container>::Next();
-    }
-    
-private:
-    Random<size_t> rnd_;
-};
-
-template<typename T>
-RandomSizeContainer(size_t min_size, size_t max_size, const std::initializer_list<T>& choices) -> RandomSizeContainer<T, std::vector>;
-template<typename T, template <typename...> class Container>
-RandomSizeContainer(size_t min_size, size_t max_size, const Container<T>& choices) -> RandomSizeContainer<T, std::vector>;
-template<typename T>
-RandomSizeContainer(size_t min_size, size_t max_size, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
-template<typename T>
-RandomSizeContainer(std::vector<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector>;
-template<typename T, template <typename...> class Container>
-RandomSizeContainer(std::vector<size_t> choices, const Container<T>& choices2) -> RandomSizeContainer<T, Container>;
-template<typename T>
-RandomSizeContainer(std::vector<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
-template<typename T>
-RandomSizeContainer(std::initializer_list<size_t> choices, const std::initializer_list<T>& choices2) -> RandomSizeContainer<T, std::vector>;
-template<typename T, template <typename...> class Container>
-RandomSizeContainer(std::initializer_list<size_t> choices, const Container<T>& choices2) -> RandomSizeContainer<T, Container>;
-template<typename T>
-RandomSizeContainer(std::initializer_list<size_t> choices, const T& start, const T& end) -> RandomSizeContainer<T, std::vector>;
 
 // An argument that sequentially takes items from a vector
 template <class T>
-class SequenceArgument : public Argument<T>, public NextType<T> {
+class SequenceArgument : public Argument<T> {
 public:
     SequenceArgument(const std::vector<T>& seq) : Argument<T>(seq[0]), sequence_(seq), it_(sequence_.begin()) {}
     
@@ -250,6 +320,172 @@ template <class T>
 SequenceArgument(const std::vector<T>& v) -> SequenceArgument<T>;
 template <class T>
 SequenceArgument(const std::initializer_list<T>& v) -> SequenceArgument<T>;
+
+
+/*
+(RandomSizeContainer << Random).Next -> Random size and contents
+(X * Y).Next -> std::tuple<X.Next, Y.Next>
+(X + Y).Next -> (X.choices append Y.choices).Next
+*/
+enum CombineType {
+    DiscreteCombine,
+    ContinuousCombine,
+    WeightedCombine
+};
+
+template<typename... Args>
+class CombineBase {
+    //static_assert(sizeof...(Args) != 0, "Combine must have at least one item in it");s
+    typedef typename get_types_of<NextType, Args...>::types TypesTuple;
+    typedef std::conditional<are_same<Args>::value..., std::tuple_element<0, std::tuple<Args...>>::type, std::variant<Args...>> ReturnType;
+protected:
+    CombineBase(const Args&... args) : parts_(args...) {}
+    
+    RangeDistribution<double> rnd_ = RangeDistribution<double>(0.0, 1.0); 
+    std::tuple<Args...> parts_;
+};
+
+template<CombineType type, typename... Args>
+class Combine;
+
+template<typename... Args>
+class Combine<DiscreteCombine, Args...> : public Discrete<typename CombineBase<Args...>::ReturnType>, public CombineBase<Args...> {
+    //static_assert(are_base_of<Discrete, Args...>::value, "Items given to Combine<DiscreteCombine> must be derived from Discrete");
+    typedef typename CombineBase<Args...>::ReturnType ReturnType;
+    using CombineBase<Args...>::rnd_;
+    using CombineBase<Args...>::parts_;
+public:
+    Combine(const Args&... args) : CombineBase<Args...>(args...) {}
+    
+    template<typename T>
+    Combine<DiscreteCombine, Args..., T> Added(const T& n) {
+        return std::make_from_tuple<Combine<DiscreteCombine>>(std::tuple_cat(parts_, std::tuple(n)));
+    }
+    template<typename T>
+    Combine<WeightedCombine, Args..., T> Added(const T& n, double weight) {
+        return std::make_from_tuple<Combine<WeightedCombine>>(std::tuple_cat(parts_, std::tuple(n, weight)));
+    }
+    
+    size_t ChoiceLength() {
+        return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
+    }
+    
+    ReturnType Next() {
+        auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
+        auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
+        auto rnd = rnd_()*ChoiceLength();
+        size_t pos;
+        for(pos = 0; pos != widths.size() && widths[pos] < rnd; pos++)
+            rnd -= widths[pos];
+        return vals[pos-1];
+    }
+};
+
+template<typename... Args>
+class Combine<ContinuousCombine, Args...> : public Continuous<typename CombineBase<Args...>::ReturnType>, public CombineBase<Args...> {
+    //static_assert(are_base_of<Continuous, Args...>::value, "Items given to Combine<ContinuousCombine> must be derived from Continuous");
+    typedef typename CombineBase<Args...>::ReturnType ReturnType;
+    using CombineBase<Args...>::rnd_;
+    using CombineBase<Args...>::parts_;
+public:
+    Combine(const Continuous<Args>&... args) : CombineBase<Args...>(args...) {}
+    
+    template<typename T>
+    Combine<ContinuousCombine, Args..., T> Added(const T& n) {
+        return std::make_from_tuple<Combine<ContinuousCombine>>(std::tuple_cat(parts_, std::tuple(n)));
+    }
+    template<typename T>
+    Combine<WeightedCombine, Args..., T> Added(const T& n, double weight) {
+        return std::make_from_tuple<Combine<WeightedCombine>>(std::tuple_cat(parts_, std::tuple(n, weight)));
+    }
+    
+    double ChoiceLength() {
+        return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
+    }
+    
+    ReturnType Next() {
+        auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
+        auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
+        auto rnd = rnd_()*ChoiceLength();
+        size_t pos;
+        for(pos = 0; pos != widths.size() && widths[pos] < rnd; pos++)
+            rnd -= widths[pos];
+        return vals[pos-1];
+    }
+};
+
+template<typename T, typename S>
+class Combine<WeightedCombine, T, S> : public NextType<typename CombineBase<T, S>::ReturnType>, CombineBase<T, S> {
+    typedef typename CombineBase<T, S>::ReturnType ReturnType;
+    using CombineBase<T, S>::rnd_;
+    using CombineBase<T, S>::parts_;
+public:
+    Combine(const NextType<T>& first, const NextType<T>& second, double weight) : CombineBase<T, S>(first, second), weight_(weight) {}
+    
+    template<typename K>
+    Combine<WeightedCombine, Combine<WeightedCombine, T, S>, K> Added(const NextType<K>& n, double weight) {
+        return Combine<WeightedCombine>(*this, n, weight);
+    }
+    
+    ReturnType Next() {
+        auto rnd = rnd_();
+        if(rnd <= weight_)
+            return std::get<0>(parts_).Next();
+        return std::get<1>(parts_).Next();
+    }
+private:
+    double weight_;
+};
+
+template<typename T, typename... Args>
+Combine<DiscreteCombine, Args..., T> operator+(const Combine<DiscreteCombine, Args...>& l, const T& r) {
+    return l.Added(r);
+}
+template<typename T, typename... Args>
+Combine<DiscreteCombine, Args..., T> operator+(const T& l, const Combine<DiscreteCombine, Args...>& r) {
+    return r + l;
+}
+
+template<typename T, typename... Args>
+Combine<ContinuousCombine, Args..., T> operator+(const Combine<ContinuousCombine, Args...>& l, const T& r) {
+    return l.Added(r);
+}
+template<typename T, typename... Args>
+Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<ContinuousCombine, Args...>& r) {
+    return r + l;
+}
+
+
+template<typename... Args>
+class Join : public NextType<typename get_types_of<NextType, Args...>::types> {
+    typedef typename get_types_of<NextType, Args...>::types TypesTuple; 
+public:
+    Join(const Args&... args) : parts_(args...) {}
+    
+    template<typename T>
+    Join<Args..., T> Appended(const NextType<T>& n) {
+        return std::make_from_tuple<Join>(std::tuple_cat<Args..., NextType<T>>(parts_, std::tuple(n)));
+    }
+    template<typename T>
+    Join<T, Args...> Prepended(const NextType<T>& n) {
+        return std::make_from_tuple<Join>(std::tuple_cat<NextType<T>, Args...>(std::tuple(n), parts_));
+    }
+    
+    TypesTuple Next() {
+        return std::apply([](auto&... t){ return std::tuple(t.Next()...); }, parts_);
+    }
+private:
+    std::tuple<Args...> parts_;
+};
+
+template<typename T, typename... Args>
+Join<Args..., T> operator+(const Join<Args...>& l, const T& r) {
+    return l.Appended(r);
+}
+template<typename T, typename... Args>
+Join<T, Args...> operator+(const T& l, const Join<Args...>& r) {
+    return r.Prepended(l);
+}
 
 /*
 // is_Random<A>::value; true if A is Random or RandomContainer, false otherwise
@@ -283,11 +519,6 @@ void advance(T& first, Args&... rest) {
 }
 
 // Theoretically improves compile times with precompiled gcheck TODO: benchmark
-extern template class RandomSizeContainer<int>;
-extern template class RandomSizeContainer<unsigned int>;
-extern template class RandomSizeContainer<double>;
-extern template class RandomSizeContainer<float>;
-extern template class RandomSizeContainer<std::string>;
 extern template class SequenceArgument<int>;
 extern template class SequenceArgument<unsigned int>;
 extern template class SequenceArgument<double>;
