@@ -213,6 +213,8 @@ protected:
     std::stringstream& ExpectFalse(bool b, std::string descriptor);
     template <class T, class S>
     std::stringstream& ExpectEqual(T expected, S output, std::string descriptor);
+    template <class T, class S>
+    std::stringstream& ExpectInequal(T expected, S output, std::string descriptor);
 
 public:
     Test(const TestInfo& info);
@@ -283,6 +285,20 @@ std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     return *AddReport(report).info_stream;
 }
 
+template <class T, class S>
+std::stringstream& Test::ExpectInequal(T left, S right, std::string descriptor) {
+    
+    TestReport report = TestReport::Make<EqualsData>();
+    auto& data = report.Get<EqualsData>();
+    
+    data.output_expected = left;
+    data.output = right;
+    data.descriptor = descriptor;
+    data.result = left != right;
+    
+    return *AddReport(report).info_stream;
+}
+
 // Theoretically improves compile times with precompiled gcheck TODO: benchmark
 extern template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
 extern template std::stringstream& Test::ExpectEqual(int left, int right, std::string descriptor);
@@ -325,6 +341,8 @@ extern template std::stringstream& Test::ExpectEqual(const char* left, std::stri
 
 #define EXPECT_EQ(left, right) \
     ExpectEqual(left, right, #left " == " #right)
+#define EXPECT_INEQ(left, right) \
+    ExpectInequal(left, right, #left " != " #right)
 
 #define ASSERT_TRUE(b) \
     ExpectTrue(b, #b); \
