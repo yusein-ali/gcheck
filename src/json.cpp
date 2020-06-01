@@ -7,6 +7,7 @@
 
 #include "user_object.h"
 #include "gcheck.h"
+#include "stringify.h"
 
 namespace gcheck {
     
@@ -106,6 +107,24 @@ JSON JSON::Escape(std::string str) {
     return json.Set(str);
 }
 
+JSON::JSON(const FunctionEntry& e) {
+    std::vector<JSON> data;
+    auto add_if = [&data](const std::string& str, auto a) {
+        if(a) data.emplace_back(str, *a);
+    };
+    add_if("input", e.input);
+    add_if("output", e.output);
+    add_if("error", e.error);
+    add_if("arguments", e.arguments);
+    add_if("arguments_after", e.arguments_after);
+    add_if("arguments_after_expected", e.arguments_after_expected);
+    add_if("return_value", e.return_value);
+    add_if("return_value_expected", e.return_value_expected);
+    data.emplace_back("result", e.result);
+    
+    Set(Stringify(data, [](const JSON& a) -> std::string { return a; }, "{", ",", "}"));
+}
+
 JSON::JSON(const UserObject& o) 
         : JSON(std::vector{
             std::pair("json", o.json()), 
@@ -149,6 +168,10 @@ JSON::JSON(const TestReport& r) {
         out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<CaseData>(&r.data)) {
         out += JSON("type", "TC") + ',';
+        
+        out += JSON("cases", *d) + ',';
+    } else if(const auto d = std::get_if<FunctionData>(&r.data)) {
+        out += JSON("type", "FC") + ',';
         
         out += JSON("cases", *d) + ',';
     }

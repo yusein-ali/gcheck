@@ -18,6 +18,11 @@ sfinae_false<T> operator*(sfinae_bool<T>, sfinae_bool<S>);
 template<class T, class S>
 sfinae_true<T> operator*(sfinae_true<T>, sfinae_true<S>);
 
+template<typename... T>
+struct is_empty : std::false_type{};
+template<>
+struct is_empty<> : std::true_type{};
+
 namespace {
     namespace detail {
     

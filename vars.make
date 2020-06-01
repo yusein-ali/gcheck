@@ -1,4 +1,4 @@
-GCHECK_HEADERS=gcheck.h user_object.h argument.h redirectors.h json.h sfinae.h stringify.h macrotools.h
+GCHECK_HEADERS=gcheck.h user_object.h argument.h redirectors.h json.h sfinae.h stringify.h macrotools.h function_test.h
 GCHECK_INCLUDE_DIR=include/gcheck
 GCHECK_LIB_DIR=lib
 

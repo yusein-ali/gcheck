@@ -194,6 +194,32 @@ namespace {
                         add_if(it2->output);
                     }
                     writer.SetHeaders({"Result", "Input", "Correct", "Output"});
+                } else if(const auto d = std::get_if<FunctionData>(&it->data)) {
+                    
+                    std::vector<std::string> headers = {"Result"};
+                    bool headers_filled = false;
+                    for(auto it2 = d->begin(); it2 != d->end(); it2++) {
+                        cells.push_back({});
+                        auto& row = cells[cells.size()-1];
+                        row.push_back(it2->result ? "correct" : "incorrect");
+                        auto add_if = [&headers, &row, headers_filled](const std::optional<UserObject>& i, const std::string& header) {
+                            if(i) {
+                                row.push_back(i->string());
+                                if(!headers_filled) headers.push_back(header);
+                            }
+                        };
+                        add_if(it2->arguments, "Arguments");
+                        add_if(it2->return_value, "Return Value");
+                        add_if(it2->return_value_expected, "Correct Return Value");
+                        add_if(it2->input, "Standard Input");
+                        add_if(it2->output, "Standard Output");
+                        add_if(it2->error, "Standard Error");
+                        add_if(it2->arguments_after, "Arguments Afterwards");
+                        add_if(it2->arguments_after_expected, "Correct Arguments Afterwards");
+                        
+                        headers_filled = true;
+                    }
+                    writer.SetHeaders(headers);
                 } else {
                     
                     cells.push_back({});

@@ -66,11 +66,24 @@ struct CaseEntry {
 };
 typedef std::vector<CaseEntry> CaseData;
 
+struct FunctionEntry {
+    std::optional<UserObject> error;
+    std::optional<UserObject> output;
+    std::optional<UserObject> input;
+    std::optional<UserObject> arguments;
+    std::optional<UserObject> arguments_after;
+    std::optional<UserObject> arguments_after_expected;
+    std::optional<UserObject> return_value;
+    std::optional<UserObject> return_value_expected;
+    bool result;
+};
+typedef std::vector<FunctionEntry> FunctionData;
+
 struct TestReport {
     
     std::shared_ptr<std::stringstream> info_stream;
     
-    std::variant<EqualsData, TrueData, FalseData, CaseData> data;
+    std::variant<EqualsData, TrueData, FalseData, CaseData, FunctionData> data;
     
     template<typename T>
     TestReport(const T& d) : info_stream(std::make_shared<std::stringstream>()), data(d) {}

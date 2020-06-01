@@ -28,6 +28,7 @@ struct has_tojson : decltype(detail::has_tojson<T>(0)){};
 
 struct TestReport;
 struct CaseEntry;
+struct FunctionEntry;
 enum TestStatus : int;
 struct TestData;
 class UserObject;
@@ -45,6 +46,7 @@ public:
     
     JSON(const TestReport& r);
     JSON(const CaseEntry& e);
+    JSON(const FunctionEntry& e);
     JSON(const TestStatus& status);
     JSON(const TestData& data);
     JSON(const UserObject& o);
