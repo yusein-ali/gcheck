@@ -7,6 +7,9 @@
 			"path": "tests/function_test"
 		},
 		{
+			"path": "tests/prerequisite"
+		},
+		{
 			"path": "tests/io_test"
 		}
 	],
