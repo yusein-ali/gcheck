@@ -21,7 +21,7 @@ endif
 
 all: $(GCHECK_LIB_DIR)/$(LIBNAME)
 
-debug: | set-debug $(GCHECK_LIB_DIR)/$(GCHECK_LIB)
+debug: | set-debug $(GCHECK_LIB_DIR)/$(LIBNAME)
 
 set-debug:
 	$(eval CXXFLAGS += -g)
