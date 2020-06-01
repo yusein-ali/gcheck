@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "tests/function_test"
+		},
+		{
+			"path": "tests/io_test"
 		}
 	],
 	"settings": {
