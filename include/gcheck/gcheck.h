@@ -144,6 +144,34 @@ enum TestStatus : int {
     Finished
 };
 
+class Test;
+class Prerequisite {
+public:
+    Prerequisite() {}
+    Prerequisite(std::string default_suite, std::string prereqs);
+    
+    bool IsFulfilled();
+private:
+    void FetchTests();
+
+    std::vector<std::pair<std::string, std::string>> names_;
+    std::vector<Test*> tests_;
+};
+
+struct TestInfo {
+    static double default_points;
+    
+    std::string suite;
+    std::string test;
+    double max_points;
+    Prerequisite prerequisite;
+    
+    TestInfo(std::string suite, std::string test, double points, Prerequisite prerequisite = Prerequisite()) : suite(suite), test(test), max_points(points), prerequisite(prerequisite) {}
+    TestInfo(std::string suite, std::string test, Prerequisite prerequisite = Prerequisite()) : TestInfo(suite, test, default_points, prerequisite) {}
+    TestInfo(std::string suite, std::string test, double points, std::string prerequisite) : TestInfo(suite, test, points, Prerequisite(suite, prerequisite)) {}
+    TestInfo(std::string suite, std::string test, std::string prerequisite) : TestInfo(suite, test, default_points, prerequisite) {}
+};
+
 struct TestData {
     std::vector<TestReport> reports;
     GradingMethod grading_method = Partial;
@@ -177,19 +205,6 @@ struct TestData {
             
         status = Finished;
     }
-};
-
-class Test;
-class Prerequisite {
-public:
-    Prerequisite(std::string default_suite, std::string prereqs);
-    
-    bool IsFulfilled();
-private:
-    void FetchTests();
-
-    std::vector<std::pair<std::string, std::string>> names_;
-    std::vector<Test*> tests_;
 };
 
 /*
@@ -239,14 +254,11 @@ protected:
     std::stringstream& ExpectEqual(T left, S right, std::string descriptor);
 
 public:
-    Test(std::string suite, std::string test, double points, std::string prerequisite);
-    Test(std::string suite, std::string test, double points, Prerequisite prerequisite);
+    Test(const TestInfo& info);
     
     bool IsPassed();
     const std::string& GetSuite() const { return suite_; }
     const std::string& GetTest() const { return test_; }
-
-    static double default_points_;
 
     static bool RunTests();
     static Test* FindTest(std::string suite, std::string test);
@@ -257,7 +269,7 @@ public:
     class GCHECK_TEST_##suitename##_##testname : gcheck::Test { \
         void ActualTest(); \
     public: \
-        GCHECK_TEST_##suitename##_##testname() : Test(#suitename, #testname, points, prerequisites) { } \
+        GCHECK_TEST_##suitename##_##testname() : Test(TestInfo(#suitename, #testname, points, prerequisites)) { } \
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
     void GCHECK_TEST_##suitename##_##testname::ActualTest() 

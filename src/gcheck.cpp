@@ -248,12 +248,10 @@ void Prerequisite::FetchTests() {
 }
 
 
-double Test::default_points_ = 1;
+double TestInfo::default_points = 1;
 
-Test::Test(std::string suite, std::string test, double points, std::string prerequisite) : Test(suite, test, points, Prerequisite(suite, prerequisite)) {}
 
-Test::Test(std::string suite, std::string test, double points, Prerequisite prerequisite) : suite_(suite), test_(test), prerequisite_(prerequisite) {
-    data_.max_points = points;
+Test::Test(const TestInfo& info) : suite_(info.suite), test_(info.test), prerequisite_(info.prerequisite) {
     test_list_().push_back(this);
 }
 
