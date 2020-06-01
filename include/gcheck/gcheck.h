@@ -24,98 +24,58 @@ struct Result {
     Result() : output() { }
     Result(T out) : output(out) { }
     
-    Result(const Result<T, S>& r) 
-        : output(r.output), error(r.error), input(r.input), input_set(r.input_set),
-        input_params(r.input_params), input_params_set(r.input_params_set), 
-        output_params(r.output_params), output_params_set(r.output_params_set) { 
-    }
+    Result(const Result<T, S>& r) = default;
     
     Result<T, S>& operator=(const T& item) {
         output = item;
         return *this;
     }
-    Result<T, S>& operator=(const Result<T, S>& r) {
-        output = r.output;
-        error = r.error;
-        input = r.input;
-        input_set = r.input_set;
-        input_params = r.input_params;
-        input_params_set = r.input_params_set; 
-        output_params = r.output_params;
-        output_params_set = r.output_params_set;
-        return *this;
-    }
+    Result<T, S>& operator=(const Result<T, S>& r) = default;
     
-    void SetInput(S data) { input = data; input_set = true; }
-    const S& GetInput() const { return input; }
-    void SetInputParams(std::string data) { input_params = data; input_params_set = true; }
-    std::string GetInputParams() const { return input_params; }
-    void SetOutputParams(std::string data) { output_params = data; output_params_set = true; }
-    std::string GetOutputParams() const { return output_params; }
-    
-    bool IsSet() { return input_set; }
-    bool IsInputParamsSet() { return input_params_set; }
-    bool IsOutputParamsSet() { return output_params_set; }
+    void SetInput(const S& data) { input = data; }
+    const std::optional<S>& GetInput() const { return input; }
 private:
-    S input;
-    bool input_set = false;
-    std::string input_params;
-    bool input_params_set = false;
-    std::string output_params;
-    bool output_params_set = false;
+    std::optional<S> input;
+};
+
+struct EqualsData {
+    UserObject output_expected;
+    UserObject output;
+    std::string descriptor;
+    bool result;
+};
+
+struct TrueData {
+    bool value;
+    std::string descriptor;
+    bool result;
+};
+
+struct FalseData {
+    bool value;
+    std::string descriptor;
+    bool result;
 };
 
 struct CaseEntry {
-    std::vector<UserObject> input_args;
-    std::string correct;
-    JSON input;
-    std::string input_params;
-    std::string output_params;
-    std::string error;
-    std::string output;
-    JSON output_json;
+    std::optional<UserObject> arguments; // arguments to test function
+    std::optional<UserObject> input; // arguments to tested function
+    std::optional<UserObject> output;
+    std::optional<UserObject> output_expected;
     bool result;
 };
-    
+typedef std::vector<CaseEntry> CaseData;
+
 struct TestReport {
     
-    std::string test_class;
     std::shared_ptr<std::stringstream> info_stream;
-    
-    enum Type {
-        Equals,
-        ExpectTrue,
-        ExpectFalse,
-        Case,
-    };
-    
-    struct EqualsData {
-        UserObject left;
-        UserObject right;
-        std::string descriptor;
-        bool result;
-    };
-    
-    struct TrueData {
-        bool value;
-        std::string descriptor;
-        bool result;
-    };
-    
-    struct FalseData {
-        bool value;
-        std::string descriptor;
-        bool result;
-    };
-
-    typedef std::vector<CaseEntry> CaseData;
     
     std::variant<EqualsData, TrueData, FalseData, CaseData> data;
     
     template<typename T>
     TestReport(const T& d) : info_stream(std::make_shared<std::stringstream>()), data(d) {}
     
-    TestReport(const TestReport& r) : test_class(r.test_class), info_stream(r.info_stream), data(r.data) {}
+    TestReport(const TestReport& r) : info_stream(r.info_stream), data(r.data) {}
     
     template<typename T>
     static TestReport Make(T item = T()) {
@@ -252,7 +212,7 @@ protected:
     std::stringstream& ExpectTrue(bool b, std::string descriptor);
     std::stringstream& ExpectFalse(bool b, std::string descriptor);
     template <class T, class S>
-    std::stringstream& ExpectEqual(T left, S right, std::string descriptor);
+    std::stringstream& ExpectEqual(T expected, S output, std::string descriptor);
 
 public:
     Test(const TestInfo& info);
@@ -268,8 +228,8 @@ public:
 template <class F, class S, class... Args>
 void Test::CompareWithCallable(int num, const F& correct, const S& under_test, Args&... args) {
     
-    TestReport report = TestReport::Make<TestReport::CaseData>();
-    auto& data = report.Get<TestReport::CaseData>();
+    TestReport report = TestReport::Make<CaseData>();
+    auto& data = report.Get<CaseData>();
     
     data.resize(num);
     
@@ -277,27 +237,19 @@ void Test::CompareWithCallable(int num, const F& correct, const S& under_test, A
         
         gcheck::advance(args...); 
         
-        it->input_args = MakeUserObjectList(args...);
+        it->arguments = UserObject(std::tuple(args...));
         auto correct_res = Result(correct(args...));
         auto correct_ans = correct_res.output;
-        it->correct = UserObject(correct_ans).string();
+        it->output_expected = UserObject(correct_ans);
         
-        if(correct_res.IsSet())
-            it->input = JSON(correct_res.GetInput());
+        if(correct_res.GetInput())
+            it->input = *correct_res.GetInput();
         else
-            it->input = JSON(it->input_args);
-        
-        if(correct_res.IsInputParamsSet())
-            it->input_params = correct_res.GetInputParams();
+            it->input = it->arguments;
         
         Result res(under_test(args...));
-        it->error = res.error;
-        it->output = UserObject(res.output).string();
-        it->output_json = UserObject(res.output).json();
+        it->output = UserObject(res.output);
         it->result = res.output == correct_ans;
-            
-        if(correct_res.IsOutputParamsSet())
-            it->output_params = correct_res.GetOutputParams();
     }
     AddReport(report);
 }
@@ -316,15 +268,15 @@ void Test::CompareWithAnswer(int num, const std::vector<T>& correct, const S& un
     TestCase(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
-    
+
 template <class T, class S>
 std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     
-    TestReport report = TestReport::Make<TestReport::EqualsData>();
-    auto& data = report.Get<TestReport::EqualsData>();
+    TestReport report = TestReport::Make<EqualsData>();
+    auto& data = report.Get<EqualsData>();
     
-    data.left = UserObject(left);
-    data.right = UserObject(right);
+    data.output_expected = left;
+    data.output = right;
     data.descriptor = descriptor;
     data.result = left == right;
     

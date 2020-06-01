@@ -148,17 +148,17 @@ namespace {
             
             for(auto it = test_data.reports.begin(); it != test_data.reports.end(); it++) {
                 std::vector<std::vector<std::string>> cells;
-                if(const auto d = std::get_if<TestReport::EqualsData>(&it->data)) {
+                if(const auto d = std::get_if<EqualsData>(&it->data)) {
                     cells.push_back({});
                     auto& row = cells[cells.size()-1];
                     row.push_back(d->result ? "correct" : "incorrect");
                     row.push_back(d->descriptor);
-                    row.push_back(d->left.string());
-                    row.push_back(d->right.string());
+                    row.push_back(d->output_expected.string());
+                    row.push_back(d->output.string());
                     row.push_back(it->info_stream->str());
                     
                     writer.SetHeaders({"Result", "Condition", "Left", "Right", "Info"});
-                } else if(const auto d = std::get_if<TestReport::TrueData>(&it->data)) {
+                } else if(const auto d = std::get_if<TrueData>(&it->data)) {
                     
                     cells.push_back({});
                     auto& row = cells[cells.size()-1];
@@ -168,7 +168,7 @@ namespace {
                     row.push_back(it->info_stream->str());
                     
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
-                } else if(const auto d = std::get_if<TestReport::FalseData>(&it->data)) {
+                } else if(const auto d = std::get_if<FalseData>(&it->data)) {
                     
                     cells.push_back({});
                     auto& row = cells[cells.size()-1];
@@ -178,19 +178,23 @@ namespace {
                     row.push_back(it->info_stream->str());
                     
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
-                } else if(const auto d = std::get_if<TestReport::CaseData>(&it->data)) {
+                } else if(const auto d = std::get_if<CaseData>(&it->data)) {
                     
                     for(auto it2 = d->begin(); it2 != d->end(); it2++) {
                         cells.push_back({});
                         auto& row = cells[cells.size()-1];
-                        row.push_back(it2->result ? "correct" : "incorrect");
-                        row.push_back(it2->input.Unescape());
-                        row.push_back(it2->correct);
-                        row.push_back(it2->output);
+                        auto add_if = [&row](const std::optional<UserObject>& i) {
+                            if(i) row.push_back(i->string());
+                            else row.push_back("");
+                        };
                         
-                        writer.SetHeaders({"Result", "Input", "Correct", "Output"});
+                        add_if(it2->result ? "correct" : "incorrect");
+                        add_if(it2->input);
+                        add_if(it2->output_expected);
+                        add_if(it2->output);
                     }
-                } else if(const auto d = std::get_if<TestReport::EqualsData>(&it->data)) {
+                    writer.SetHeaders({"Result", "Input", "Correct", "Output"});
+                } else {
                     
                     cells.push_back({});
                     auto& row = cells[cells.size()-1];
@@ -274,19 +278,17 @@ double Test::RunTest() {
 
 TestReport& Test::AddReport(TestReport& report) {
     
-    report.test_class = typeid(*this).name(); 
-    
     auto increment_correct = [this](bool b) { 
         b ? data_.correct++ : data_.incorrect++;
     };
     
-    if(const auto d = std::get_if<TestReport::EqualsData>(&report.data)) {
+    if(const auto d = std::get_if<EqualsData>(&report.data)) {
         increment_correct(d->result);
-    } else if(const auto d = std::get_if<TestReport::TrueData>(&report.data)) {
+    } else if(const auto d = std::get_if<TrueData>(&report.data)) {
         increment_correct(d->result);
-    } else if(const auto d = std::get_if<TestReport::FalseData>(&report.data)) {
+    } else if(const auto d = std::get_if<FalseData>(&report.data)) {
         increment_correct(d->result);
-    } else if(const auto cases = std::get_if<TestReport::CaseData>(&report.data)) {
+    } else if(const auto cases = std::get_if<CaseData>(&report.data)) {
         for(auto it = cases->begin(); it != cases->end(); it++) {
             increment_correct(it->result);
         }
@@ -306,8 +308,8 @@ void Test::OutputFormat(std::string format) {
     
 std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
 
-    TestReport report = TestReport::Make<TestReport::TrueData>();
-    auto& data = report.Get<TestReport::TrueData>();
+    TestReport report = TestReport::Make<TrueData>();
+    auto& data = report.Get<TrueData>();
     
     data.value = b;
     data.descriptor = descriptor;
@@ -318,8 +320,8 @@ std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
 
 std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     
-    TestReport report = TestReport::Make<TestReport::FalseData>();
-    auto& data = report.Get<TestReport::FalseData>();
+    TestReport report = TestReport::Make<FalseData>();
+    auto& data = report.Get<FalseData>();
     
     data.value = b;
     data.descriptor = descriptor;

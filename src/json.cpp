@@ -114,16 +114,11 @@ JSON::JSON(const UserObject& o)
 
 JSON::JSON(const CaseEntry& e) {
     std::string out = "{";
-    
     out += JSON("output", e.output) + ',';
-    out += JSON("output_json", e.output_json) + ',';
+    out += JSON("output_expected", e.output_expected) + ',';
+    out += JSON("arguments", e.arguments) + ',';
     out += JSON("result", e.result) + ',';
     out += JSON("input", e.input) + ',';
-    out += JSON("input_args", JSON(e.input_args)) + ',';
-    out += JSON("input_params", JSON(e.input_params)) + ',';
-    out += JSON("output_params", JSON(e.output_params)) + ',';
-    out += JSON("correct", e.correct);
-    
     out += "}";
     
     Set(out);
@@ -132,34 +127,31 @@ JSON::JSON(const CaseEntry& e) {
 JSON::JSON(const TestReport& r) {
     
     std::string out = "{";
-    
-    if(const auto d = std::get_if<TestReport::EqualsData>(&r.data)) {
+    if(const auto d = std::get_if<EqualsData>(&r.data)) {
         out += JSON("type", "EE") + ',';
         
-        out += JSON("left", d->left) + ',';
-        out += JSON("right", d->right) + ',';
+        out += JSON("output_expected", d->output_expected.string()) + ',';
+        out += JSON("output", d->output.string()) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
-    } else if(const auto d = std::get_if<TestReport::TrueData>(&r.data)) {
+    } else if(const auto d = std::get_if<TrueData>(&r.data)) {
         out += JSON("type", "ET") + ',';
         
         out += JSON("value", d->value) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
-    } else if(const auto d = std::get_if<TestReport::FalseData>(&r.data)) {
+    } else if(const auto d = std::get_if<FalseData>(&r.data)) {
         out += JSON("type", "EF") + ',';
         
         out += JSON("value", d->value) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
-    } else if(const auto d = std::get_if<TestReport::CaseData>(&r.data)) {
+    } else if(const auto d = std::get_if<CaseData>(&r.data)) {
         out += JSON("type", "TC") + ',';
         
         out += JSON("cases", *d) + ',';
     }
-    
     out += JSON("info", r.info_stream->str());
-    
     out += "}";
     
     Set(out);
