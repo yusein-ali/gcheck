@@ -112,6 +112,8 @@ public:
     Prerequisite(std::string default_suite, std::string prereqs);
     
     bool IsFulfilled();
+    bool IsFulfilled() const;
+    std::vector<std::tuple<std::string, std::string, bool>> GetFullfillmentData() const;
 private:
     void FetchTests();
 
@@ -134,6 +136,8 @@ struct TestInfo {
 };
 
 struct TestData {
+    Prerequisite prerequisite;
+    
     std::vector<TestReport> reports;
     GradingMethod grading_method = Partial;
     std::string output_format = "horizontal";
@@ -148,6 +152,8 @@ struct TestData {
     int correct = 0;
     int incorrect = 0;
     
+    TestData(double points, Prerequisite prerequisite) : prerequisite(prerequisite), max_points(points) {}
+
     void CalculatePoints() {
         
         if(grading_method == Partial)
@@ -182,13 +188,9 @@ class Test {
 
     double RunTest(); // Runs the test and takes care of result logging to Formatter
 protected:
-
     TestData data_;
-
     std::string suite_;
     std::string test_;
-
-    Prerequisite prerequisite_;
 
     TestReport& AddReport(TestReport& report);
     void SetGradingMethod(GradingMethod method);
@@ -219,7 +221,7 @@ protected:
 public:
     Test(const TestInfo& info);
     
-    bool IsPassed();
+    bool IsPassed() const;
     const std::string& GetSuite() const { return suite_; }
     const std::string& GetTest() const { return test_; }
 

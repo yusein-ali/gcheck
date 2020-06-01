@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <stack>
 #include <cstring>
+#include <algorithm>
 
 #include "user_object.h"
 #include "gcheck.h"
@@ -177,9 +178,9 @@ JSON::JSON(const TestStatus& status) {
 JSON::JSON(const TestData& data) {
     
     std::string out = "{";
-    
     out += JSON("results", data.reports) + ',';
     out += JSON("grading_method", data.grading_method) + ',';
+    out += JSON("prerequisite", data.prerequisite) + ',';
     out += JSON("format", data.output_format) + ',';
     out += JSON("points", data.points) + ',';
     out += JSON("max_points", data.max_points) + ',';
@@ -188,12 +189,30 @@ JSON::JSON(const TestData& data) {
     out += JSON("correct", data.correct) + ',';
     out += JSON("incorrect", data.incorrect) + ',';
     out += JSON("status", data.status);
-    
     out += "}";
     
     Set(out);
 }
 
+JSON::JSON(const Prerequisite& pre) {
+    auto v = pre.GetFullfillmentData();
+    std::vector<std::tuple<std::pair<std::string, std::string>,std::pair<std::string, std::string>, std::pair<std::string, bool>>> v2(v.size());
+    std::transform(v.begin(), v.end(), v2.begin(), 
+        [](const std::tuple<std::string, std::string, bool>& t) {
+            return std::tuple(
+                std::pair("suite", std::get<0>(t)),
+                std::pair("test", std::get<1>(t)),
+                std::pair("ispassed", std::get<2>(t))
+            );
+        });
+    
+    std::string out = "{";
+    out += JSON("isfullfilled", pre.IsFulfilled());
+    out += JSON("details", v2);
+    out += "}";
+    Set(out);
+}
+    
 template JSON::JSON(const std::string& key, const int& value);
 template JSON::JSON(const int& v);
 template JSON::JSON(const std::string& key, const unsigned int& value);

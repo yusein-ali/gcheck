@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include "sfinae.h"
 
@@ -30,6 +31,7 @@ struct CaseEntry;
 enum TestStatus : int;
 struct TestData;
 class UserObject;
+class Prerequisite;
 
 class JSON : public std::string {
 public:
@@ -46,6 +48,7 @@ public:
     JSON(const TestStatus& status);
     JSON(const TestData& data);
     JSON(const UserObject& o);
+    JSON(const Prerequisite& o);
     
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && !has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE, typename A3 = SFINAE>
     JSON(const T&) : JSON() {}

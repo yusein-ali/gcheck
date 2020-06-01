@@ -232,18 +232,42 @@ Prerequisite::Prerequisite(std::string default_suite, std::string prereqs) {
     } while(epos != std::string::npos);
 }
 
-bool Prerequisite::IsFulfilled() {
+std::vector<std::tuple<std::string, std::string, bool>> Prerequisite::GetFullfillmentData() const {
+    std::vector<std::tuple<std::string, std::string, bool>> ret(names_.size());
+    
+    std::transform(names_.begin(), names_.end(), ret.begin(), 
+        [](const std::pair<std::string, std::string>& t){
+            Test* test = Test::FindTest(t.first, t.second);
+            if(test)
+                return std::tuple(t.first, t.second, test->IsPassed());
+            else
+                return std::tuple(t.first, t.second, false);
+        });
+            
+    return ret;
+}
+    
+bool Prerequisite::IsFulfilled() const {
     if(tests_.size() != names_.size())
-        FetchTests();
+        return false;
     
     for(auto t : tests_)
         if(!t->IsPassed())
             return false;
     
-    return tests_.size() == names_.size();
+    return true;
+}
+
+bool Prerequisite::IsFulfilled() {
+    FetchTests();
+    
+    return std::as_const(*this).IsFulfilled();
 }
 
 void Prerequisite::FetchTests() {
+    if(tests_.size() == names_.size())
+        return;
+        
     tests_.clear();
     for(auto& p : names_) {
         Test* t = Test::FindTest(p.first, p.second);
@@ -255,7 +279,7 @@ void Prerequisite::FetchTests() {
 double TestInfo::default_points = 1;
 
 
-Test::Test(const TestInfo& info) : suite_(info.suite), test_(info.test), prerequisite_(info.prerequisite) {
+Test::Test(const TestInfo& info) : data_(info.max_points, info.prerequisite), suite_(info.suite), test_(info.test) {
     test_list_().push_back(this);
 }
 
@@ -330,7 +354,7 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     return *AddReport(report).info_stream;
 }
 
-bool Test::IsPassed() {
+bool Test::IsPassed() const {
     return data_.status == Finished && data_.max_points == data_.points;
 }
 
@@ -346,7 +370,7 @@ bool Test::RunTests() {
     do {
         counter = 0;
         for(auto it = test_list.begin(); it != test_list.end(); it++) {
-            if((*it)->data_.status != Finished && (*it)->prerequisite_.IsFulfilled()) {
+            if((*it)->data_.status != Finished && (*it)->data_.prerequisite.IsFulfilled()) {
                 (*it)->data_.status = Started;
                 (*it)->RunTest();
                 Formatter::FinishTest((*it)->suite_, (*it)->test_);
