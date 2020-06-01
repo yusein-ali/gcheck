@@ -12,6 +12,7 @@
 #include "json.h"
 #include "user_object.h"
 #include "sfinae.h"
+#include "macrotools.h"
 
 namespace gcheck {
 
@@ -264,45 +265,6 @@ public:
     static Test* FindTest(std::string suite, std::string test);
 };
 
-// Creates a class for a prerequisite test with specific maximum points and prerequisite priority; higher goes first
-#define PREREQ_TEST(suitename, testname, points, prerequisites) \
-    class GCHECK_TEST_##suitename##_##testname : gcheck::Test { \
-        void ActualTest(); \
-    public: \
-        GCHECK_TEST_##suitename##_##testname() : Test(TestInfo(#suitename, #testname, points, prerequisites)) { } \
-    }; \
-    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
-    void GCHECK_TEST_##suitename##_##testname::ActualTest() 
-    
-// Creates a class for a test with specific maximum points
-#define TEST_(suitename, testname, points) \
-    PREREQ_TEST(suitename, testname, points, "")
-    
-// Calls TEST_ with the default maximum points
-#define TEST(suitename, testname) \
-    TEST_(suitename, testname, default_points_)
-
-#define EXPECT_TRUE(b) \
-    ExpectTrue(b, #b)
-    
-#define EXPECT_FALSE(b) \
-    ExpectFalse(b, "!" #b)
-
-#define EXPECT_EQ(left, right) \
-    ExpectEqual(left, right, #left " == " #right)
-
-#define ASSERT_TRUE(b) \
-    ExpectTrue(b, #b); \
-    if(!(b)) return;
-    
-#define ASSERT_FALSE(b) \
-    ExpectFalse(b, #b); \
-    if(b) return;
-
-#define FAIL() \
-    GradingMethod(gcheck::AllOrNothing); \
-    ExpectTrue(false, "FAIL")
-
 template <class F, class S, class... Args>
 void Test::CompareWithCallable(int num, const F& correct, const S& under_test, Args&... args) {
     
@@ -379,3 +341,47 @@ extern template std::stringstream& Test::ExpectEqual(std::string left, const cha
 extern template std::stringstream& Test::ExpectEqual(const char* left, std::string right, std::string descriptor);
 
 }
+
+#define _TEST3(suitename, testname, points) _TEST4(suitename, testname, points, "")
+#define _TEST4(suitename, testname, points, prerequisites) \
+    class GCHECK_TEST_##suitename##_##testname : public gcheck::Test { \
+        void ActualTest(); \
+    public: \
+        GCHECK_TEST_##suitename##_##testname() : Test(gcheck::TestInfo(#suitename, #testname, points, prerequisites)) { } \
+    }; \
+    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
+    void GCHECK_TEST_##suitename##_##testname::ActualTest() 
+#define _TEST2(suitename, testname) \
+    class GCHECK_TEST_##suitename##_##testname : public gcheck::Test { \
+        void ActualTest(); \
+    public: \
+        GCHECK_TEST_##suitename##_##testname() : Test(gcheck::TestInfo(#suitename, #testname)) { } \
+    }; \
+    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname; \
+    void GCHECK_TEST_##suitename##_##testname::ActualTest() 
+
+// params: suite name, test name, points (optional), prerequisites (optional)
+#define TEST(...) \
+    VFUNC(_TEST, __VA_ARGS__)
+
+
+#define EXPECT_TRUE(b) \
+    ExpectTrue(b, #b)
+    
+#define EXPECT_FALSE(b) \
+    ExpectFalse(b, "!" #b)
+
+#define EXPECT_EQ(left, right) \
+    ExpectEqual(left, right, #left " == " #right)
+
+#define ASSERT_TRUE(b) \
+    ExpectTrue(b, #b); \
+    if(!(b)) return;
+    
+#define ASSERT_FALSE(b) \
+    ExpectFalse(b, #b); \
+    if(b) return;
+
+#define FAIL() \
+    GradingMethod(gcheck::AllOrNothing); \
+    ExpectTrue(false, "FAIL")
