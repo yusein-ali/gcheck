@@ -3,6 +3,7 @@ import os
 import sys
 import argparse
 import html
+from report_parser import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest='out', type=str, default="stdout")
@@ -14,7 +15,7 @@ args = parser.parse_args()
 default_format = "list"
 
 template_filenames = {
-    "vertical": "vertical.html", 
+    "vertical": "vertical.html",
     "horizontal": "horizontal.html",
     "main": "main.html",
     "testbody": "testbody.html"
@@ -31,7 +32,7 @@ def sanitize_replace(original, substr, replacor):
 
 def differences(correct, answer):
     """Returns a tuple with two lists of tuples with the difference locations and lengths"""
-    
+
     def split(s):
         res = []
         pos = 0
@@ -56,7 +57,7 @@ def differences(correct, answer):
     while n < len(c_words) and n < len(a_words) and c_words[n] == a_words[n]:
         n+=1
     start = c_words[:n]
-    
+
     n = 0
     while n < len(c_words) and n < len(a_words) and c_words[-n-1] == a_words[-n-1]:
         n+=1
@@ -124,7 +125,7 @@ def differences(correct, answer):
         dc2, da2 = list(zip(*ds))
         print(dc2, da2)
     '''
-    
+
     return get_indices(c_words, dc, offset), get_indices(a_words, da, offset)
 
 def mark_differences(correct, answer):
@@ -200,7 +201,7 @@ def get_table(template, results, replace_func):
 
         pos = end
         index += 1
-    
+
     return hor
 
 def replace(templ, results, typ, func, input_text, output_text, correct_text):
@@ -213,74 +214,67 @@ for key, file_name in template_filenames.items():
     with open(template_location + file_name, 'r') as f:
         templates[key] = f.read()
 
-with open(report_filename, 'r') as f:
-    report_data = json.load(f)
-    test_results = report_data["test_results"]
-    total_max_points = report_data["max_points"]
-    
+report = Report(report_filename)
+
 if max_points == -1:
     point_multiplier = 1
 else:
-    point_multiplier = max_points/total_max_points
+    point_multiplier = max_points/report.max_points
 
-#TODO: sanitize html
 stdio = ""
 tests = ""
-for suite_name, suite_data in test_results.items():
-    for test_name, test_data in suite_data.items():
-        
-        if ("stdout" in test_data and test_data["stdout"] != "") or ("stderr" in test_data and test_data["stderr"] != ""):
-            stdio += "Test: " + test_name + "\n"
-            if ("stdout" in test_data and test_data["stdout"] != ""):
-                stdio += "Stdout: " + test_data["stdout"] + "\n"
-            if ("stderr" in test_data and test_data["stderr"] != ""):
-                stdio += "Stderr: " + test_data["stderr"] + "\n"
-            stdio += "--------------------------------------------------------------\n"
-        
-        format_name = default_format if 'format' not in test_data else test_data['format']
-        
-        def ET_func(template, result):
-            """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], "True", result["result"])
-            
-        def EF_func(template, result):
-            """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], "True", result["result"])
-        
-        def EE_func(template, result):
-            """Function for replacing condition case data"""
-            return replace_entries(template, result["descriptor"], result["left"], result["right"])
-            
-        def TC_func(template, result):
-            """Function for replacing test case data"""
-            content = ""
-            for case in result.get("cases", []):
-                content += replace_entries(template, case["input"], case["correct"], case["output"])
-            return content
-        
-        if test_data['finished']:
-            content = replace(templates[format_name], test_data['results'], "ET", ET_func, "Condition", "Output", "Should be")
-            content += replace(templates[format_name], test_data['results'], "EF", EF_func, "Condition", "Output", "Should be")
-            content += replace(templates[format_name], test_data['results'], "EE", EE_func, "Condition", "Right (Output)", "Left (Correct)")
-            content += replace(templates[format_name], test_data['results'], "TC", TC_func, "Input", "Output", "Correct")
-        else:
-            content = "Crashed or timed out while running this test."
-        
-        testbody = templates["testbody"].replace('{{{testname}}}', test_name)
-        testbody = testbody.replace('{{{suitename}}}', suite_name)
-        testbody = testbody.replace('{{{points}}}', str(test_data["points"]*point_multiplier))
-        testbody = testbody.replace('{{{max_points}}}', str(test_data['max_points']*point_multiplier))
-        testbody = testbody.replace('{{{point_state}}}', 
-            "full-points" if test_data["points"] == test_data['max_points'] else 
-            "zero-points" if test_data["points"] == 0 else 
-            "partial-points")
-        testbody = sanitize_replace(testbody, '{{{testid}}}', suite_name+test_name)
-        testbody = testbody.replace('{{{testcontent}}}', content)
+for test in report.tests:
+    if test.stdout != "" or test.stderr != "":
+        stdio += "Test: " + test.get_name() + "\n"
+        if (test.stdout != ""):
+            stdio += "Stdout: " + test.stdout + "\n"
+        if (test.stderr != ""):
+            stdio += "Stderr: " + test.stderr + "\n"
+        stdio += "--------------------------------------------------------------\n"
 
-        tests += testbody
+    format_name = default_format if not test.format else test.format
 
-if "ERROR" in report_data:
-    stdio += report_data["ERROR"]
+    def ET_func(template, result):
+        """Function for replacing condition case data"""
+        return replace_entries(template, result["descriptor"], "True", result["result"])
+
+    def EF_func(template, result):
+        """Function for replacing condition case data"""
+        return replace_entries(template, result["descriptor"], "True", result["result"])
+
+    def EE_func(template, result):
+        """Function for replacing condition case data"""
+        return replace_entries(template, result["descriptor"], result["left"], result["right"])
+
+    def TC_func(template, result):
+        """Function for replacing test case data"""
+        content = ""
+        for case in result.get("cases", []):
+            content += replace_entries(template, case["input"], case["correct"], case["output"])
+        return content
+
+    content = ""
+    for result in test.results:
+        content += replace(templates[format_name], result, "ET", ET_func, "Condition", "Output", "Should be")
+        content += replace(templates[format_name], result, "EF", EF_func, "Condition", "Output", "Should be")
+        content += replace(templates[format_name], result, "EE", EE_func, "Condition", "Output", "Should be")
+        content += replace(templates[format_name], result, "TC", TC_func, "Input", "Output", "Should be")
+
+    if test.status == Status.Started:
+        content = "Crashed or timed out while running this test.\n"
+
+    testbody = templates["testbody"].replace('{{{testname}}}', test.test)
+    testbody = testbody.replace('{{{suitename}}}', test.suite)
+    testbody = testbody.replace('{{{points}}}', str(test.points*point_multiplier))
+    testbody = testbody.replace('{{{max_points}}}', str(test.max_points*point_multiplier))
+    testbody = testbody.replace('{{{point_state}}}',
+        "full-points" if test.points == test.max_points else
+        "zero-points" if test.points == 0 else
+        "partial-points")
+    testbody = sanitize_replace(testbody, '{{{testid}}}', test.suite + test.test)
+    testbody = testbody.replace('{{{testcontent}}}', content)
+
+    tests += testbody
 
 main = sanitize_replace(templates["main"], '{{{stdio}}}', stdio)
 main = main.replace('{{{tests}}}', tests)
