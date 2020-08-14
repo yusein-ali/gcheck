@@ -1,5 +1,5 @@
 /*
-    Collection of functions for converting objects to JSON string format. 
+    Collection of functions for converting objects to JSON string format.
 */
 
 #pragma once
@@ -13,7 +13,7 @@
 namespace gcheck {
 
 namespace {
-    
+
 namespace detail{
     template<class T>
     static auto has_tojson(int) -> sfinae_true<decltype(to_json(std::declval<T>()))>;
@@ -43,7 +43,7 @@ public:
     JSON(const std::string& key, const char* value) : JSON(key, JSON(value)) {}
     JSON(const JSON& str) = default;
     JSON(bool b) : std::string(b ? "true" : "false") {}
-    
+
     JSON(const TestReport& r);
     JSON(const CaseEntry& e);
     JSON(const FunctionEntry& e);
@@ -51,19 +51,19 @@ public:
     JSON(const TestData& data);
     JSON(const UserObject& o);
     JSON(const Prerequisite& o);
-    
+
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && !has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE, typename A3 = SFINAE>
     JSON(const T&) : JSON() {}
-    
+
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE>
     JSON(const T& value) : JSON(std::to_string(value)) {}
-    
+
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && has_tostring<T>::value>, typename A = SFINAE>
     JSON(const T& value) : JSON(to_string(value)) {}
-    
+
     template<typename T, typename = typename std::enable_if_t<has_tojson<T>::value>>
     JSON(const T& value) : std::string(to_json(value)) {}
-    
+
     template<typename T>
     JSON(const std::string& key, const T& value) : std::string("\"" + key + "\":" + JSON(value)) {}
 
@@ -76,7 +76,7 @@ public:
                 ret += ",";
         }
         ret += "]";
-        
+
         Set(ret);
     }
 
@@ -90,10 +90,10 @@ public:
                 ret += ",";
         }
         ret += "}";
-        
+
         Set(ret);
     }
-    
+
     template<typename T>
     JSON(const std::vector<std::pair<const char*, T>>& v) {
         std::string ret = "{";
@@ -104,11 +104,11 @@ public:
                 ret += ",";
         }
         ret += "}";
-        
+
         Set(ret);
     }
 
-    
+
     template<typename... Args>
     JSON(const std::tuple<Args...>& v) {
         std::string ret = "[";
@@ -119,14 +119,14 @@ public:
                 ret += ",";
         });
         ret += "]";
-        
+
         Set(ret);
     }
-    
+
     JSON(const std::tuple<>&) {
         Set("[]");
     }
-    
+
     template<typename... Args>
     JSON(const std::tuple<std::pair<std::string, Args>...>& v) {
         std::string ret = "{";
@@ -137,10 +137,10 @@ public:
                 ret += ",";
         });
         ret += "}";
-        
+
         Set(ret);
     }
-    
+
     template<typename... Args>
     JSON(const std::tuple<std::pair<const char*, Args>...>& v) {
         std::string ret = "{";
@@ -151,7 +151,7 @@ public:
                 ret += ",";
         });
         ret += "}";
-        
+
         Set(ret);
     }
 
@@ -163,13 +163,13 @@ public:
     JSON& operator=(const JSON& val) = default;
     template<typename T>
     JSON& operator=(const T& val) {
-        return *this = JSON(val); 
+        return *this = JSON(val);
     }
-    
+
     // Escapes special JSON characters from 'str'
     static JSON Escape(std::string str);
     static std::string Unescape(const JSON& json) { return json.Unescape(); }
-    
+
     std::string Unescape() const {
         std::string out = *this;
         size_t pos = 0;

@@ -23,7 +23,7 @@ struct ValueAndAddress {
 // Turns a C-array returning function into a vector returning one
 template<typename T, typename... Args>
 std::function<std::vector<T>(Args...)> CArray(std::function<T*(Args...)> func, std::function<size_t(T*)> size_func) {
-    return [type](Args... args) { 
+    return [type](Args... args) {
             T* ptr = func(args...);
             size_t size = size_func(ptr);
             return std::vector(ptr, ptr + size);
@@ -32,14 +32,14 @@ std::function<std::vector<T>(Args...)> CArray(std::function<T*(Args...)> func, s
 
 template<typename T, typename... Args>
 std::function<T(Args...)> PointerValue(std::function<T*(Args...)> func) {
-    return [type](Args... args) { 
+    return [type](Args... args) {
             return *func(args...);
         };
 }
 
 template<typename T, typename... Args>
 std::function<ValueAndAddress<T>(Args...)> PointerValueAndAddress(std::function<T*(Args...)> func) {
-    return [type](Args... args) { 
+    return [type](Args... args) {
             return *func(args...);
         };
 }

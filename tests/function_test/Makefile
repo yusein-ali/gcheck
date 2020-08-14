@@ -38,10 +38,10 @@ $(EXECUTABLE): $(GCHECK_LIB_DIR)/lib$(GCHECK_LIB).a $(OBJECTS) | $(BIN_DIR)
 
 clean:
 	$(RM) $(OBJECTS) $(EXECUTABLE) output.html report.json
-	
+
 clean-all: clean
 	$(MAKE) -C $(GCHECK_DIR)/ clean
-	
+
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
 $(BIN_DIR):
@@ -50,4 +50,3 @@ $(BIN_DIR):
 $(GCHECK_LIB_DIR)/lib$(GCHECK_LIB).a:
 	$(MAKE) -C $(GCHECK_DIR)/ debug
 
-	

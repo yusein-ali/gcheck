@@ -72,7 +72,7 @@ typename std::enable_if<!has_toconstruct<T*>::value, std::string>::type
 toConstruct(const T* item) {
     if(item == nullptr)
         return "nullptr";
-        
+
     return "new " + toConstruct(*item);
 }
 
@@ -102,26 +102,26 @@ toConstruct(unsigned long long item) { return std::to_string(item) + "ULL"; }
 
 template<typename T = float>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(float item) { 
+toConstruct(float item) {
     std::stringstream ss;
     ss << "std::stof(" << std::hexfloat << item << ')';
-    return ss.str(); 
+    return ss.str();
 }
 
 template<typename T = double>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(double item) { 
+toConstruct(double item) {
     std::stringstream ss;
     ss << "std::stod(" << std::hexfloat << item << ')';
-    return ss.str(); 
+    return ss.str();
 }
 
 template<typename T = long double>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(long double item) { 
+toConstruct(long double item) {
     std::stringstream ss;
     ss << "std::stold(" << std::hexfloat << item << ')';
-    return ss.str(); 
+    return ss.str();
 }
 
 template<typename T>
@@ -166,10 +166,10 @@ typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value
 toString(T* item) {
     if(item == nullptr)
         return "nullptr";
-        
+
     std::stringstream ss;
     ss << static_cast<const void*>(item);
-    return ss.str(); 
+    return ss.str();
 }
 /*template<typename T>
 typename std::enable_if<!has_tostring<T>::value && has_std_tostring<T>::value>::type

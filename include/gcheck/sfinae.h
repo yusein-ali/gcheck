@@ -4,7 +4,7 @@
 #include <type_traits>
 
 namespace gcheck {
-    
+
 template<class>
 struct sfinae_bool {};
 template<class T>
@@ -25,7 +25,7 @@ struct is_empty<> : std::true_type{};
 
 namespace {
     namespace detail {
-    
+
     template<class T>
     static auto has_tostring(int) -> sfinae_true<decltype(to_string(std::declval<T>()))>;
     template<class T>
@@ -34,7 +34,7 @@ namespace {
     static auto has_std_tostring(int) -> sfinae_true<decltype(std::to_string(std::declval<T>()))>;
     template<class T>
     static auto has_std_tostring(long) -> sfinae_false<T>;
-    
+
     } // detail
 } // anonymous
 

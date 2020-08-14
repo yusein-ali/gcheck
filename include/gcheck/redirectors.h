@@ -5,8 +5,8 @@
 #include <ios>
 
 namespace gcheck {
-    
-/* 
+
+/*
     Class for injecting input from a file (e.g. stdin).
     State of associate istream gets reset back to the original after Restore().
 */
@@ -30,7 +30,7 @@ public:
     FileInjecter& Capture();
     FileInjecter& Restore();
     FileInjecter& Close();
-    
+
     FileInjecter& operator<<(std::string str) { return Write(str); }
 };
 /*
@@ -43,7 +43,7 @@ public:
 };
 
 
-/* 
+/*
     Class for capturing output written to a file (e.g. stdout).
 */
 class FileCapturer {
@@ -61,7 +61,7 @@ public:
     */
     FileCapturer(FILE* stream);
     ~FileCapturer();
-    
+
     std::string str();
     FileCapturer& Restore();
     FileCapturer& Capture();

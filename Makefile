@@ -37,7 +37,7 @@ get-report: $(EXECUTABLE)
 
 clean:
 	$(RM) build/* $(GCHECK_LIB_DIR)/* $(EXECUTABLE) output.html report.json
-	
+
 build:
 	mkdir build
 $(GCHECK_LIB_DIR):

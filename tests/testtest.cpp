@@ -46,7 +46,7 @@ std::string asd4(std::list<char> a) {
 
 TEST(suite1, test1) {
     GradingMethod(Partial);
-    
+
     RangeDistribution<char> dist('a', 'z');
     ChoiceDistribution<char> dist2({'a', 'b', 'd', 'k'});
     Random<char> rng(dist);

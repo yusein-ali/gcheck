@@ -15,7 +15,7 @@ namespace gcheck {
 
 class ConsoleWriter {
 public:
-#if defined(_WIN32) || defined(WIN32)  
+#if defined(_WIN32) || defined(WIN32)
     enum Color : int {
         Original,
         Black = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
@@ -35,28 +35,28 @@ public:
     };
 #endif
 private:
-    
+
     std::vector<std::string> headers_;
     std::vector<int> header_widths_;
-    
+
     bool terminating_newline_ = false;
     bool use_colors_ = false; // TODO: determine if terminal supports colors
-    
+
     int GetWidth();
-    
+
     std::vector<int> CalcWidths(const std::vector<std::string>& strs, std::vector<int> widths = std::vector<int>());
-    
+
     void WriteRow(int width, const std::vector<std::string>& cells, const std::vector<int>& widths, const std::vector<int>& cuts);
 public:
-    
+
     void SetColor(Color color);
-    
+
     void WriteSeparator();
-    
+
     void SetHeaders(const std::vector<std::string>& headers);
 
     void WriteRow(const std::vector<std::string>& cells);
-    
+
     void WriteRows(const std::vector<std::vector<std::string>>& cells);
 };
 

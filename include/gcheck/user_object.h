@@ -32,14 +32,14 @@ struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0))
 
 /*
     Wrapper class for anything passed by users from tests.
-    Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "", 
+    Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "",
         in that order by first available method.
  */
 class UserObject {
 public:
     UserObject() {}
     UserObject(const UserObject& v) = default;
-    
+
     template<typename T>
     UserObject(const T& item) {
         as_json_ = item;
@@ -48,14 +48,14 @@ public:
     }
     template<typename... Args>
     UserObject(const Args&... items) : UserObject(std::tuple<Args...>(items...)) {}
-    
+
     JSON json() const { return as_json_; }
     std::string string() const { return as_string_; }
     std::string construct() const { return construct_; }
-    
+
     template<typename T>
     UserObject& operator=(const T& v) {
-        return *this = UserObject(v); 
+        return *this = UserObject(v);
     }
 private:
     std::string as_string_;

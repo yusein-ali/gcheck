@@ -60,7 +60,7 @@ struct Discrete : public NextType<T> {
 template<typename A>
 class Distribution {
 protected:
-    std::default_random_engine generator_; 
+    std::default_random_engine generator_;
 public:
     Distribution() : generator_(std::random_device()()) {}
     Distribution(uint32_t seed) : generator_(seed == UINT32_MAX ? std::random_device()() : seed) {}
@@ -90,7 +90,7 @@ template<typename A>
 class RangeDistribution<A, typename std::enable_if<std::is_floating_point<A>::value || std::is_integral<A>::value>::type> : public Distribution<A> {
 public:
 
-    RangeDistribution(const A& start = std::numeric_limits<A>::min(), const A& end = std::numeric_limits<A>::max(), uint32_t seed = UINT32_MAX) 
+    RangeDistribution(const A& start = std::numeric_limits<A>::min(), const A& end = std::numeric_limits<A>::max(), uint32_t seed = UINT32_MAX)
         : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
     RangeDistribution(const RangeDistribution<A>& dist) : Distribution<A>(dist), start_(dist.start_), end_(dist.end_), distribution_(dist.distribution_) {}
     A operator()() { return distribution_(Distribution<A>::generator_); }
@@ -98,8 +98,8 @@ private:
     A start_;
     A end_;
     // Use int distribution for integral types and real distribution for floating point types
-    typename std::conditional<std::is_integral<A>::value, 
-        std::uniform_int_distribution<A>, 
+    typename std::conditional<std::is_integral<A>::value,
+        std::uniform_int_distribution<A>,
         std::uniform_real_distribution<A>
         >::type distribution_;
 };
@@ -138,10 +138,10 @@ class Argument : public NextType<A> {
 public:
     Argument() : value_() {};
     Argument(A value) : value_(value) {};
-    
+
     operator A() const { return value_; };
     A operator ()() const { return value_; };
-    
+
     virtual A Next() {
         return value_;
     }
@@ -156,14 +156,14 @@ protected:
 template <typename A>
 class Random : public Argument<A>, public NextType<A> {
 public:
-    Random(const A& start, const A& end, uint32_t seed = UINT32_MAX) 
+    Random(const A& start, const A& end, uint32_t seed = UINT32_MAX)
             : distribution_(new RangeDistribution<A>(start, end, seed)) {}
-    Random(const std::vector<A>& choices, uint32_t seed = UINT32_MAX) 
+    Random(const std::vector<A>& choices, uint32_t seed = UINT32_MAX)
             : distribution_(new ChoiceDistribution<A>(choices, seed)) {}
     Random(std::shared_ptr<Distribution<A>> distribution) : distribution_(distribution) {}
     Random(Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
     Random(const Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
-    
+
     A Next() { return this->value_ = (*distribution_)(); };
 private:
     std::shared_ptr<Distribution<A>> distribution_;
@@ -187,15 +187,15 @@ class Container : public Argument<ContainerT<strip_next<T>>> {
     typedef ContainerT<strip_next<T>> ReturnType;
     typedef std::vector<NextType<T>*> SourceType;
 public:
-    Container(const NextType<size_t>& size, T def = T()) 
+    Container(const NextType<size_t>& size, T def = T())
             : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
         Resize(size, def);
     }
-    Container(size_t size, T def = T()) 
+    Container(size_t size, T def = T())
             : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
         Resize(size, def);
     }
-    Container(const Container<ContainerT, T>& container) 
+    Container(const Container<ContainerT, T>& container)
             : Argument<ContainerT<T>>(container), size_(container.size_->Clone()) {
         SetSource(container.source_);
     }
@@ -205,7 +205,7 @@ public:
             delete item;
         }
     }
-    
+
     void Resize(const NextType<size_t>& size, T val = T()) {
         default_ = val;
         size_ = size.Clone();
@@ -245,7 +245,7 @@ public:
         }
         return this->value_;
     }
-    
+
     NextType<ContainerT<strip_next<T>>>* Clone() {
         return new Container(*this);
     }
@@ -259,11 +259,11 @@ class Container<std::basic_string, char> : public Argument<std::string>  {
     typedef std::string ReturnType;
     typedef std::vector<NextType<char>*> SourceType;
 public:
-    Container(const Args&... args) 
+    Container(const Args&... args)
             : Argument<ReturnType>(ReturnType(args...)), source_(args...) {}
-    Container(const Container<std::tuple, Args...>& container) 
+    Container(const Container<std::tuple, Args...>& container)
             : Argument<ReturnType>(container), source_(container.source_) {}
-    
+
     void Resize(size_t size, T val = T()) {
         this->value_.resize(size, val);
     }
@@ -277,7 +277,7 @@ public:
         source_.resize(source.size(), nullptr);
         std::transform(source.begin(), source.end(), source_.begin(), [](const NextType<char>* in){ return in.Clone(); });
     }
-    
+
     ReturnType Next() {
         auto it2 = source_.begin();
         if(it2 != source_.end()) {
@@ -300,13 +300,13 @@ template <class T>
 class SequenceArgument : public Argument<T> {
 public:
     SequenceArgument(const std::vector<T>& seq) : Argument<T>(seq[0]), sequence_(seq), it_(sequence_.begin()) {}
-    
+
     T Next() {
         this->value_ = *it_;
         it_++;
         if(it_ == sequence_.end())
             it_ = sequence_.begin();
-        
+
         return this->value_;
     }
     size_t GetSize() { return sequence_.size(); }
@@ -340,8 +340,8 @@ class CombineBase {
     typedef std::conditional<are_same<Args>::value..., std::tuple_element<0, std::tuple<Args...>>::type, std::variant<Args...>> ReturnType;
 protected:
     CombineBase(const Args&... args) : parts_(args...) {}
-    
-    RangeDistribution<double> rnd_ = RangeDistribution<double>(0.0, 1.0); 
+
+    RangeDistribution<double> rnd_ = RangeDistribution<double>(0.0, 1.0);
     std::tuple<Args...> parts_;
 };
 
@@ -356,7 +356,7 @@ class Combine<DiscreteCombine, Args...> : public Discrete<typename CombineBase<A
     using CombineBase<Args...>::parts_;
 public:
     Combine(const Args&... args) : CombineBase<Args...>(args...) {}
-    
+
     template<typename T>
     Combine<DiscreteCombine, Args..., T> Added(const T& n) {
         return std::make_from_tuple<Combine<DiscreteCombine>>(std::tuple_cat(parts_, std::tuple(n)));
@@ -365,11 +365,11 @@ public:
     Combine<WeightedCombine, Args..., T> Added(const T& n, double weight) {
         return std::make_from_tuple<Combine<WeightedCombine>>(std::tuple_cat(parts_, std::tuple(n, weight)));
     }
-    
+
     size_t ChoiceLength() {
         return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
     }
-    
+
     ReturnType Next() {
         auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
         auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
@@ -389,7 +389,7 @@ class Combine<ContinuousCombine, Args...> : public Continuous<typename CombineBa
     using CombineBase<Args...>::parts_;
 public:
     Combine(const Continuous<Args>&... args) : CombineBase<Args...>(args...) {}
-    
+
     template<typename T>
     Combine<ContinuousCombine, Args..., T> Added(const T& n) {
         return std::make_from_tuple<Combine<ContinuousCombine>>(std::tuple_cat(parts_, std::tuple(n)));
@@ -398,11 +398,11 @@ public:
     Combine<WeightedCombine, Args..., T> Added(const T& n, double weight) {
         return std::make_from_tuple<Combine<WeightedCombine>>(std::tuple_cat(parts_, std::tuple(n, weight)));
     }
-    
+
     double ChoiceLength() {
         return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
     }
-    
+
     ReturnType Next() {
         auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
         auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
@@ -421,12 +421,12 @@ class Combine<WeightedCombine, T, S> : public NextType<typename CombineBase<T, S
     using CombineBase<T, S>::parts_;
 public:
     Combine(const NextType<T>& first, const NextType<T>& second, double weight) : CombineBase<T, S>(first, second), weight_(weight) {}
-    
+
     template<typename K>
     Combine<WeightedCombine, Combine<WeightedCombine, T, S>, K> Added(const NextType<K>& n, double weight) {
         return Combine<WeightedCombine>(*this, n, weight);
     }
-    
+
     ReturnType Next() {
         auto rnd = rnd_();
         if(rnd <= weight_)
@@ -458,10 +458,10 @@ Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<Conti
 
 template<typename... Args>
 class Join : public NextType<typename get_types_of<NextType, Args...>::types> {
-    typedef typename get_types_of<NextType, Args...>::types TypesTuple; 
+    typedef typename get_types_of<NextType, Args...>::types TypesTuple;
 public:
     Join(const Args&... args) : parts_(args...) {}
-    
+
     template<typename T>
     Join<Args..., T> Appended(const NextType<T>& n) {
         return std::make_from_tuple<Join>(std::tuple_cat<Args..., NextType<T>>(parts_, std::tuple(n)));
@@ -470,7 +470,7 @@ public:
     Join<T, Args...> Prepended(const NextType<T>& n) {
         return std::make_from_tuple<Join>(std::tuple_cat<NextType<T>, Args...>(std::tuple(n), parts_));
     }
-    
+
     TypesTuple Next() {
         return std::apply([](auto&... t){ return std::tuple(t.Next()...); }, parts_);
     }

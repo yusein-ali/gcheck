@@ -16,15 +16,15 @@
 #include <iostream>
 
 namespace gcheck {
-    
-FileInjecter::FileInjecter(FILE* stream, std::string str, std::istream* associate) 
+
+FileInjecter::FileInjecter(FILE* stream, std::string str, std::istream* associate)
         : swapped_(false), closed_(true), associate_(associate) {
-    
+
     original_ = stream;
     save_ = dup(fileno(stream));
-    
+
     Capture();
-    
+
     if(str.length() != 0)
         Write(str);
 }
@@ -36,60 +36,60 @@ FileInjecter::~FileInjecter() {
 
 FileInjecter& FileInjecter::Write(std::string str) {
     if(!swapped_ || closed_) Capture();
-    
+
     fputs(str.c_str(), out_);
     fflush(out_);
-    
+
     return *this;
 }
 
 FileInjecter& FileInjecter::Capture() {
     if(swapped_) {
         if(!closed_) return *this;
-        
+
         Restore();
     } else if(!closed_) {
         Close();
     }
-    
+
     if(associate_ != nullptr)
         original_state_ = associate_->rdstate();
-    
+
     int fds[2];
     pipe(fds);
     out_ = fdopen(fds[1], "w");
     dup2(fds[0], fileno(original_));
     close(fds[0]);
-    
+
     swapped_ = true;
     closed_ = false;
-    
+
     return *this;
 }
 
 FileInjecter& FileInjecter::Restore() {
     if(!closed_) Close();
     if(!swapped_) return *this;
-        
+
     char buffer[1024];
     while(fgets(buffer, 1024, original_) != NULL);
     clearerr(original_);
-    
+
     dup2(save_, fileno(original_));
-    
+
     swapped_ = false;
     if(associate_ != nullptr)
         associate_->clear(original_state_);
-    
+
     return *this;
 }
 
 FileInjecter& FileInjecter::Close() {
     if(closed_) return *this;
-    
+
     fclose(out_);
     closed_ = true;
-    
+
     return *this;
 }
 
@@ -125,7 +125,7 @@ FileCapturer::FileCapturer(FILE* stream) : is_swapped_(false), last_pos_(0), fil
 FileCapturer::~FileCapturer() {
     Restore();
     if(new_ == NULL) return;
-    
+
     fclose(new_);
     close(save_);
     new_ = NULL;
@@ -133,20 +133,20 @@ FileCapturer::~FileCapturer() {
 
 std::string FileCapturer::str() {
     if(new_ == NULL) return "";
-    
+
     fflush(new_);
-    
+
     fseek(new_, last_pos_, 0);
-    
+
     std::stringstream ss;
-    
+
     int c = EOF+1;
     while((c = fgetc(new_)) != EOF) {
         ss.put(c);
     }
-    
+
     last_pos_ = ftell(new_);
-    
+
     return ss.str();
 }
 
@@ -157,7 +157,7 @@ FileCapturer& FileCapturer::Restore() {
     fflush(original_);
     dup2(save_, fileno_);
     close(save_);
-    
+
     return *this;
 }
 
@@ -165,11 +165,11 @@ FileCapturer& FileCapturer::Capture() {
     if(new_ == NULL) throw; // TODO: better exception
     if(is_swapped_) return *this;
     is_swapped_ = true;
-    
+
     fflush(original_);
     save_ = dup(fileno_);
     dup2(fileno(new_), fileno_);
-    
+
     return *this;
 }
 

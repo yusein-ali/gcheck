@@ -12,7 +12,7 @@ class Type(Enum):
     EE = 3
     EF = 4
     ET = 5
-    
+
 class Status(Enum):
     NotStarted = 1
     Started = 2
@@ -27,10 +27,10 @@ class UserObject:
 class FunctionEntry:
     def __init__(self, report):
         self.result = report["result"]
-        
+
         def UO_or_None(var):
             return UserObject(report[var]) if var in report else None
-        
+
         self.error = UO_or_None("error")
         self.output = UO_or_None("output")
         self.input = UO_or_None("input")
@@ -39,14 +39,14 @@ class FunctionEntry:
         self.arguments_after_expected = UO_or_None("arguments_after_expected")
         self.return_value = UO_or_None("return_value")
         self.return_value_expected = UO_or_None("return_value_expected")
-        
+
 class CaseEntry:
     def __init__(self, report):
         self.result = report["result"]
-        
+
         def UO_or_None(var):
             return UserObject(report[var]) if var in report else None
-        
+
         self.output = UO_or_None("output")
         self.output_expected = UO_or_None("output_expected")
         self.input = UO_or_None("input")
@@ -84,7 +84,7 @@ class Test:
         self.status = Status[report["status"]]
         self.results = [Result(r) for r in report["results"]]
         self.prerequisite = Prerequisite(report["prerequisite"])
-    
+
     def get_name(self):
         return self.suite + " : " + self.test
 
@@ -97,6 +97,6 @@ class Report:
             self.points = self.data["points"]
             self.max_points = self.data["max_points"]
             self.tests = [Test(suite_name, test_name, test_data) for suite_name, suite_data in self.data["test_results"].items() for test_name, test_data in suite_data.items()]
-    
+
     def get_json(self):
         return json.dumps(self.data)

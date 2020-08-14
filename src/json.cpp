@@ -10,7 +10,7 @@
 #include "stringify.h"
 
 namespace gcheck {
-    
+
 std::string Escapees() {
     std::string escapees = "\\\"";
     for(char c = 0; c < 0x20; c++) {
@@ -21,7 +21,7 @@ std::string Escapees() {
 
 std::string Replacee(char val) {
     static const char* digits = "0123456789ABCDEF";
-    
+
     std::string ret = "\\u0000";
     //TODO: test
     for (size_t i = 0; i < 2; ++i)
@@ -37,10 +37,10 @@ std::vector<std::string> Replacees() {
 }
 
 JSON JSON::Escape(std::string str) {
-    
+
     static const std::string escapees = Escapees();
     static const std::vector<std::string> replacees = Replacees();
-    
+
     size_t pos = 0;
     int index = 0;
     size_t min = std::string::npos;
@@ -55,7 +55,7 @@ JSON JSON::Escape(std::string str) {
     while(pos != std::string::npos) {
         str.replace(pos, 1, replacees[index]);
         pos += replacees[index].length();
-        
+
         index = 0;
         min = std::string::npos;
         for(unsigned int i = 0; i < escapees.length(); i++) {
@@ -67,7 +67,7 @@ JSON JSON::Escape(std::string str) {
         }
         pos = min;
     }
-    
+
     // encode non-utf-8 characters
     std::stack<size_t> positions;
     for(size_t pos = 0; pos < str.length(); pos++) {
@@ -85,7 +85,7 @@ JSON JSON::Escape(std::string str) {
         }
         positions.push(pos);
     }
-    
+
     str.resize(str.length()+positions.size()*5); // add space for encoding
     //TODO: test
     size_t epos = str.length()-1;
@@ -94,15 +94,15 @@ JSON JSON::Escape(std::string str) {
     while(!positions.empty()) {
         size_t pos = positions.top();
         auto repl = Replacee(str[pos]);
-        
+
         std::memmove(cstr+offset+pos+1, cstr+pos+1, epos-offset-pos);
         offset -= 5;
         std::copy(repl.data(), repl.data()+6, cstr+offset+pos);
         epos = offset+pos-1;
-        
+
         positions.pop();
     }
-    
+
     JSON json;
     return json.Set(str);
 }
@@ -121,13 +121,13 @@ JSON::JSON(const FunctionEntry& e) {
     add_if("return_value", e.return_value);
     add_if("return_value_expected", e.return_value_expected);
     data.emplace_back("result", e.result);
-    
+
     Set(Stringify(data, [](const JSON& a) -> std::string { return a; }, "{", ",", "}"));
 }
 
-JSON::JSON(const UserObject& o) 
+JSON::JSON(const UserObject& o)
         : JSON(std::vector{
-            std::pair("json", o.json()), 
+            std::pair("json", o.json()),
             std::pair("construct", JSON(o.construct())),
             std::pair("string", JSON(o.string())),
         }) {}
@@ -140,44 +140,44 @@ JSON::JSON(const CaseEntry& e) {
     out += JSON("result", e.result) + ',';
     out += JSON("input", e.input) + ',';
     out += "}";
-    
+
     Set(out);
 }
 
 JSON::JSON(const TestReport& r) {
-    
+
     std::string out = "{";
     if(const auto d = std::get_if<EqualsData>(&r.data)) {
         out += JSON("type", "EE") + ',';
-        
+
         out += JSON("output_expected", d->output_expected.string()) + ',';
         out += JSON("output", d->output.string()) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TrueData>(&r.data)) {
         out += JSON("type", "ET") + ',';
-        
+
         out += JSON("value", d->value) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<FalseData>(&r.data)) {
         out += JSON("type", "EF") + ',';
-        
+
         out += JSON("value", d->value) + ',';
         out += JSON("result", d->result) + ',';
         out += JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<CaseData>(&r.data)) {
         out += JSON("type", "TC") + ',';
-        
+
         out += JSON("cases", *d) + ',';
     } else if(const auto d = std::get_if<FunctionData>(&r.data)) {
         out += JSON("type", "FC") + ',';
-        
+
         out += JSON("cases", *d) + ',';
     }
     out += JSON("info", r.info_stream->str());
     out += "}";
-    
+
     Set(out);
 }
 
@@ -199,7 +199,7 @@ JSON::JSON(const TestStatus& status) {
 }
 
 JSON::JSON(const TestData& data) {
-    
+
     std::string out = "{";
     out += JSON("results", data.reports) + ',';
     out += JSON("grading_method", data.grading_method) + ',';
@@ -213,14 +213,14 @@ JSON::JSON(const TestData& data) {
     out += JSON("incorrect", data.incorrect) + ',';
     out += JSON("status", data.status);
     out += "}";
-    
+
     Set(out);
 }
 
 JSON::JSON(const Prerequisite& pre) {
     auto v = pre.GetFullfillmentData();
     std::vector<std::tuple<std::pair<std::string, std::string>,std::pair<std::string, std::string>, std::pair<std::string, bool>>> v2(v.size());
-    std::transform(v.begin(), v.end(), v2.begin(), 
+    std::transform(v.begin(), v.end(), v2.begin(),
         [](const std::tuple<std::string, std::string, bool>& t) {
             return std::tuple(
                 std::pair("suite", std::get<0>(t)),
@@ -228,14 +228,14 @@ JSON::JSON(const Prerequisite& pre) {
                 std::pair("ispassed", std::get<2>(t))
             );
         });
-    
+
     std::string out = "{";
     out += JSON("isfullfilled", pre.IsFulfilled());
     out += JSON("details", v2);
     out += "}";
     Set(out);
 }
-    
+
 template JSON::JSON(const std::string& key, const int& value);
 template JSON::JSON(const int& v);
 template JSON::JSON(const std::string& key, const unsigned int& value);

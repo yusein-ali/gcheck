@@ -60,20 +60,20 @@ public:
     typedef TupleWrapper<typename std::remove_reference<Args>::type...> TupleWrapperType;
     typedef typename TupleWrapperType::tuple_type TupleType;
     typedef void(*CompareFunc)(void);
-    
+
     FunctionTest(const TestInfo& info, int num_runs, const std::function<ReturnT(Args...)>& func) : Test(info), num_runs_(num_runs), function_(func) { }
 protected:
     CompareFunc comp_function_ = nullptr;
-    
+
     std::optional<TupleType> args_;
     std::optional<TupleType> args_after_;
     std::optional<ReturnType> expected_return_value_;
-    
+
     std::optional<TupleType> last_args_;
     int num_runs_;
     size_t run_index_ = 0;
     bool check_arguments_ = true;
-    
+
     // Sets the input arguments given to the tested function
     void SetArguments(const typename std::remove_reference<Args>::type&... args) { args_ = std::tuple(args...);}
     void SetArguments(const TupleType& args) { std::apply(SetArguments, args); }
@@ -83,17 +83,17 @@ protected:
     void IgnoreArgumentsAfter() { check_arguments_ = false; }
     // Sets the expected output (stdout) of tested function
     void SetReturn(const ReturnType& val) { expected_return_value_ = val; }
-    
+
     const std::optional<TupleType>& GetLastArguments() const { return last_args_; }
     size_t GetRunIndex() { return run_index_; }
-    
+
     virtual void SetInputsAndOutputs() = 0;
-    
+
     void RunOnce(FunctionEntry& data);
     void ResetTestVars();
 private:
     virtual void ActualTest();
-    
+
     std::function<ReturnT(Args...)> function_;
 };
 
@@ -108,19 +108,19 @@ void FunctionTest<ReturnT, Args...>::ResetTestVars() {
 template<typename ReturnT, typename... Args>
 void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
     last_args_ = args_;
-    
+
     if(check_arguments_) {
         if(!args_after_ && args_)
             args_after_ = args_;
         if(args_after_)
             data.arguments_after_expected = (TupleType)*args_after_;
     }
-    
+
     if constexpr(!TupleWrapperType::is_empty::value) { // if function takes arguments
         if(args_) {
             auto args = (FunctionTest::TupleType)*args_;
             data.arguments = args;
-            
+
             if constexpr(std::is_same<ReturnT, void>::value) {
                 std::apply(function_, args);
                 data.result = true;
@@ -131,7 +131,7 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
                     data.return_value_expected = *expected_return_value_;
                 data.result = expected_return_value_ == ret;
             }
-            
+
             data.arguments_after = args;
             data.result = data.result && (!check_arguments_ || args == args_after_);
         } else {
@@ -153,18 +153,18 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
 
 template<typename ReturnT, typename... Args>
 void FunctionTest<ReturnT, Args...>::ActualTest() {
-    
+
     TestReport report = TestReport::Make<FunctionData>();
     auto& data = report.Get<FunctionData>();
-    
+
     data.resize(num_runs_);
-    
+
     run_index_ = 0;
     for(auto it = data.begin(); it != data.end(); it++, run_index_++) {
         ResetTestVars();
-        
+
         SetInputsAndOutputs();
-        
+
         RunOnce(*it);
     }
     AddReport(report);
@@ -190,8 +190,8 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(__HEAD(__VA_ARGS__)); \
     template<typename ReturnT, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs() 
-    
+    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs()
+
 #define _FUNCTIONTEST4(suitename, testname, num_runs, tobetested) \
     template<typename ReturnT, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::FunctionTest<ReturnT, Args...> { \
@@ -208,7 +208,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
     }; \
     GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(tobetested); \
     template<typename ReturnT, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs() 
+    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs()
 
 // params: suite name, test name, number of runs, function to be tested, points (optional), prerequisites (optional)
 #define FUNCTIONTEST(...) \

@@ -2,20 +2,20 @@
 #include "function_test.h"
 
 void VoidAndEmpty() {
-    
+
 }
 int IntAndEmpty() {
     return 0;
 }
 void VoidAndIntInt(int,int) {
-    
+
 }
 int IntAndIntInt(int,int) {
     return 0;
 }
 
 FUNCTIONTEST(basic, VoidAndEmpty, 3, VoidAndEmpty, 4) {
-    
+
 }
 FUNCTIONTEST(basic, IntAndEmpty, 3, IntAndEmpty, 4) {
     SetReturn(0);

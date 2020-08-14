@@ -5,10 +5,10 @@
 #include <algorithm>
 
 namespace gcheck {
-    
+
 int ConsoleWriter::GetWidth() {
     int w = 0;
-#if defined(_WIN32) || defined(WIN32)  
+#if defined(_WIN32) || defined(WIN32)
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
     if(csbi.dwSize.X > 0) {
@@ -26,16 +26,16 @@ int ConsoleWriter::GetWidth() {
 #else //lets hope it is unix
     winsize size;
     ioctl(STDOUT_FILENO,TIOCGWINSZ,&size);
-    
+
     w = size.ws_col;
 #endif
     return w < 5 ? w = 128 : w;
 }
-    
+
 std::vector<int> ConsoleWriter::CalcWidths(const std::vector<std::string>& strs, std::vector<int> widths) {
     if(widths.size() < strs.size())
         widths.resize(strs.size(), 0);
-    
+
     auto it2 = widths.begin();
     for(auto it = strs.begin(); it != strs.end(); it++, it2++) {
         const std::string& str = *it;
@@ -47,24 +47,24 @@ std::vector<int> ConsoleWriter::CalcWidths(const std::vector<std::string>& strs,
                 max_width = width;
         }
     }
-    
+
     return widths;
 }
-    
+
 void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, const std::vector<int>& widths, const std::vector<int>& cuts) {
-    
+
     if(width < 5) {
         width = 128;
     }
-    
+
     int totalwidth = widths.size()+1;
     for(auto& e : widths)
         totalwidth += e;
-    if(totalwidth > width) 
+    if(totalwidth > width)
         totalwidth = width;
-    
+
     std::vector<std::vector<std::string>> parts;
-    
+
     std::vector<size_t> poss(cells.size(), 0);
     unsigned int num_done = 0;
     while(num_done != poss.size()) {
@@ -86,7 +86,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
             }
         }
     }
-    
+
     int pos = 0;
     for(auto it = cuts.begin(); it != cuts.end(); it++) {
         if(pos == 0)
@@ -101,17 +101,17 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
         if(terminating_newline_ || t_width != width)
             std::cout << std::endl;
         for(auto& row : parts) {
-            
+
             std::string pad = "|";
             if(pos != 0)
                 pad = "  ";
             std::cout << pad;
-            
+
             if(row[pos].length() > totalwidth-pad.length()-1) {
                 size_t len = totalwidth-pad.length()-1;
                 SetColor(BrightBlack);
                 std::cout << row[pos].substr(0, len);
-                
+
                 size_t p = len;
                 len = totalwidth-pad.length()-2;
                 for(; p < row[pos].length(); p += len) {
@@ -145,7 +145,7 @@ void ConsoleWriter::WriteRow(int width, const std::vector<std::string>& cells, c
 void ConsoleWriter::SetColor(Color color) {
     if(use_colors_) {
         std::cout.flush();
-#if defined(_WIN32) || defined(WIN32)  
+#if defined(_WIN32) || defined(WIN32)
         if(color == Original)
             color = Black;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -158,7 +158,7 @@ void ConsoleWriter::SetColor(Color color) {
 #endif
     }
 }
-    
+
 void ConsoleWriter::WriteSeparator() {
     int width = GetWidth();
     std::cout << std::string(width, '*');
@@ -174,14 +174,14 @@ void ConsoleWriter::SetHeaders(const std::vector<std::string>& headers) {
 void ConsoleWriter::WriteRow(const std::vector<std::string>& cells) {
     WriteRows(std::vector<std::vector<std::string>>(1, cells));
 }
-    
+
 void ConsoleWriter::WriteRows(const std::vector<std::vector<std::string>>& cells) {
-    
+
     int width = GetWidth();
     std::vector<int> widths = header_widths_;
     for(auto& r : cells)
         widths = CalcWidths(r, widths);
-    
+
     std::vector<int> cuts;
     int cut_width = 1, counter = 0;
     for(auto& e : widths) {
@@ -194,7 +194,7 @@ void ConsoleWriter::WriteRows(const std::vector<std::vector<std::string>>& cells
         counter++;
     }
     cuts.push_back(counter);
-    
+
     if(headers_.size() != 0) {
         WriteRow(width, headers_, widths, cuts);
     }
