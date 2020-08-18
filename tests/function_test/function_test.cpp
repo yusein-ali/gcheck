@@ -1,5 +1,5 @@
-#include "gcheck.h"
-#include "function_test.h"
+#include <gcheck/gcheck.h>
+#include <gcheck/function_test.h>
 
 void VoidAndEmpty() {
 

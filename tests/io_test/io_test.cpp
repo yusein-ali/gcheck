@@ -1,6 +1,5 @@
-#include "gcheck.h"
-#include "io_test.h"
-#include "gcheck.h"
+#include <gcheck/gcheck.h>
+#include <gcheck/io_test.h>
 
 void VoidAndEmpty() {
 
