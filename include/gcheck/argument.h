@@ -524,11 +524,13 @@ Join<T, Args...> operator*(const T& l, const Join<Args...>& r) {
 }
 
 
-template<typename T, typename S, class = std::enable_if_t<is_base_of_template<T, NextType>::value || is_base_of_template<S, NextType>::value>>
+template<typename T, typename S, class = std::enable_if_t<
+        (is_base_of_template<T, Continuous>::value && is_base_of_template<S, Continuous>::value)
+        || (is_base_of_template<T, Discrete>::value && is_base_of_template<S, Discrete>::value)>>
 auto operator+(const T& l, const S& r) {
     return Combine(l, r);
 }
-template<typename T, typename S, class = std::enable_if_t<is_base_of_template<T, NextType>::value || is_base_of_template<S, NextType>::value>>
+template<typename T, typename S, class = std::enable_if_t<is_base_of_template<T, NextType>::value && is_base_of_template<S, NextType>::value>>
 auto operator*(const T& l, const S& r) {
     return Join(l, r);
 }
@@ -554,11 +556,12 @@ void advance(T& first, Args&... rest) {
     gcheck::advance(rest...);
 }
 
+// TODO: these were causing trouble for some reason
 // Theoretically improves compile times with precompiled gcheck TODO: benchmark
-extern template class SequenceArgument<int>;
+/*extern template class SequenceArgument<int>;
 extern template class SequenceArgument<unsigned int>;
 extern template class SequenceArgument<double>;
 extern template class SequenceArgument<float>;
-extern template class SequenceArgument<std::string>;
+extern template class SequenceArgument<std::string>;*/
 
 }
