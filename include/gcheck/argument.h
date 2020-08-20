@@ -339,6 +339,36 @@ SequenceArgument(const std::vector<T>& v) -> SequenceArgument<T>;
 template <class T>
 SequenceArgument(const std::initializer_list<T>& v) -> SequenceArgument<T>;
 
+template<typename T, typename F>
+class Generator : public Argument<T> {
+    Generator(const F& functor, size_t index) : index_(index), functor_(functor) {}
+public:
+    Generator(F&& functor) : functor_(functor) {}
+
+    const F& Functor() {
+        return functor_;
+    }
+
+    T& Next() override {
+        if constexpr(std::is_invocable<F, size_t>::value) {
+            return this->value_ = functor_(index_++);
+        } else {
+            return this->value_ = functor_();
+        }
+    }
+    NextType<T>* Clone() const override {
+        return new Generator(functor_, index_);
+    }
+private:
+    size_t index_ = 0;
+    F functor_;
+};
+
+template<typename F>
+Generator(F&& functor) -> Generator<typename std::invoke_result<F>::type, F>;
+
+template<typename F>
+Generator(F&& functor) -> Generator<typename std::invoke_result<F, size_t>::type, F>;
 
 /*
 (RandomSizeContainer << Random).Next -> Random size and contents
