@@ -116,7 +116,7 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
             data.arguments_after_expected = (TupleType)*args_after_;
     }
 
-    if constexpr(!TupleWrapperType::is_empty::value) { // if function takes arguments
+    if constexpr(sizeof...(Args) != 0) { // if function takes arguments
         if(args_) {
             auto args = (FunctionTest::TupleType)*args_;
             data.arguments = args;
@@ -137,17 +137,15 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
         } else {
             data.result = false;
         }
+    } else if constexpr(std::is_same<ReturnT, void>::value) {
+        function_();
+        data.result = !args_after_ && !args_;
     } else {
-        if constexpr(std::is_same<ReturnT, void>::value) {
-            function_();
-            data.result = !args_after_ && !args_;
-        } else {
-            auto ret = function_();
-            data.return_value = ret;
-            if(expected_return_value_)
-                data.return_value_expected = *expected_return_value_;
-            data.result = expected_return_value_ == ret && (!args_after_ && !args_);
-        }
+        auto ret = function_();
+        data.return_value = ret;
+        if(expected_return_value_)
+            data.return_value_expected = *expected_return_value_;
+        data.result = expected_return_value_ == ret && (!args_after_ && !args_);
     }
 }
 
