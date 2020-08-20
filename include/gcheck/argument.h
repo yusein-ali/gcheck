@@ -151,6 +151,11 @@ public:
     operator A() const { return value_; };
     A operator ()() const { return value_; };
 
+    template<size_t index>
+    auto get() -> std::enable_if_t<is_base_of_template<A, std::tuple>::value, std::tuple_element_t<index, A>> {
+        return std::get<index>(value_);
+    }
+
     virtual A& Next() {
         return value_;
     }
