@@ -158,11 +158,11 @@ std::string toString(const UserObject& u);
 std::string toString(decltype(nullptr));
 
 template<typename T>
-typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value>::type
+typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value, std::string>::type
 toString(T) { return ""; }
 
 template<typename T>
-typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value>::type
+typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value, std::string>::type
 toString(T* item) {
     if(item == nullptr)
         return "nullptr";
