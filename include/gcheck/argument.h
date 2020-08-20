@@ -154,7 +154,7 @@ protected:
 
 // An argument that takes a random value from a distribution
 template <typename A>
-class Random : public Argument<A>, public NextType<A> {
+class Random : public Argument<A> {
 public:
     Random(const A& start, const A& end, uint32_t seed = UINT32_MAX)
             : distribution_(new RangeDistribution<A>(start, end, seed)) {}
@@ -457,7 +457,7 @@ Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<Conti
 
 
 template<typename... Args>
-class Join : public NextType<typename get_types_of<NextType, Args...>::types> {
+class Join : public Argument<typename get_types_of<NextType, Args...>::types> {
     typedef typename get_types_of<NextType, Args...>::types TypesTuple;
     using Argument<TypesTuple>::value_;
 public:
