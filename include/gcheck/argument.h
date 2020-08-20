@@ -43,7 +43,7 @@ struct get_types_of {
 template<class T>
 class NextType {
 public:
-    virtual T Next() = 0;
+    virtual T& Next() = 0;
     virtual NextType<T>* Clone() const = 0;
 };
 
@@ -142,7 +142,7 @@ public:
     operator A() const { return value_; };
     A operator ()() const { return value_; };
 
-    virtual A Next() {
+    virtual A& Next() {
         return value_;
     }
     virtual NextType<A>* Clone() const {
@@ -164,7 +164,7 @@ public:
     Random(Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
     Random(const Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
 
-    A Next() { return this->value_ = (*distribution_)(); };
+    A& Next() { return this->value_ = (*distribution_)(); };
 private:
     std::shared_ptr<Distribution<A>> distribution_;
 };
@@ -233,7 +233,7 @@ public:
         source_.push_back(((typename argumentize<S>::type*)&item).Clone());
         return *this;
     }
-    ReturnType Next() {
+    ReturnType& Next() {
         this->value_.resize(size_->Next(), default_);
         auto it2 = source_.begin();
         if(it2 != source_.end()) {
@@ -301,7 +301,7 @@ class SequenceArgument : public Argument<T> {
 public:
     SequenceArgument(const std::vector<T>& seq) : Argument<T>(seq[0]), sequence_(seq), it_(sequence_.begin()) {}
 
-    T Next() {
+    T& Next() override {
         this->value_ = *it_;
         it_++;
         if(it_ == sequence_.end())
@@ -370,7 +370,7 @@ public:
         return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
     }
 
-    ReturnType Next() {
+    ReturnType& Next() {
         auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
         auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
         auto rnd = rnd_()*ChoiceLength();
@@ -403,7 +403,7 @@ public:
         return std::apply([](auto&... t){ return (t.ChoiceLength()+...); }, parts_);
     }
 
-    ReturnType Next() {
+    ReturnType& Next() {
         auto vals = std::apply([](auto&... t){ return std::vector<ReturnType>({t.Next()...}); }, parts_);
         auto widths = std::apply([](auto&... t){ return std::vector({t.ChoiceLength()...}); }, parts_);
         auto rnd = rnd_()*ChoiceLength();
@@ -427,7 +427,7 @@ public:
         return Combine<WeightedCombine>(*this, n, weight);
     }
 
-    ReturnType Next() {
+    ReturnType& Next() {
         auto rnd = rnd_();
         if(rnd <= weight_)
             return std::get<0>(parts_).Next();
@@ -459,6 +459,7 @@ Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<Conti
 template<typename... Args>
 class Join : public NextType<typename get_types_of<NextType, Args...>::types> {
     typedef typename get_types_of<NextType, Args...>::types TypesTuple;
+    using Argument<TypesTuple>::value_;
 public:
     Join(const Args&... args) : parts_(args...) {}
 
@@ -471,8 +472,9 @@ public:
         return std::make_from_tuple<Join>(std::tuple_cat<NextType<T>, Args...>(std::tuple(n), parts_));
     }
 
-    TypesTuple Next() {
-        return std::apply([](auto&... t){ return std::tuple(t.Next()...); }, parts_);
+    TypesTuple& Next() {
+        value_ = std::apply([](auto&... t){ return std::tuple(t.Next()...); }, parts_);
+        return value_;
     }
 private:
     std::tuple<Args...> parts_;
