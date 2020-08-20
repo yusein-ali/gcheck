@@ -79,10 +79,14 @@ protected:
 
     // Sets the input arguments given to the tested function
     void SetArguments(const typename std::remove_reference<Args>::type&... args) { args_ = std::tuple(args...);}
-    void SetArguments(const TupleType& args) { std::apply(SetArguments, args); }
+    void SetArguments(const TupleType& args) {
+        std::apply([this](auto... x){this->SetArguments(x...);}, args);
+    }
     // Sets what the input arguments given to the tested function should be after the call
     void SetArgumentsAfter(const typename std::remove_reference<Args>::type&... args) { args_after_ = std::tuple(args...);}
-    void SetArgumentsAfter(const TupleType& args) { std::apply(SetArgumentsAfter, args); }
+    void SetArgumentsAfter(const TupleType& args) {
+        std::apply([this](auto... x){this->SetArgumentsAfter(x...);}, args);
+    }
     void IgnoreArgumentsAfter() { check_arguments_ = false; }
     // Sets the expected output (stdout) of tested function
     void SetReturn(const ReturnType& val) { expected_return_value_ = val; }
