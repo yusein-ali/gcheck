@@ -467,20 +467,20 @@ private:
     double weight_;
 };
 
-template<typename T, typename... Args>
+template<typename T, typename... Args, class = std::enable_if_t<is_base_of_template<T, Discrete>::value>>
 Combine<DiscreteCombine, Args..., T> operator+(const Combine<DiscreteCombine, Args...>& l, const T& r) {
     return l.Added(r);
 }
-template<typename T, typename... Args>
+template<typename T, typename... Args, class = std::enable_if_t<is_base_of_template<T, Discrete>::value>>
 Combine<DiscreteCombine, Args..., T> operator+(const T& l, const Combine<DiscreteCombine, Args...>& r) {
     return r + l;
 }
 
-template<typename T, typename... Args>
+template<typename T, typename... Args, class = std::enable_if_t<is_base_of_template<T, Continuous>::value>>
 Combine<ContinuousCombine, Args..., T> operator+(const Combine<ContinuousCombine, Args...>& l, const T& r) {
     return l.Added(r);
 }
-template<typename T, typename... Args>
+template<typename T, typename... Args, class = std::enable_if_t<is_base_of_template<T, Continuous>::value>>
 Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<ContinuousCombine, Args...>& r) {
     return r + l;
 }
@@ -515,23 +515,23 @@ private:
 };
 
 template<typename T, typename... Args>
-Join<Args..., T> operator+(const Join<Args...>& l, const T& r) {
+Join<Args..., T> operator*(const Join<Args...>& l, const T& r) {
     return l.Appended(r);
 }
 template<typename T, typename... Args>
-Join<T, Args...> operator+(const T& l, const Join<Args...>& r) {
+Join<T, Args...> operator*(const T& l, const Join<Args...>& r) {
     return r.Prepended(l);
 }
 
-/*
-// is_Random<A>::value; true if A is Random or RandomContainer, false otherwise
-template<typename A>
-struct is_Random : public std::false_type {};
-template <typename... Ts>
-struct is_Random<Random<Ts...>> : public std::true_type {};
-template <typename... Ts>
-struct is_Random<RandomContainer<Ts...>> : public std::true_type {};
-*/
+
+template<typename T, typename S, class = std::enable_if_t<is_base_of_template<T, NextType>::value || is_base_of_template<S, NextType>::value>>
+auto operator+(const T& l, const S& r) {
+    return Combine(l, r);
+}
+template<typename T, typename S, class = std::enable_if_t<is_base_of_template<T, NextType>::value || is_base_of_template<S, NextType>::value>>
+auto operator*(const T& l, const S& r) {
+    return Join(l, r);
+}
 
 // is_Argument<A>::value; true if A is any of the argument types, false otherwise
 template<typename A>
