@@ -43,13 +43,36 @@ struct has_tostring : decltype(detail::has_tostring<T>(0)){};
 template<class T>
 struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
 
-template<int index = 0, typename Func, typename... Args>
-std::enable_if_t<index == sizeof...(Args)> for_each(const std::tuple<Args...>&, Func) {}
+template<size_t... Args>
+auto index_tuple(std::index_sequence<Args...>) {
+    return std::make_tuple(Args...);
+}
 
-template<int index = 0, typename Func, typename... Args>
-std::enable_if_t<index != sizeof...(Args)> for_each(const std::tuple<Args...>& t, Func func) {
-    func(index, std::get<index>(t));
-    for_each<index+1>(t, func);
+template<size_t N>
+auto index_tuple() {
+    return index_tuple(std::make_index_sequence<N>());
+}
+
+template<int index = 0, typename... Tuples>
+auto tuple_from(const Tuples&... tuples) {
+    return std::make_tuple(std::get<index>(tuples)...);
+}
+
+template<typename T, T... Indices, typename... Tuples>
+auto zip(std::integer_sequence<T, Indices...>, const Tuples&... tuples) {
+    return std::make_tuple(tuple_from<Indices>(tuples...)...);
+}
+
+template<typename... Args, typename... Tuples>
+auto zip(const std::tuple<Args...>& tuple, const Tuples&... tuples) {
+    return zip(std::index_sequence_for<Args...>(), tuple, tuples...);
+}
+
+template<typename Func, typename... Args>
+inline void for_each(const std::tuple<Args...>& tuple, Func&& func) {
+    std::apply([&func](auto... tuples){
+        (..., std::apply(func, tuples));
+    }, zip(index_tuple<sizeof...(Args)>(), tuple));
 }
 
 } // anonymous
