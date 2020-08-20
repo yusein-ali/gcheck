@@ -494,12 +494,12 @@ public:
     Join(const Args&... args) : parts_(args...) {}
 
     template<typename T>
-    Join<Args..., T> Appended(const NextType<T>& n) {
-        return std::make_from_tuple<Join>(std::tuple_cat<Args..., NextType<T>>(parts_, std::tuple(n)));
+    Join<Args..., T> Appended(const T& n) const {
+        return std::make_from_tuple<Join<Args..., T>>(std::tuple_cat(parts_, std::tuple(n)));
     }
     template<typename T>
-    Join<T, Args...> Prepended(const NextType<T>& n) {
-        return std::make_from_tuple<Join>(std::tuple_cat<NextType<T>, Args...>(std::tuple(n), parts_));
+    Join<T, Args...> Prepended(const T& n) const {
+        return std::make_from_tuple<Join<T, Args...>>(std::tuple_cat(std::tuple(n), parts_));
     }
 
     TypesTuple& Next() {
