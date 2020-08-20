@@ -31,12 +31,21 @@ struct are_base_of : std::conjunction<are_base_of<T, Args>...> {};
 template <typename T, typename S>
 struct are_base_of<T, S> : std::is_base_of<T, S> {};
 
-template<template<typename...> class Base, typename... Args>
-std::tuple<Args...> _get_types_of(const Base<Args>&...);
+template<template<typename...> class Base>
+struct _get_templates {
+    template<typename... Args>
+    static std::tuple<Args...> of(Base<Args>&&...);
+};
 
 template<template<typename...> class Base, typename... Args>
-struct get_types_of {
-    typedef decltype(_get_types_of<Base>(std::declval<Args>()...)) types;
+struct get_templates {
+    typedef decltype(_get_templates<Base>::of(std::declval<Args>()...)) types_tuple;
+};
+
+template<template<typename...> class Base, typename T>
+struct get_templates<Base, T> {
+    typedef decltype(_get_templates<Base>::of(std::declval<T>())) types_tuple;
+    typedef std::tuple_element_t<0, types_tuple> type;
 };
 
 // Base class used for determining the existence of Next() function in class.
@@ -345,7 +354,7 @@ enum CombineType {
 template<typename... Args>
 class CombineBase {
     //static_assert(sizeof...(Args) != 0, "Combine must have at least one item in it");s
-    typedef typename get_types_of<NextType, Args...>::types TypesTuple;
+    typedef typename get_templates<NextType, Args...>::types_tuple TypesTuple;
     typedef std::conditional<are_same<Args>::value..., std::tuple_element<0, std::tuple<Args...>>::type, std::variant<Args...>> ReturnType;
 protected:
     CombineBase(const Args&... args) : parts_(args...) {}
@@ -478,8 +487,8 @@ Combine<ContinuousCombine, Args..., T> operator+(const T& l, const Combine<Conti
 
 
 template<typename... Args>
-class Join : public Argument<typename get_types_of<NextType, Args...>::types> {
-    typedef typename get_types_of<NextType, Args...>::types TypesTuple;
+class Join : public Argument<typename get_templates<NextType, Args...>::types_tuple> {
+    typedef typename get_templates<NextType, Args...>::types_tuple TypesTuple;
     using Argument<TypesTuple>::value_;
 public:
     Join(const Args&... args) : parts_(args...) {}
