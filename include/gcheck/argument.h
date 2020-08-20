@@ -161,10 +161,12 @@ public:
     Random(const std::vector<A>& choices, uint32_t seed = UINT32_MAX)
             : distribution_(new ChoiceDistribution<A>(choices, seed)) {}
     Random(std::shared_ptr<Distribution<A>> distribution) : distribution_(distribution) {}
-    Random(Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
     Random(const Random<A>& rnd) : Argument<A>(rnd()), distribution_(rnd.distribution_) {}
 
     A& Next() { return this->value_ = (*distribution_)(); };
+    NextType<A>* Clone() const {
+        return new Random(*this);
+    }
 private:
     std::shared_ptr<Distribution<A>> distribution_;
 };
@@ -300,6 +302,10 @@ template <class T>
 class SequenceArgument : public Argument<T> {
 public:
     SequenceArgument(const std::vector<T>& seq) : Argument<T>(seq[0]), sequence_(seq), it_(sequence_.begin()) {}
+    SequenceArgument(const SequenceArgument<T>& seq) : Argument<T>(seq) {
+        sequence_ = seq.sequence_;
+        Reset();
+    }
 
     T& Next() override {
         this->value_ = *it_;
@@ -308,6 +314,9 @@ public:
             it_ = sequence_.begin();
 
         return this->value_;
+    }
+    NextType<T>* Clone() const override {
+        return new SequenceArgument(*this);
     }
     size_t GetSize() { return sequence_.size(); }
     void Reset() { it_ = sequence_.begin(); };
@@ -379,6 +388,10 @@ public:
             rnd -= widths[pos];
         return vals[pos-1];
     }
+
+    NextType<ReturnType>* Clone() const {
+        return new Combine(*this);
+    }
 };
 
 template<typename... Args>
@@ -412,6 +425,10 @@ public:
             rnd -= widths[pos];
         return vals[pos-1];
     }
+
+    NextType<ReturnType>* Clone() const {
+        return new Combine(*this);
+    }
 };
 
 template<typename T, typename S>
@@ -432,6 +449,10 @@ public:
         if(rnd <= weight_)
             return std::get<0>(parts_).Next();
         return std::get<1>(parts_).Next();
+    }
+
+    NextType<ReturnType>* Clone() const {
+        return new Combine(*this);
     }
 private:
     double weight_;
@@ -475,6 +496,10 @@ public:
     TypesTuple& Next() {
         value_ = std::apply([](auto&... t){ return std::tuple(t.Next()...); }, parts_);
         return value_;
+    }
+
+    NextType<TypesTuple>* Clone() const {
+        return std::apply([](auto... args){return new Join(args...);}, parts_);
     }
 private:
     std::tuple<Args...> parts_;
