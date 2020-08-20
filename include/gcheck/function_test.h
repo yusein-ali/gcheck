@@ -52,6 +52,11 @@ namespace {
 
 } // anonymous
 
+template<typename T, typename... Args>
+std::function<T(Args...)> constructor() {
+    return [](auto... args){ return T(args...); };
+}
+
 /*
     Base class for testing functions.
 */
