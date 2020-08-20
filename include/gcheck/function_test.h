@@ -15,6 +15,7 @@ namespace {
     template<typename... Args>
     struct TupleWrapper : public std::tuple<Args...> {
         typedef std::tuple<Args...> tuple_type;
+        typedef std::tuple<std::remove_const_t<Args>...> constless_tuple_type;
         typedef std::false_type is_empty;
         TupleWrapper(){}
         TupleWrapper(const std::tuple<Args...>& c) : std::tuple<Args...>(c) {}
@@ -26,6 +27,7 @@ namespace {
     template<>
     struct TupleWrapper<> : public std::tuple<> {
         typedef std::tuple<> tuple_type;
+        typedef std::tuple<> constless_tuple_type;
         typedef std::true_type is_empty;
         TupleWrapper(){}
         TupleWrapper(const std::tuple<>& c) : std::tuple<>(c) {}
@@ -58,6 +60,7 @@ class FunctionTest : public Test {
 public:
     typedef typename ConditionalT<ReturnT>::type ReturnType;
     typedef TupleWrapper<typename std::remove_reference<Args>::type...> TupleWrapperType;
+    typedef typename TupleWrapperType::constless_tuple_type ConstlessTupleType;
     typedef typename TupleWrapperType::tuple_type TupleType;
     typedef void(*CompareFunc)(void);
 
@@ -65,11 +68,11 @@ public:
 protected:
     CompareFunc comp_function_ = nullptr;
 
-    std::optional<TupleType> args_;
-    std::optional<TupleType> args_after_;
+    std::optional<ConstlessTupleType> args_;
+    std::optional<ConstlessTupleType> args_after_;
     std::optional<ReturnType> expected_return_value_;
 
-    std::optional<TupleType> last_args_;
+    std::optional<ConstlessTupleType> last_args_;
     int num_runs_;
     size_t run_index_ = 0;
     bool check_arguments_ = true;
