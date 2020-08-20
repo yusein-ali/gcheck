@@ -341,6 +341,13 @@ TestReport& Test::AddReport(TestReport& report) {
         for(auto it = cases->begin(); it != cases->end(); it++) {
             increment_correct(it->result);
         }
+    } else if(const auto cases = std::get_if<FunctionData>(&report.data)) {
+        for(auto it = cases->begin(); it != cases->end(); it++) {
+            increment_correct(it->result);
+        }
+    } else {
+        // this should never be run
+        throw std::exception();
     }
     data_.reports.push_back(report);
 
