@@ -65,7 +65,7 @@ std::string toConstruct(decltype(nullptr));
 
 template<typename T>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(T) { return ""; }
+toConstruct(const T&) { return ""; }
 
 template<typename T>
 typename std::enable_if<!has_toconstruct<T*>::value, std::string>::type
@@ -159,7 +159,7 @@ std::string toString(decltype(nullptr));
 
 template<typename T>
 typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value, std::string>::type
-toString(T) { return ""; }
+toString(const T&) { return "error-type"; }
 
 template<typename T>
 typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value, std::string>::type
