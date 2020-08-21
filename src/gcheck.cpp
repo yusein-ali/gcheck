@@ -213,7 +213,9 @@ namespace {
                         add_if(it2->return_value_expected, "Correct Return Value");
                         add_if(it2->input, "Standard Input");
                         add_if(it2->output, "Standard Output");
+                        add_if(it2->output_expected, "Expected Output");
                         add_if(it2->error, "Standard Error");
+                        add_if(it2->error_expected, "Expected Error");
                         add_if(it2->arguments_after, "Arguments Afterwards");
                         add_if(it2->arguments_after_expected, "Correct Arguments Afterwards");
 

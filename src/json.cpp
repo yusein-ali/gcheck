@@ -114,7 +114,9 @@ JSON::JSON(const FunctionEntry& e) {
     };
     add_if("input", e.input);
     add_if("output", e.output);
+    add_if("output_expected", e.output_expected);
     add_if("error", e.error);
+    add_if("error_expected", e.error_expected);
     add_if("arguments", e.arguments);
     add_if("arguments_after", e.arguments_after);
     add_if("arguments_after_expected", e.arguments_after_expected);

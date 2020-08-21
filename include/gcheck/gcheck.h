@@ -67,9 +67,11 @@ struct CaseEntry {
 typedef std::vector<CaseEntry> CaseData;
 
 struct FunctionEntry {
-    std::optional<UserObject> error;
-    std::optional<UserObject> output;
     std::optional<UserObject> input;
+    std::optional<UserObject> output;
+    std::optional<UserObject> output_expected;
+    std::optional<UserObject> error;
+    std::optional<UserObject> error_expected;
     std::optional<UserObject> arguments;
     std::optional<UserObject> arguments_after;
     std::optional<UserObject> arguments_after_expected;

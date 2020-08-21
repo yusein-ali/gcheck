@@ -91,7 +91,11 @@ void IOTest<ReturnT, Args...>::ActualTest() {
         std::string outstr = tout.str();
         std::string errstr = terr.str();
         it->output = outstr;
+        if(expected_output_)
+            it->output_expected = *expected_output_;
         it->error = errstr;
+        if(expected_error_)
+            it->error_expected = *expected_error_;
         it->result = it->result && (!expected_output_ || *expected_output_ == outstr) && (!expected_error_ || *expected_error_ == errstr);
 
     }
