@@ -101,6 +101,19 @@ public:
     typedef void(*CompareFunc)(void);
 
     FunctionTest(const TestInfo& info, int num_runs, const std::function<ReturnT(Args...)>& func) : Test(info), num_runs_(num_runs), function_(func) { }
+
+    template<typename F>
+    void AddResetTest(F&& func) {
+        reset_vars_functions_.push_back(std::forward<F>(func));
+    }
+    template<typename F>
+    void AddPreRun(F&& func) {
+        pre_run_functions_.push_back(std::forward<F>(func));
+    }
+    template<typename F>
+    void AddPostRun(F&& func) {
+        post_run_functions_.push_back(std::forward<F>(func));
+    }
 protected:
     CompareFunc comp_function_ = nullptr;
 
@@ -112,6 +125,10 @@ protected:
     int num_runs_;
     size_t run_index_ = 0;
     bool check_arguments_ = true;
+
+    std::vector<std::function<void()>> reset_vars_functions_;
+    std::vector<std::function<void(size_t, FunctionEntry&)>> pre_run_functions_;
+    std::vector<std::function<void(size_t, FunctionEntry&)>> post_run_functions_;
 
     // Sets the input arguments given to the tested function
     void SetArguments(const typename std::remove_reference<Args>::type&... args) { args_ = std::tuple(args...);}
@@ -133,7 +150,7 @@ protected:
     virtual void SetInputsAndOutputs() = 0;
 
     void RunOnce(FunctionEntry& data);
-    void ResetTestVars();
+    virtual void ResetTestVars();
 private:
     virtual void ActualTest();
 
@@ -194,7 +211,6 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
 
 template<typename ReturnT, typename... Args>
 void FunctionTest<ReturnT, Args...>::ActualTest() {
-
     TestReport report = TestReport::Make<FunctionData>();
     auto& data = report.Get<FunctionData>();
 
@@ -204,9 +220,18 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
     for(auto it = data.begin(); it != data.end(); it++, run_index_++) {
         ResetTestVars();
 
+        for(auto& f : reset_vars_functions_)
+            f();
+
         SetInputsAndOutputs();
 
+        for(auto& f : pre_run_functions_)
+            f(run_index_, *it);
+
         RunOnce(*it);
+
+        for(auto& f : post_run_functions_)
+            f(run_index_, *it);
     }
     AddReport(report);
 }

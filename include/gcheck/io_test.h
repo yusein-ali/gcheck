@@ -1,6 +1,8 @@
 #pragma once
 
 #include <functional>
+#include <optional>
+#include <string>
 
 #include "macrotools.h"
 #include "gcheck.h"
@@ -11,14 +13,24 @@
 
 namespace gcheck {
 
-/*
-    Base class for testing functions, their response to standard input and output in standard output and error.
-*/
-template<typename ReturnT, typename... Args>
-class IOTest : public FunctionTest<ReturnT, Args...> {
+class IOPlugin {
 public:
-    IOTest(const TestInfo& info, int num_runs, const std::function<ReturnT(Args...)>& func) : FunctionTest<ReturnT, Args...>(info, num_runs, func) { }
+    template<typename... Args>
+    IOPlugin(FunctionTest<Args...>* test) : tout_(false), terr_(false), tin_(false) {
+        test->AddResetTest([this](){ this->ResetTestVars(); });
+        test->AddPreRun([this](auto&&... args){ this->PreRun(std::forward<decltype(args)>(args)...); });
+        test->AddPostRun([this](auto&&... args){ this->PostRun(std::forward<decltype(args)>(args)...); });
+    }
 protected:
+    StdoutCapturer tout_;
+    StderrCapturer terr_;
+    StdinInjecter tin_;
+
+    std::optional<std::string> input_;
+    std::optional<std::string> expected_output_;
+    std::optional<std::string> expected_error_;
+    bool do_close = false;
+
     // Sets the input (stdin) given to the tested function
     void SetInput(const std::string& str, bool close_stream = false) { input_ = str; do_close = close_stream; }
     // Sets the expected output (stdout) of tested function
@@ -26,11 +38,49 @@ protected:
     // Sets the expected error (stderr) of tested function
     void SetError(const std::string& str) { expected_error_ = str; }
 
-    //using FunctionTest<ReturnT, Args...>::GetRunIndex;
+    void ResetTestVars() {
+        input_.reset();
+        expected_output_.reset();
+        expected_error_.reset();
+        do_close = false;
+    }
 private:
-    void ActualTest();
-    void ResetTestVars();
+    void PreRun(size_t, FunctionEntry&) {
+        //tin_.Capture();
+        //if(input_) tin_.Write(*input_);
+        //if(do_close) tin_.Close();
 
+        tout_.Capture();
+        terr_.Capture();
+    }
+    void PostRun(size_t, FunctionEntry& entry) {
+        tout_.Restore();
+        terr_.Restore();
+        tin_.Restore();
+
+        if(input_) entry.input = *input_;
+
+        std::string outstr = tout_.str();
+        std::string errstr = terr_.str();
+        entry.output = outstr;
+        if(expected_output_)
+            entry.output_expected = *expected_output_;
+        entry.error = errstr;
+        if(expected_error_)
+            entry.error_expected = *expected_error_;
+        entry.result = entry.result && (!expected_output_ || *expected_output_ == outstr) && (!expected_error_ || *expected_error_ == errstr);
+    }
+};
+
+/*
+    Base class for testing functions, their response to standard input and output in standard output and error.
+*/
+template<typename ReturnT, typename... Args>
+class IOTest : public FunctionTest<ReturnT, Args...>, public IOPlugin {
+public:
+    IOTest(const TestInfo& info, int num_runs, const std::function<ReturnT(Args...)>& func) : FunctionTest<ReturnT, Args...>(info, num_runs, func), IOPlugin(this) { }
+
+private:
     using FunctionTest<ReturnT, Args...>::SetInputsAndOutputs;
     using FunctionTest<ReturnT, Args...>::AddReport;
     using FunctionTest<ReturnT, Args...>::RunOnce;
@@ -40,67 +90,7 @@ private:
     using FunctionTest<ReturnT, Args...>::num_runs_;
     using FunctionTest<ReturnT, Args...>::run_index_;
     using FunctionTest<ReturnT, Args...>::check_arguments_;
-
-    std::optional<std::string> input_;
-    std::optional<std::string> expected_output_;
-    std::optional<std::string> expected_error_;
-    bool do_close = false;
 };
-
-template<typename ReturnT, typename... Args>
-void IOTest<ReturnT, Args...>::ResetTestVars() {
-    FunctionTest<ReturnT, Args...>::ResetTestVars();
-    input_.reset();
-    expected_output_.reset();
-    expected_error_.reset();
-    do_close = false;
-}
-
-template<typename ReturnT, typename... Args>
-void IOTest<ReturnT, Args...>::ActualTest() {
-    StdoutCapturer tout;
-    StderrCapturer terr;
-    StdinInjecter tin;
-
-    TestReport report = TestReport::Make<FunctionData>();
-    auto& data = report.Get<FunctionData>();
-
-    data.resize(num_runs_);
-
-    run_index_ = 0;
-    for(auto it = data.begin(); it != data.end(); it++, run_index_++) {
-        ResetTestVars();
-        SetInputsAndOutputs();
-
-        if(input_)
-            tin.Write(*input_);
-        if(do_close)
-            tin.Close();
-
-        tout.Capture();
-        terr.Capture();
-
-        RunOnce(*it);
-
-        tout.Restore();
-        terr.Restore();
-        tin.Restore();
-
-        if(input_) it->input = *input_;
-
-        std::string outstr = tout.str();
-        std::string errstr = terr.str();
-        it->output = outstr;
-        if(expected_output_)
-            it->output_expected = *expected_output_;
-        it->error = errstr;
-        if(expected_error_)
-            it->error_expected = *expected_error_;
-        it->result = it->result && (!expected_output_ || *expected_output_ == outstr) && (!expected_error_ || *expected_error_ == errstr);
-
-    }
-    AddReport(report);
-}
 
 } // gcheck
 
@@ -115,6 +105,8 @@ void IOTest<ReturnT, Args...>::ActualTest() {
         using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
+        using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \
@@ -136,6 +128,8 @@ void IOTest<ReturnT, Args...>::ActualTest() {
         using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
+        using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \
