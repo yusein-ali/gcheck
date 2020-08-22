@@ -1,0 +1,5 @@
+#include "gcheck.h"
+#include "function_test.h"
+#include "method_test.h"
+#include "io_test.h"
+#include "method_io_test.h"
