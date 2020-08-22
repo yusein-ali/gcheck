@@ -18,15 +18,19 @@
 namespace gcheck {
 
 FileInjecter::FileInjecter(FILE* stream, std::string str, std::istream* associate)
-        : swapped_(false), closed_(true), associate_(associate) {
+        : FileInjecter(stream, true, associate) {
+    if(str.length() != 0) {
+        Write(str);
+    }
+}
 
+FileInjecter::FileInjecter(FILE* stream, bool capture, std::istream* associate)
+        : swapped_(false), closed_(true), associate_(associate) {
     original_ = stream;
     save_ = dup(fileno(stream));
 
-    Capture();
-
-    if(str.length() != 0)
-        Write(str);
+    if(capture)
+        Capture();
 }
 
 FileInjecter::~FileInjecter() {
@@ -95,7 +99,7 @@ FileInjecter& FileInjecter::Close() {
 
 
 
-FileCapturer::FileCapturer(FILE* stream) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
+FileCapturer::FileCapturer(FILE* stream, bool capture) : is_swapped_(false), last_pos_(0), fileno_(fileno(stream)), original_(stream) {
     new_ = tmpfile();
     if(new_ == NULL) {
         int err = errno;
@@ -119,7 +123,9 @@ FileCapturer::FileCapturer(FILE* stream) : is_swapped_(false), last_pos_(0), fil
                 throw;
         }
     }
-    Capture();
+
+    if(capture)
+        Capture();
 }
 
 FileCapturer::~FileCapturer() {
@@ -174,7 +180,8 @@ FileCapturer& FileCapturer::Capture() {
 }
 
 StdinInjecter::StdinInjecter(std::string str) : FileInjecter(stdin, str, &std::cin) {}
-StdoutCapturer::StdoutCapturer() : FileCapturer(stdout) {}
-StderrCapturer::StderrCapturer() : FileCapturer(stderr) {}
+StdinInjecter::StdinInjecter(bool capture) : FileInjecter(stdin, capture, &std::cin) {}
+StdoutCapturer::StdoutCapturer(bool capture) : FileCapturer(stdout, capture) {}
+StderrCapturer::StderrCapturer(bool capture) : FileCapturer(stderr, capture) {}
 
 }

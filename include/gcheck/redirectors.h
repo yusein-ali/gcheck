@@ -24,6 +24,7 @@ public:
         FileInjecter(stdin) or StdinInjecter() for standard input injection.
     */
     FileInjecter(FILE* stream, std::string str = "", std::istream* associate = nullptr);
+    FileInjecter(FILE* stream, bool capture, std::istream* associate = nullptr);
     ~FileInjecter();
 
     FileInjecter& Write(std::string str);
@@ -40,6 +41,7 @@ public:
 class StdinInjecter : public FileInjecter {
 public:
     StdinInjecter(std::string str = "");
+    StdinInjecter(bool capture);
 };
 
 
@@ -59,7 +61,7 @@ public:
         Use FileCapturer(stdout) to capture standard output and FileCapturer(stderr) to capture standard error output
             or use the StdoutCapturer and StderrCapturer classes.
     */
-    FileCapturer(FILE* stream);
+    FileCapturer(FILE* stream, bool capture = true);
     ~FileCapturer();
 
     std::string str();
@@ -73,7 +75,7 @@ public:
 */
 class StdoutCapturer : public FileCapturer {
 public:
-    StdoutCapturer();
+    StdoutCapturer(bool capture = true);
 };
 
 /*
@@ -82,6 +84,6 @@ public:
 */
 class StderrCapturer : public FileCapturer {
 public:
-    StderrCapturer();
+    StderrCapturer(bool capture = true);
 };
 }
