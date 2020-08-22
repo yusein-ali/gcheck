@@ -52,9 +52,40 @@ namespace {
 
 } // anonymous
 
+/* Creates a function for creating an object on the stack
+Usage: constructor<class_name, args1 type, arg2 type, ...>()
+Return value is a lambda that calls the constructor
+*/
 template<typename T, typename... Args>
 std::function<T(Args...)> constructor() {
     return [](auto... args){ return T(args...); };
+}
+
+/* Creates a function for creating an object on the heap
+Usage: new_constructor<class_name, args1 type, arg2 type, ...>()
+Return value is a lambda that calls the constructor with new
+*/
+template<typename T, typename... Args>
+std::function<T*(Args...)> new_constructor() {
+    return [](auto... args){ return new T(args...); };
+}
+
+/* Creates a Generator object for creating an object on the stack
+Usage: ClassGenerator<class_name, args1 type, arg2 type, ...>(NextType that generates args for the constructor)
+*/
+template<typename Class, typename... Args, typename... Args2>
+auto ClassGenerator(NextType<Args2...>& args) {
+    auto c = constructor<Class, Args...>();
+    return Generator([c, &args]() -> Class { return std::apply(c, args.Next()); });
+}
+
+/* Creates a Generator object for creating an object on the heap
+Usage: ClassGenerator<class_name, args1 type, arg2 type, ...>(NextType that generates args for the constructor)
+*/
+template<typename Class, typename... Args, typename... Args2>
+auto ClassPtrGenerator(NextType<Args2...>& args) {
+    auto c = new_constructor<Class, Args...>();
+    return Generator([c, &args]() -> Class* { return std::apply(c, args.Next()); });
 }
 
 /*
