@@ -122,6 +122,9 @@ JSON::JSON(const FunctionEntry& e) {
     add_if("arguments_after_expected", e.arguments_after_expected);
     add_if("return_value", e.return_value);
     add_if("return_value_expected", e.return_value_expected);
+    add_if("object", e.object);
+    add_if("object_after", e.object_after);
+    add_if("object_after_expected", e.object_after_expected);
     data.emplace_back("result", e.result);
 
     Set(Stringify(data, [](const JSON& a) -> std::string { return a; }, "{", ",", "}"));

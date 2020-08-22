@@ -208,6 +208,9 @@ namespace {
                                 if(!headers_filled) headers.push_back(header);
                             }
                         };
+                        add_if(it2->object, "Object");
+                        add_if(it2->object_after, "Object Afterwards");
+                        add_if(it2->object_after_expected, "Correct Object Afterwards");
                         add_if(it2->arguments, "Arguments");
                         add_if(it2->return_value, "Return Value");
                         add_if(it2->return_value_expected, "Correct Return Value");

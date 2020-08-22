@@ -77,6 +77,9 @@ struct FunctionEntry {
     std::optional<UserObject> arguments_after_expected;
     std::optional<UserObject> return_value;
     std::optional<UserObject> return_value_expected;
+    std::optional<UserObject> object;
+    std::optional<UserObject> object_after;
+    std::optional<UserObject> object_after_expected;
     bool result;
 };
 typedef std::vector<FunctionEntry> FunctionData;
