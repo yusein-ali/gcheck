@@ -373,7 +373,7 @@ class Test {
 
     virtual void ActualTest() = 0; // The test function specified by user
 
-    double RunTest(); // Runs the test and takes care of result logging to Formatter
+    void RunTest(); // Runs the test and takes care of result logging to Formatter
 protected:
     TestData data_;
     std::string suite_;

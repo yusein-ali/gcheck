@@ -324,7 +324,7 @@ Test::Test(const TestInfo& info) : data_(info.max_points, info.prerequisite), su
     test_list_().push_back(this);
 }
 
-double Test::RunTest() {
+void Test::RunTest() {
     StdoutCapturer tout;
     StderrCapturer terr;
 
@@ -336,8 +336,6 @@ double Test::RunTest() {
     data_.serr = terr.str();
 
     data_.CalculatePoints();
-
-    return data_.points;
 }
 
 TestReport& Test::AddReport(TestReport& report) {
