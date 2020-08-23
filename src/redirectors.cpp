@@ -142,7 +142,7 @@ std::string FileCapturer::str() {
 
     fflush(new_);
 
-    fseek(new_, last_pos_, 0);
+    fseek(new_, last_pos_, SEEK_SET);
 
     std::stringstream ss;
 
@@ -150,8 +150,6 @@ std::string FileCapturer::str() {
     while((c = fgetc(new_)) != EOF) {
         ss.put(c);
     }
-
-    last_pos_ = ftell(new_);
 
     return ss.str();
 }
@@ -175,6 +173,9 @@ FileCapturer& FileCapturer::Capture() {
     fflush(original_);
     save_ = dup(fileno_);
     dup2(fileno(new_), fileno_);
+
+    fseek(new_, 0, SEEK_END);
+    last_pos_ = ftell(new_);
 
     return *this;
 }
