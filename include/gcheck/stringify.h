@@ -52,7 +52,9 @@ std::string Stringify(const C<T>& container, Func func, const std::string& start
         ret = ss.str(); \
     }
 
-class UserObject;
+template<template<typename> class allocator>
+class _UserObject;
+using UserObject = _UserObject<std::allocator>;
 
 std::string toConstruct(const char* item);
 std::string toConstruct(char* item);

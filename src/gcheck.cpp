@@ -131,8 +131,8 @@ namespace {
                 );
 
             auto it2 = std::find_if(it->second.begin(), it->second.end(),
-                    [test](const std::pair<std::string, TestData>& a){ 
-                        return a.first == test; 
+                    [test](const std::pair<std::string, TestData>& a){
+                        return a.first == test;
                     }
                 );
 
@@ -159,7 +159,7 @@ namespace {
                     row.push_back(d->descriptor);
                     row.push_back(d->output_expected.string());
                     row.push_back(d->output.string());
-                    row.push_back(it->info_stream->str());
+                    row.push_back(it->info_stream.str());
 
                     writer.SetHeaders({"Result", "Condition", "Left", "Right", "Info"});
                 } else if(const auto d = std::get_if<TrueData>(&it->data)) {
@@ -169,7 +169,7 @@ namespace {
                     row.push_back(d->result ? "correct" : "incorrect");
                     row.push_back(d->descriptor);
                     row.push_back(d->result ? "true" : "false");
-                    row.push_back(it->info_stream->str());
+                    row.push_back(it->info_stream.str());
 
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
                 } else if(const auto d = std::get_if<FalseData>(&it->data)) {
@@ -179,7 +179,7 @@ namespace {
                     row.push_back(d->result ? "correct" : "incorrect");
                     row.push_back(d->descriptor);
                     row.push_back(d->result ? "true" : "false");
-                    row.push_back(it->info_stream->str());
+                    row.push_back(it->info_stream.str());
 
                     writer.SetHeaders({"Result", "Condition", "Value", "Info"});
                 } else if(const auto d = std::get_if<CaseData>(&it->data)) {
@@ -385,7 +385,7 @@ std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
     data.descriptor = descriptor;
     data.result = b;
 
-    return *AddReport(report).info_stream;
+    return AddReport(report).info_stream;
 }
 
 std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
@@ -397,7 +397,7 @@ std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
     data.descriptor = descriptor;
     data.result = !b;
 
-    return *AddReport(report).info_stream;
+    return AddReport(report).info_stream;
 }
 
 bool Test::IsPassed() const {

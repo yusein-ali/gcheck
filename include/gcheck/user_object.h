@@ -35,32 +35,39 @@ struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0))
     Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "",
         in that order by first available method.
  */
-class UserObject {
+template<template<typename> class allocator = std::allocator>
+class _UserObject {
+    typedef std::basic_string<char, std::char_traits<char>, allocator<char>> stdstring;
 public:
-    UserObject() {}
-    UserObject(const UserObject& v) = default;
+    _UserObject() {}
+    _UserObject(const _UserObject& v) = default;
 
+    template<template<typename> class T>
+    _UserObject(const _UserObject<T>& uo) : as_string_(uo.string()), as_json_(uo.json()), construct_(uo.construct()) {}
+
+    template<template<typename> class T>
+    _UserObject(const std::optional<_UserObject<T>>& item) = delete;
     template<typename T>
-    UserObject(const T& item) {
+    _UserObject(const T& item) {
         as_json_ = item;
         as_string_ = toString(item);
         construct_ = toConstruct(item);
     }
     template<typename... Args>
-    UserObject(const Args&... items) : UserObject(std::tuple<Args...>(items...)) {}
+    _UserObject(const Args&... items) : _UserObject(std::tuple<Args...>(items...)) {}
 
     JSON json() const { return as_json_; }
-    std::string string() const { return as_string_; }
-    std::string construct() const { return construct_; }
+    std::string string() const { return (std::string)as_string_; }
+    std::string construct() const { return (std::string)construct_; }
 
     template<typename T>
-    UserObject& operator=(const T& v) {
-        return *this = UserObject(v);
+    _UserObject& operator=(const T& v) {
+        return *this = _UserObject(v);
     }
 private:
-    std::string as_string_;
+    stdstring as_string_;
     JSON as_json_;
-    std::string construct_; // a string representation on how to construct the object e.g. std::vector<int>({0, 1, 2})
+    stdstring construct_; // a string representation on how to construct the object e.g. std::vector<int>({0, 1, 2})
 };
 
 } // gcheck

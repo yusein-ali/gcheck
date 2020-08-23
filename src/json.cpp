@@ -36,7 +36,7 @@ std::vector<std::string> Replacees() {
     return replacees;
 }
 
-JSON JSON::Escape(std::string str) {
+_JSON<std::allocator> _JSON<std::allocator>::Escape(std::string str) {
 
     static const std::string escapees = Escapees();
     static const std::vector<std::string> replacees = Replacees();
@@ -103,12 +103,12 @@ JSON JSON::Escape(std::string str) {
         positions.pop();
     }
 
-    JSON json;
+    _JSON json;
     return json.Set(str);
 }
 
-JSON::JSON(const FunctionEntry& e) {
-    std::vector<JSON> data;
+_JSON<std::allocator>::_JSON(const _FunctionEntry<std::allocator>& e) {
+    std::vector<_JSON> data;
     auto add_if = [&data](const std::string& str, auto a) {
         if(a) data.emplace_back(str, *a);
     };
@@ -128,102 +128,102 @@ JSON::JSON(const FunctionEntry& e) {
     data.emplace_back("run_time", e.run_time.count());
     data.emplace_back("result", e.result);
 
-    Set(Stringify(data, [](const JSON& a) -> std::string { return a; }, "{", ",", "}"));
+    Set(Stringify(data, [](const _JSON& a) -> std::string { return a; }, "{", ",", "}"));
 }
 
-JSON::JSON(const UserObject& o)
-        : JSON(std::vector{
+_JSON<std::allocator>::_JSON(const _UserObject<std::allocator>& o)
+        : _JSON(std::vector{
             std::pair("json", o.json()),
-            std::pair("construct", JSON(o.construct())),
-            std::pair("string", JSON(o.string())),
+            std::pair("construct", _JSON(o.construct())),
+            std::pair("string", _JSON(o.string())),
         }) {}
 
-JSON::JSON(const CaseEntry& e) {
+_JSON<std::allocator>::_JSON(const _CaseEntry<std::allocator>& e) {
     std::string out = "{";
-    out += JSON("output", e.output) + ',';
-    out += JSON("output_expected", e.output_expected) + ',';
-    out += JSON("arguments", e.arguments) + ',';
-    out += JSON("result", e.result) + ',';
-    out += JSON("input", e.input) + ',';
+    out += _JSON("output", e.output) + ',';
+    out += _JSON("output_expected", e.output_expected) + ',';
+    out += _JSON("arguments", e.arguments) + ',';
+    out += _JSON("result", e.result) + ',';
+    out += _JSON("input", e.input) + ',';
     out += "}";
 
     Set(out);
 }
 
-JSON::JSON(const TestReport& r) {
+_JSON<std::allocator>::_JSON(const _TestReport<std::allocator>& r) {
 
     std::string out = "{";
     if(const auto d = std::get_if<EqualsData>(&r.data)) {
-        out += JSON("type", "EE") + ',';
+        out += _JSON("type", "EE") + ',';
 
-        out += JSON("output_expected", d->output_expected.string()) + ',';
-        out += JSON("output", d->output.string()) + ',';
-        out += JSON("result", d->result) + ',';
-        out += JSON("descriptor", d->descriptor) + ',';
+        out += _JSON("output_expected", d->output_expected.string()) + ',';
+        out += _JSON("output", d->output.string()) + ',';
+        out += _JSON("result", d->result) + ',';
+        out += _JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<TrueData>(&r.data)) {
-        out += JSON("type", "ET") + ',';
+        out += _JSON("type", "ET") + ',';
 
-        out += JSON("value", d->value) + ',';
-        out += JSON("result", d->result) + ',';
-        out += JSON("descriptor", d->descriptor) + ',';
+        out += _JSON("value", d->value) + ',';
+        out += _JSON("result", d->result) + ',';
+        out += _JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<FalseData>(&r.data)) {
-        out += JSON("type", "EF") + ',';
+        out += _JSON("type", "EF") + ',';
 
-        out += JSON("value", d->value) + ',';
-        out += JSON("result", d->result) + ',';
-        out += JSON("descriptor", d->descriptor) + ',';
+        out += _JSON("value", d->value) + ',';
+        out += _JSON("result", d->result) + ',';
+        out += _JSON("descriptor", d->descriptor) + ',';
     } else if(const auto d = std::get_if<CaseData>(&r.data)) {
-        out += JSON("type", "TC") + ',';
+        out += _JSON("type", "TC") + ',';
 
-        out += JSON("cases", *d) + ',';
+        out += _JSON("cases", *d) + ',';
     } else if(const auto d = std::get_if<FunctionData>(&r.data)) {
-        out += JSON("type", "FC") + ',';
+        out += _JSON("type", "FC") + ',';
 
-        out += JSON("cases", *d) + ',';
+        out += _JSON("cases", *d) + ',';
     }
-    out += JSON("info", r.info_stream->str());
+    out += _JSON("info", r.info_stream.str());
     out += "}";
 
     Set(out);
 }
 
-JSON::JSON(const TestStatus& status) {
+_JSON<std::allocator>::_JSON(const TestStatus& status) {
     switch (status) {
     case TestStatus::NotStarted:
-        *this = JSON("NotStarted");
+        *this = _JSON("NotStarted");
         break;
     case TestStatus::Started:
-        *this = JSON("Started");
+        *this = _JSON("Started");
         break;
     case TestStatus::Finished:
-        *this = JSON("Finished");
+        *this = _JSON("Finished");
         break;
     default:
-        *this = JSON("ERROR");
+        *this = _JSON("ERROR");
         break;
     }
 }
 
-JSON::JSON(const TestData& data) {
+_JSON<std::allocator>::_JSON(const _TestData<std::allocator>& data) {
 
     std::string out = "{";
-    out += JSON("results", data.reports) + ',';
-    out += JSON("grading_method", data.grading_method) + ',';
-    out += JSON("prerequisite", data.prerequisite) + ',';
-    out += JSON("format", data.output_format) + ',';
-    out += JSON("points", data.points) + ',';
-    out += JSON("max_points", data.max_points) + ',';
-    out += JSON("stdout", data.sout) + ',';
-    out += JSON("stderr", data.serr) + ',';
-    out += JSON("correct", data.correct) + ',';
-    out += JSON("incorrect", data.incorrect) + ',';
-    out += JSON("status", data.status);
+    out += _JSON("results", data.reports) + ',';
+    out += _JSON("grading_method", data.grading_method) + ',';
+    out += _JSON("prerequisite", data.prerequisite) + ',';
+    out += _JSON("format", data.output_format) + ',';
+    out += _JSON("points", data.points) + ',';
+    out += _JSON("max_points", data.max_points) + ',';
+    out += _JSON("stdout", data.sout) + ',';
+    out += _JSON("stderr", data.serr) + ',';
+    out += _JSON("correct", data.correct) + ',';
+    out += _JSON("incorrect", data.incorrect) + ',';
+    out += _JSON("status", data.status);
     out += "}";
 
     Set(out);
 }
 
-JSON::JSON(const Prerequisite& pre) {
+_JSON<std::allocator>::_JSON(const Prerequisite& pre) {
     auto v = pre.GetFullfillmentData();
     std::vector<std::tuple<std::pair<std::string, std::string>,std::pair<std::string, std::string>, std::pair<std::string, bool>>> v2(v.size());
     std::transform(v.begin(), v.end(), v2.begin(),
@@ -236,25 +236,25 @@ JSON::JSON(const Prerequisite& pre) {
         });
 
     std::string out = "{";
-    out += JSON("isfullfilled", pre.IsFulfilled());
-    out += JSON("details", v2);
+    out += _JSON("isfullfilled", pre.IsFulfilled());
+    out += _JSON("details", v2);
     out += "}";
     Set(out);
 }
 
-template JSON::JSON(const std::string& key, const int& value);
-template JSON::JSON(const int& v);
-template JSON::JSON(const std::string& key, const unsigned int& value);
-template JSON::JSON(const unsigned int& v);
-template JSON::JSON(const std::string& key, const long& value);
-template JSON::JSON(const long& v);
-template JSON::JSON(const std::string& key, const unsigned long& value);
-template JSON::JSON(const unsigned long& v);
-template JSON::JSON(const std::string& key, const double& value);
-template JSON::JSON(const double& v);
-template JSON::JSON(const std::string& key, const float& value);
-template JSON::JSON(const float& v);
-template JSON::JSON(const std::string& key, const std::string& value);
-template JSON::JSON(const std::string& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const int& value);
+template _JSON<std::allocator>::_JSON(const int& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const unsigned int& value);
+template _JSON<std::allocator>::_JSON(const unsigned int& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const long& value);
+template _JSON<std::allocator>::_JSON(const long& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const unsigned long& value);
+template _JSON<std::allocator>::_JSON(const unsigned long& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const double& value);
+template _JSON<std::allocator>::_JSON(const double& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const float& value);
+template _JSON<std::allocator>::_JSON(const float& v);
+template _JSON<std::allocator>::_JSON(const std::string& key, const std::string& value);
+template _JSON<std::allocator>::_JSON(const std::string& v);
 
 }

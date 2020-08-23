@@ -39,54 +39,198 @@ private:
     std::optional<S> input;
 };
 
-struct EqualsData {
-    UserObject output_expected;
-    UserObject output;
-    std::string descriptor;
+template<template<typename> class allocator = std::allocator>
+struct _EqualsData {
+    typedef _UserObject<allocator> UO;
+    typedef std::basic_string<char, std::char_traits<char>, allocator<char>> string;
+    UO output_expected;
+    UO output;
+    string descriptor;
     bool result;
-};
 
-struct TrueData {
+    _EqualsData() {}
+
+    template<template<typename> class T>
+    _EqualsData(const _EqualsData<T>& d) {
+        *this = d;
+    }
+    template<template<typename> class T>
+    _EqualsData& operator=(const _EqualsData<T>& d) {
+        output_expected = d.output_expected;
+        output = d.output;
+        descriptor = d.descriptor;
+        result = d.result;
+        return *this;
+    }
+};
+using EqualsData = _EqualsData<>;
+
+template<template<typename> class allocator = std::allocator>
+struct _TrueData {
+    typedef std::basic_string<char, std::char_traits<char>, allocator<char>> string;
     bool value;
-    std::string descriptor;
+    string descriptor;
     bool result;
-};
 
-struct FalseData {
+    _TrueData() {}
+
+    template<template<typename> class T>
+    _TrueData(const _TrueData<T>& d) {
+        *this = d;
+    }
+    template<template<typename> class T>
+    _TrueData& operator=(const _TrueData<T>& d) {
+        value = d.value;
+        descriptor = d.descriptor;
+        result = d.result;
+        return *this;
+    }
+};
+using TrueData = _TrueData<>;
+
+template<template<typename> class allocator = std::allocator>
+struct _FalseData {
+    typedef std::basic_string<char, std::char_traits<char>, allocator<char>> string;
     bool value;
-    std::string descriptor;
+    string descriptor;
     bool result;
-};
 
-struct CaseEntry {
-    std::optional<UserObject> arguments; // arguments to test function
-    std::optional<UserObject> input; // arguments to tested function
-    std::optional<UserObject> output;
-    std::optional<UserObject> output_expected;
+    _FalseData() {}
+
+    template<template<typename> class T>
+    _FalseData(const _FalseData<T>& d) {
+        *this = d;
+    }
+    template<template<typename> class T>
+    _FalseData& operator=(const _FalseData<T>& d) {
+        value = d.value;
+        descriptor = d.descriptor;
+        result = d.result;
+        return *this;
+    }
+};
+using FalseData = _FalseData<>;
+
+template<template<typename> class allocator = std::allocator>
+struct _CaseEntry {
+    typedef _UserObject<allocator> UO;
+    std::optional<UO> arguments; // arguments to test function
+    std::optional<UO> input; // arguments to tested function
+    std::optional<UO> output;
+    std::optional<UO> output_expected;
     bool result;
-};
-typedef std::vector<CaseEntry> CaseData;
 
+    _CaseEntry() {}
+
+    template<template<typename> class T>
+    _CaseEntry(const _CaseEntry<T>& f) {
+        *this = f;
+    }
+    template<template<typename> class T>
+    _CaseEntry& operator=(const _CaseEntry<T>& ce) {
+        arguments = ce.arguments;
+        input = ce.input;
+        output = ce.output;
+        output_expected = ce.output_expected;
+        result = ce.result;
+        return *this;
+    }
+};
+using CaseEntry = _CaseEntry<>;
+template<template<typename> class allocator = std::allocator>
+using _CaseData = std::vector<_CaseEntry<allocator>, allocator<_CaseEntry<allocator>>>;
+using CaseData = _CaseData<>;
+
+template<template<typename> class allocator = std::allocator>
+struct _FunctionEntry {
+    typedef _UserObject<allocator> UO;
+    std::optional<UO> input;
+    std::optional<UO> output;
+    std::optional<UO> output_expected;
+    std::optional<UO> error;
+    std::optional<UO> error_expected;
+    std::optional<UO> arguments;
+    std::optional<UO> arguments_after;
+    std::optional<UO> arguments_after_expected;
+    std::optional<UO> return_value;
+    std::optional<UO> return_value_expected;
+    std::optional<UO> object;
+    std::optional<UO> object_after;
+    std::optional<UO> object_after_expected;
     std::optional<std::chrono::nanoseconds> max_run_time;
     std::chrono::nanoseconds run_time;
     bool result;
+
+    _FunctionEntry() {}
+
+    template<template<typename> class T>
+    _FunctionEntry(const _FunctionEntry<T>& f) {
+        *this = f;
+    }
+    template<template<typename> class T>
+    _FunctionEntry& operator=(const _FunctionEntry<T>& fe) {
+        input = fe.input;
+        output = fe.output;
+        output_expected = fe.output_expected;
+        error = fe.error;
+        error_expected = fe.error_expected;
+        arguments = fe.arguments;
+        arguments_after = fe.arguments_after;
+        arguments_after_expected = fe.arguments_after_expected;
+        return_value = fe.return_value;
+        return_value_expected = fe.return_value_expected;
+        object = fe.object;
+        object_after = fe.object_after;
+        object_after_expected = fe.object_after_expected;
+        max_run_time = fe.max_run_time;
+        run_time = fe.run_time;
+        result = fe.result;
+        return *this;
+    }
 };
-typedef std::vector<FunctionEntry> FunctionData;
+using FunctionEntry = _FunctionEntry<>;
+template<template<typename> class allocator = std::allocator>
+using _FunctionData = std::vector<_FunctionEntry<allocator>, allocator<_FunctionEntry<allocator>>>;
+using FunctionData = _FunctionData<>;
 
-struct TestReport {
+template<template<typename> class allocator = std::allocator>
+struct _TestReport {
+    typedef std::basic_stringstream<char, std::char_traits<char>, allocator<char>> stringstream;
+    stringstream info_stream;
 
-    std::shared_ptr<std::stringstream> info_stream;
+    std::variant<_EqualsData<allocator>, _TrueData<allocator>, _FalseData<allocator>, _CaseData<allocator>, _FunctionData<allocator>> data;
 
-    std::variant<EqualsData, TrueData, FalseData, CaseData, FunctionData> data;
+    _TestReport(const _TestReport& r) : data(r.data) { info_stream << r.info_stream.str(); }
+    template<typename T>
+    _TestReport(const T& d) : data(d) {}
+    template<template<typename> class T>
+    _TestReport(const _TestReport<T>& r) {
+        switch (r.data.index()) {
+        case 0:
+            data = std::get<0>(r.data);
+            break;
+        case 1:
+            data = std::get<1>(r.data);
+            break;
+        case 2:
+            data = std::get<2>(r.data);
+            break;
+        case 3: {
+            auto& vec = std::get<3>(r.data);
+            data = _CaseData<allocator>(vec.begin(), vec.end());
+            break;
+        } case 4: {
+            auto& vec = std::get<4>(r.data);
+            data = _FunctionData<allocator>(vec.begin(), vec.end());
+            break;
+        } default:
+            break;
+        }
+    }
 
     template<typename T>
-    TestReport(const T& d) : info_stream(std::make_shared<std::stringstream>()), data(d) {}
-
-    TestReport(const TestReport& r) : info_stream(r.info_stream), data(r.data) {}
-
-    template<typename T>
-    static TestReport Make(T item = T()) {
-        return TestReport(item);
+    static _TestReport Make(T item = T()) {
+        return _TestReport(item);
     }
 
     template<typename T>
@@ -99,6 +243,7 @@ struct TestReport {
         return std::get<T>(data);
     }
 };
+using TestReport = _TestReport<>;
 
 enum GradingMethod {
     Partial,
@@ -142,24 +287,58 @@ struct TestInfo {
     TestInfo(std::string suite, std::string test, std::string prerequisite) : TestInfo(suite, test, default_points, prerequisite) {}
 };
 
-struct TestData {
+template<template<typename> class allocator = std::allocator>
+struct _TestData {
+    typedef std::basic_string<char, std::char_traits<char>, allocator<char>> string;
+    typedef _TestReport<allocator> TReport;
     Prerequisite prerequisite;
 
-    std::vector<TestReport> reports;
+    std::vector<TReport, allocator<TReport>> reports;
     GradingMethod grading_method = Partial;
-    std::string output_format = "horizontal";
+    string output_format = "horizontal";
+    std::chrono::duration<double> timeout = std::chrono::duration<double>::zero();
     TestStatus status = NotStarted;
 
     double points = 0;
     double max_points = 0;
 
-    std::string sout = "";
-    std::string serr = "";
+    string sout = "";
+    string serr = "";
 
     int correct = 0;
     int incorrect = 0;
 
-    TestData(double points, Prerequisite prerequisite) : prerequisite(prerequisite), max_points(points) {}
+    _TestData(double points, Prerequisite prerequisite) : prerequisite(prerequisite), max_points(points) {}
+    template<template<typename> class T>
+    _TestData(const _TestData<T>& td) {
+        reports = std::vector<TReport, allocator<TReport>>(td.reports.begin(), td.reports.end());
+        grading_method = td.grading_method;
+        output_format = td.output_format;
+        timeout = td.timeout;
+        status = td.status;
+        points = td.points;
+        max_points = td.max_points;
+        sout = td.sout;
+        serr = td.serr;
+        correct = td.correct;
+        incorrect = td.incorrect;
+        prerequisite = td.prerequisite;
+    }
+    template<template<typename> class T>
+    _TestData& operator=(const _TestData<T>& td) {
+        reports = std::vector<TReport, allocator<TReport>>(td.reports.begin(), td.reports.end());
+        grading_method = td.grading_method;
+        output_format = td.output_format;
+        timeout = td.timeout;
+        status = td.status;
+        points = td.points;
+        max_points = td.max_points;
+        sout = td.sout;
+        serr = td.serr;
+        correct = td.correct;
+        incorrect = td.incorrect;
+        return *this;
+    }
 
     void CalculatePoints() {
 
@@ -180,6 +359,7 @@ struct TestData {
         status = Finished;
     }
 };
+using TestData = _TestData<>;
 
 /*
     Abstract base class for tests. Keeps track of the test's results and options.
@@ -291,7 +471,7 @@ std::stringstream& Test::ExpectEqual(T left, S right, std::string descriptor) {
     data.descriptor = descriptor;
     data.result = left == right;
 
-    return *AddReport(report).info_stream;
+    return AddReport(report).info_stream;
 }
 
 template <class T, class S>
@@ -305,7 +485,7 @@ std::stringstream& Test::ExpectInequal(T left, S right, std::string descriptor) 
     data.descriptor = descriptor;
     data.result = left != right;
 
-    return *AddReport(report).info_stream;
+    return AddReport(report).info_stream;
 }
 
 // Theoretically improves compile times with precompiled gcheck TODO: benchmark
