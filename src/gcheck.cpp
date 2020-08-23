@@ -7,8 +7,12 @@
 #include "argument.h"
 #include "redirectors.h"
 #include "console_writer.h"
+#include "shared_allocator.h"
 
 namespace gcheck {
+// TODO: For some reason linker gives undefined reference errors without this.
+shared_manager asdnsadinasidnasikufbiusdbfg;
+
 namespace {
     /*
         Static class for keeping track of and logging test results.
