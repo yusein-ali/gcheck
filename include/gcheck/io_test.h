@@ -107,6 +107,7 @@ private:
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \
@@ -130,6 +131,7 @@ private:
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \

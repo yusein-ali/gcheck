@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <functional>
+#include <chrono>
 
 #include "macrotools.h"
 #include "gcheck.h"
@@ -120,6 +121,7 @@ protected:
     std::optional<ConstlessTupleType> args_;
     std::optional<ConstlessTupleType> args_after_;
     std::optional<ReturnType> expected_return_value_;
+    std::optional<std::chrono::nanoseconds> max_run_time_;
 
     std::optional<ConstlessTupleType> last_args_;
     int num_runs_;
@@ -143,6 +145,8 @@ protected:
     void IgnoreArgumentsAfter() { check_arguments_ = false; }
     // Sets the expected output (stdout) of tested function
     void SetReturn(const ReturnType& val) { expected_return_value_ = val; }
+    void SetMaxRunTime(std::chrono::nanoseconds ns) { max_run_time_ = ns; }
+    void SetMaxRunTime(unsigned long long ns) { max_run_time_ = std::chrono::nanoseconds(ns); }
 
     const std::optional<TupleType>& GetLastArguments() const { return last_args_; }
     size_t GetRunIndex() { return run_index_; }
@@ -182,10 +186,16 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
             data.arguments = args;
 
             if constexpr(std::is_same<ReturnT, void>::value) {
+                auto t1 = std::chrono::high_resolution_clock::now();
                 std::apply(function_, args);
+                data.run_time = std::chrono::high_resolution_clock::now() - t1;
+
                 data.result = true;
             } else {
+                auto t1 = std::chrono::high_resolution_clock::now();
                 auto ret = std::apply(function_, args);
+                data.run_time = std::chrono::high_resolution_clock::now() - t1;
+
                 data.return_value = ret;
                 if(expected_return_value_)
                     data.return_value_expected = *expected_return_value_;
@@ -198,15 +208,25 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
             data.result = false;
         }
     } else if constexpr(std::is_same<ReturnT, void>::value) {
+        auto t1 = std::chrono::high_resolution_clock::now();
         function_();
+        data.run_time = std::chrono::high_resolution_clock::now() - t1;
+
         data.result = !args_after_ && !args_;
     } else {
+        auto t1 = std::chrono::high_resolution_clock::now();
         auto ret = function_();
+        data.run_time = std::chrono::high_resolution_clock::now() - t1;
+
         data.return_value = ret;
         if(expected_return_value_)
             data.return_value_expected = *expected_return_value_;
         data.result = expected_return_value_ == ret && (!args_after_ && !args_);
     }
+
+    data.max_run_time = max_run_time_;
+    if(max_run_time_)
+        data.result = data.result && data.run_time <= max_run_time_.value();
 }
 
 template<typename ReturnT, typename... Args>
@@ -249,6 +269,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
         using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::FunctionTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
@@ -267,6 +288,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
         using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::FunctionTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \

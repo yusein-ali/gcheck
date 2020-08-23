@@ -202,12 +202,17 @@ namespace {
                         cells.push_back({});
                         auto& row = cells[cells.size()-1];
                         row.push_back(it2->result ? "correct" : "incorrect");
-                        auto add_if = [&headers, &row, headers_filled](const std::optional<UserObject>& i, const std::string& header) {
-                            if(i) {
-                                row.push_back(i->string());
-                                if(!headers_filled) headers.push_back(header);
-                            }
+                        auto add = [&headers, &row, headers_filled](const std::string& str, const std::string& header) {
+                            row.push_back(str);
+                            if(!headers_filled) headers.push_back(header);
                         };
+                        auto add_if = [&add, &headers, &row, headers_filled](const std::optional<UserObject>& i, const std::string& header) {
+                            if(i) add(i->string(), header);
+                        };
+                        if(it2->max_run_time) {
+                            add(std::to_string(it2->max_run_time->count()), "Max Run Time");
+                            add(std::to_string(it2->run_time.count()), "Run Time");
+                        }
                         add_if(it2->object, "Object");
                         add_if(it2->object_after, "Object Afterwards");
                         add_if(it2->object_after_expected, "Correct Object Afterwards");

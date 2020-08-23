@@ -7,6 +7,7 @@
 #include <sstream>
 #include <memory>
 #include <variant>
+#include <chrono>
 
 #include "argument.h"
 #include "json.h"
@@ -66,20 +67,8 @@ struct CaseEntry {
 };
 typedef std::vector<CaseEntry> CaseData;
 
-struct FunctionEntry {
-    std::optional<UserObject> input;
-    std::optional<UserObject> output;
-    std::optional<UserObject> output_expected;
-    std::optional<UserObject> error;
-    std::optional<UserObject> error_expected;
-    std::optional<UserObject> arguments;
-    std::optional<UserObject> arguments_after;
-    std::optional<UserObject> arguments_after_expected;
-    std::optional<UserObject> return_value;
-    std::optional<UserObject> return_value_expected;
-    std::optional<UserObject> object;
-    std::optional<UserObject> object_after;
-    std::optional<UserObject> object_after_expected;
+    std::optional<std::chrono::nanoseconds> max_run_time;
+    std::chrono::nanoseconds run_time;
     bool result;
 };
 typedef std::vector<FunctionEntry> FunctionData;

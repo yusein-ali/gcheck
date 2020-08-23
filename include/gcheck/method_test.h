@@ -125,6 +125,7 @@ private:
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObject; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
@@ -152,6 +153,7 @@ private:
         using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
         using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObject; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
