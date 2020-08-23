@@ -57,7 +57,7 @@ public:
 
     void WriteRow(const std::vector<std::string>& cells);
 
-    void WriteRows(const std::vector<std::vector<std::string>>& cells);
+    void WriteRows(std::vector<std::vector<std::string>> cells);
 };
 
 }

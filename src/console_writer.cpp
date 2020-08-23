@@ -175,12 +175,15 @@ void ConsoleWriter::WriteRow(const std::vector<std::string>& cells) {
     WriteRows(std::vector<std::vector<std::string>>(1, cells));
 }
 
-void ConsoleWriter::WriteRows(const std::vector<std::vector<std::string>>& cells) {
+void ConsoleWriter::WriteRows(std::vector<std::vector<std::string>> cells) {
 
     int width = GetWidth();
     std::vector<int> widths = header_widths_;
     for(auto& r : cells)
         widths = CalcWidths(r, widths);
+    for(auto& r : cells)
+        if(r.size() < widths.size())
+            r.resize(widths.size(), "");
 
     std::vector<int> cuts;
     int cut_width = 1, counter = 0;
@@ -196,7 +199,13 @@ void ConsoleWriter::WriteRows(const std::vector<std::vector<std::string>>& cells
     cuts.push_back(counter);
 
     if(headers_.size() != 0) {
-        WriteRow(width, headers_, widths, cuts);
+        if(headers_.size() != widths.size()) {
+            auto headers = headers_;
+            headers.resize(widths.size(), "");
+            WriteRow(width, headers, widths, cuts);
+        } else {
+            WriteRow(width, headers_, widths, cuts);
+        }
     }
     for(auto& r : cells) {
         WriteRow(width, r, widths, cuts);
