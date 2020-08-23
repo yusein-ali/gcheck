@@ -205,6 +205,10 @@ namespace {
                     for(auto it2 = d->begin(); it2 != d->end(); it2++) {
                         cells.push_back({});
                         auto& row = cells[cells.size()-1];
+                        if(it2->timed_out) {
+                            row.push_back("Timed out");
+                            continue;
+                        }
                         row.push_back(it2->result ? "correct" : "incorrect");
                         auto add = [&headers, &row, headers_filled](const std::string& str, const std::string& header) {
                             row.push_back(str);
@@ -322,6 +326,14 @@ bool Test::do_safe_run_ = false;
 
 Test::Test(const TestInfo& info) : data_(info.max_points, info.prerequisite), suite_(info.suite), test_(info.test) {
     test_list_().push_back(this);
+}
+
+void Test::SetTimeout(std::chrono::duration<double> seconds) {
+    data_.timeout = seconds;
+}
+
+void Test::SetTimeout(double seconds) {
+    data_.timeout = std::chrono::duration<double>(seconds);
 }
 
 void Test::RunTest() {
@@ -452,9 +464,16 @@ template std::stringstream& Test::ExpectEqual(const char* left, std::string righ
 int main(int argc, char** argv) {
     using namespace gcheck;
 
-    for(int i = 1; i < argc; ++i) {
-        if(argv[i] == std::string("--json")) Formatter::pretty_ = false;
-        else Formatter::filename_ = argv[i];
+    int i = 1;
+    auto next_param = [&i, argv]() {
+        return argv[i++];
+    };
+
+    while(i < argc) {
+        auto param = next_param();
+        if(param == std::string("--json")) Formatter::pretty_ = false;
+        else if(param == std::string("--safe")) Test::do_safe_run_ = true;
+        else Formatter::filename_ = param;
     }
     if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
 

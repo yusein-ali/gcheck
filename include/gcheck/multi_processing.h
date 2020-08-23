@@ -34,7 +34,6 @@ bool wait_timeout(pid_t pid, std::chrono::duration<double> time) {
     }
     return true;
 }
-#endif
 
 template<template<template<typename...> class> class T, typename F, typename... Args>
 bool RunForked(std::chrono::duration<double> timeout, T<std::allocator>& data_out, size_t mem_size, F&& function, Args&&... args) {
@@ -63,5 +62,6 @@ bool RunForked(std::chrono::duration<double> timeout, T<std::allocator>& data_ou
     sm.Free();
     return true;
 }
+#endif
 
 } // gcheck

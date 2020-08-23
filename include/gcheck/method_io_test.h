@@ -36,6 +36,7 @@ private:
 #define _METHODIOTEST5(suitename, testname, num_runs, ...) \
     template<typename ReturnT, typename ObjectType, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::MethodIOTest<ReturnT, ObjectType, Args...> { \
+        using gcheck::Test::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
@@ -65,6 +66,7 @@ private:
 #define _METHODIOTEST4(suitename, testname, num_runs, tobetested) \
     template<typename ReturnT, typename ObjectType, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::MethodIOTest<ReturnT, ObjectType, Args...> { \
+        using gcheck::Test::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \

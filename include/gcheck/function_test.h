@@ -3,11 +3,13 @@
 #include <type_traits>
 #include <functional>
 #include <chrono>
+#include <stdexcept>
 
 #include "macrotools.h"
 #include "gcheck.h"
 #include "sfinae.h"
 #include "user_object.h"
+#include "multi_processing.h"
 
 namespace gcheck {
 
@@ -171,6 +173,9 @@ void FunctionTest<ReturnT, Args...>::ResetTestVars() {
 
 template<typename ReturnT, typename... Args>
 void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
+    for(auto& f : pre_run_functions_)
+        f(run_index_, data);
+
     last_args_ = args_;
 
     if(check_arguments_) {
@@ -227,6 +232,9 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
     data.max_run_time = max_run_time_;
     if(max_run_time_)
         data.result = data.result && data.run_time <= max_run_time_.value();
+
+    for(auto& f : post_run_functions_)
+        f(run_index_, data);
 }
 
 template<typename ReturnT, typename... Args>
@@ -245,13 +253,18 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
 
         SetInputsAndOutputs();
 
-        for(auto& f : pre_run_functions_)
-            f(run_index_, *it);
-
-        RunOnce(*it);
-
-        for(auto& f : post_run_functions_)
-            f(run_index_, *it);
+        if(do_safe_run_) {
+#if defined(_WIN32) || defined(WIN32)
+            throw std::runtime_error("Safe running is not yet supported on windows.");
+#else
+            if(!gcheck::RunForked(data_.timeout, *it, 1024*1024, std::bind(&FunctionTest::RunOnce, this, std::placeholders::_1), *it)) {
+                it->timed_out = true;
+                it->result = false;
+            }
+#endif
+        } else {
+            RunOnce(*it);
+        }
     }
     AddReport(report);
 }
@@ -263,6 +276,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
 #define _FUNCTIONTEST5(suitename, testname, num_runs, ...) \
     template<typename ReturnT, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::FunctionTest<ReturnT, Args...> { \
+        using gcheck::Test::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
@@ -282,6 +296,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
 #define _FUNCTIONTEST4(suitename, testname, num_runs, tobetested) \
     template<typename ReturnT, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::FunctionTest<ReturnT, Args...> { \
+        using gcheck::Test::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \

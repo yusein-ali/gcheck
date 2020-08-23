@@ -159,6 +159,7 @@ struct _FunctionEntry {
     std::optional<UO> object_after_expected;
     std::optional<std::chrono::nanoseconds> max_run_time;
     std::chrono::nanoseconds run_time;
+    bool timed_out = false;
     bool result;
 
     _FunctionEntry() {}
@@ -382,6 +383,8 @@ protected:
     TestReport& AddReport(TestReport& report);
     void SetGradingMethod(GradingMethod method);
     void OutputFormat(std::string format);
+    void SetTimeout(std::chrono::duration<double> seconds);
+    void SetTimeout(double seconds);
 
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */
@@ -411,6 +414,8 @@ public:
     bool IsPassed() const;
     const std::string& GetSuite() const { return suite_; }
     const std::string& GetTest() const { return test_; }
+
+    static bool do_safe_run_;
 
     static bool RunTests();
     static Test* FindTest(std::string suite, std::string test);

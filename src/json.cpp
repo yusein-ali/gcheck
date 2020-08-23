@@ -126,6 +126,7 @@ _JSON<std::allocator>::_JSON(const _FunctionEntry<std::allocator>& e) {
     add_if("object_after", e.object_after);
     add_if("object_after_expected", e.object_after_expected);
     data.emplace_back("run_time", e.run_time.count());
+    data.emplace_back("timed_out", e.timed_out);
     data.emplace_back("result", e.result);
 
     Set(Stringify(data, [](const _JSON& a) -> std::string { return a; }, "{", ",", "}"));
