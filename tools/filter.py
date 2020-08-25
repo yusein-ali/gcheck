@@ -6,6 +6,10 @@ import shutil
 import subprocess
 import regex
 import json
+from itertools import product
+from typing import Tuple, List
+
+from report_parser import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest='output', type=str, default="")
@@ -120,7 +124,7 @@ def is_test_source(content):
     lines = content.split("\n")
 
     lines2 = [line for line in lines if line.find("#include") != -1]
-    lines2 = [line for line in lines2 if line.find("gcheck.h") != -1]
+    lines2 = [line for line in lines2 if line.find("gcheck") != -1]
 
     if len(lines2) == 0:
         return False
@@ -165,20 +169,7 @@ def CppProcessor(file, content):
         dir = os.path.split(file)[0]
         subprocess.run(["make", "-s", "get-report"], cwd=dir)
 
-        reportfile = os.path.join(dir, "report.json")
-        with open(reportfile) as f:
-            results = json.load(f)["test_results"]
-
-        out = {}
-        for suite_name, suite_data in results.items():
-            inner = {}
-            for test_name, test_data in suite_data.items():
-                inner[test_name] = []
-                for result in test_data["results"]:
-                    if result["type"] == "TC":
-                        inner[test_name].append(result)
-
-            out[suite_name] = inner
+        out = Report("report.json")
 
         subprocess.run(["make", "-s", "clean"], cwd=dir)
 
@@ -298,6 +289,83 @@ def CppProcessor(file, content):
             self.under_test = regex.sub(template_remover, "", self.under_test_w_template)
             self.inputs = [arg[0] for arg in self.args[3:]]
             self.content = "TestCase" + case[:self.arg_end]
+    class FunctionTest:
+        def __init__(self, results: Result):
+            self.data = {}
+            self.init("SetTimeout", len(results.cases))
+            self.init("SetArguments", len(results.cases))
+            self.init("SetArgumentsAfter", len(results.cases))
+            self.init("SetReturn", len(results.cases))
+            self.init("SetMaxRunTime", len(results.cases))
+            for index, case in enumerate(results.cases):
+                self.add_uo(index, "SetArguments", case.arguments)
+                self.add_uo(index, "SetArgumentsAfter", case.arguments_after_expected)
+                self.add_uo(index, "SetReturn", case.return_value_expected)
+                self.add_uo(index, "SetMaxRunTime", case.max_run_time)
+                self.add(index, "SetTimeout", case.timeout)
+
+        def __getitem__(self, key):
+            return self.data[key]
+
+        def __setitem__(self, key, val):
+            self.data[key] = val
+
+        def init(self, type: str, num: int):
+            self[type] = [None] * num
+
+        def add_uo(self, index: int, type: str, uo: UserObject):
+            self.add(index, type, uo.construct if uo is not None else None)
+
+        def add(self, index: int, type: str, val):
+            self[type][index] = str(val) if val is not None else None
+
+        def get_content(self):
+            content = "    auto index = GetRunIndex();\n"
+            for key, values in self.data.items():
+                noneless = [val for val in values if val is not None]
+                if len(noneless) == 0:
+                    continue
+                mapping = []
+                index = 0
+                for val in values:
+                    if val is not None:
+                        mapping.append(str(index))
+                        index = index + 1
+                    else:
+                        mapping.append("-1")
+
+                content = content + "    static std::array " + key + "_mapping" + "{" + ",".join(mapping) + "};\n"
+                content = content + "    static std::array " + key + "_vars" + "{" + ",".join(noneless) + "};\n"
+                content = content + "    if(" + key + "_mapping[index] != -1)\n"
+                content = content + "        " + key + "(" + key + "_vars[" + key + "_mapping[index]]);\n"
+
+            return content
+
+    class MethodTest(FunctionTest):
+        def __init__(self, results: Result):
+            super().__init__(results)
+            self.init("SetObject", len(results.cases))
+            self.init("SetObjectAfter", len(results.cases))
+            self.init("SetStateComparer", len(results.cases))
+            for index, case in enumerate(results.cases):
+                self.add_uo(index, "SetObject", case.object)
+                self.add_uo(index, "SetObjectAfter", case.object_after_expected)
+                #self.add_uo(index, "SetStateComparer", case.state_comparer)
+
+    class IOTest(FunctionTest):
+        def __init__(self, results: Result):
+            super().__init__(results)
+            self.init("SetInput", len(results.cases))
+            self.init("SetOutput", len(results.cases))
+            self.init("SetError", len(results.cases))
+            for index, case in enumerate(results.cases):
+                self.add_uo(index, "SetInput", case.input)
+                self.add_uo(index, "SetOutput", case.output_expected)
+                self.add_uo(index, "SetError", case.error_expected)
+
+    class MethodIOTest(MethodTest, IOTest):
+        def __init__(self, results: Result):
+            super().__init__(results)
 
     class Function:
         def check_for_ignore(self, string):
@@ -327,8 +395,8 @@ def CppProcessor(file, content):
             name_start = rfind_space(content, 0, name_end, True)+1 # find last space
             self.name = content[name_start:name_end]
             ret_start = name_start
-            if self.name in ["TEST","TEST_","PREREQ_TEST"]:
-                self.istest = True
+            if self.name in ["TEST","FUNCTIONTEST","IOTEST","METHODTEST","METHODIOTEST"]:
+                self.test_type = self.name
                 self.ret_str = ""
                 args = self.arg_string.split(",")
                 self.suite = args[0].strip()
@@ -336,7 +404,7 @@ def CppProcessor(file, content):
 
                 self.check_for_ignore(content[:name_start])
             else:
-                self.istest = False
+                self.test_type = None
                 ret_end = rfind_space(content, 0, name_start, False) # find last nonspace
                 ret_start = rfind_space(content, 0, ret_end, True)+1 # find last space
                 self.ret_str = content[ret_start:ret_end+1]
@@ -350,29 +418,37 @@ def CppProcessor(file, content):
             if self.istest:
                 self.__populate_contents()
 
+        @property
+        def istest(self):
+            return self.test_type is not None
+
         def __populate_contents(self):
             content = self.content
-            parts = content.split("TestCase")
-            part2 = [p[p.rfind("\n")+1:] for p in parts]
-            self.parted_content = [parts[0]]
-            self.test_cases = []
-            for index, case in enumerate(parts[1:]):
-                if is_in_comment(parts[index], len(parts[index])-1):
-                    self.parted_content.append("TestCase"+case)
-                else:
-                    test_case = TestCase(case)
-                    test_case.indent = part2[index] if part2[index].strip() == "" else ""
-                    self.test_cases.append(test_case)
-                    self.parted_content.append(test_case)
-                    self.parted_content.append(case[test_case.arg_end:])
+            if self.test_type == "TEST":
+                parts = content.split("TestCase")
+                part2 = [p[p.rfind("\n")+1:] for p in parts]
+                self.parted_content = [parts[0]]
+                self.test_cases = []
+                for index, case in enumerate(parts[1:]):
+                    if is_in_comment(parts[index], len(parts[index])-1):
+                        self.parted_content.append("TestCase"+case)
+                    else:
+                        test_case = TestCase(case)
+                        test_case.indent = part2[index] if part2[index].strip() == "" else ""
+                        self.test_cases.append(test_case)
+                        self.parted_content.append(test_case)
+                        self.parted_content.append(case[test_case.arg_end:])
 
-        def update_content(self):
-            self.content = ""
-            for part in self.parted_content:
-                if type(part) is TestCase:
-                    self.content += part.content
-                else:
-                    self.content += part
+        def update_content(self, content = None):
+            if content is None:
+                self.content = ""
+                for part in self.parted_content:
+                    if type(part) is TestCase:
+                        self.content += part.content
+                    else:
+                        self.content += part
+            else:
+                self.content = self.content[:self.lscope_start+1] + "\n" + content + "}"
 
     class Struct:
         def __init__(self, start, scope_start, end):
@@ -467,80 +543,95 @@ def CppProcessor(file, content):
     remove_list = []
     test_funcs = [scope for scope in top_scopes if type(scope) is Function and scope.istest and not scope.ignore]
     for test_func in test_funcs:
-        for test_case in test_func.test_cases:
-            remove_list.append(test_case.correct_func)
+        if test_func.test_type == "TEST":
+            for test_case in test_func.test_cases:
+                remove_list.append(test_case.correct_func)
     remove_list = [func_list[0].name for func_list in [[func for func in top_scopes if func.name == rem] for rem in remove_list] if len(func_list) != 0 and not func_list[0].ignore]
     for test_func in test_funcs:
-        for test_case in test_func.test_cases:
-            if test_case.under_test in remove_list:
-                Logger.error(file, "Correct function is used as under_test function. Cannot remove.", False)
-                return None
+        if test_func.test_type == "TEST":
+            for test_case in test_func.test_cases:
+                if test_case.under_test in remove_list:
+                    Logger.error(file, "Correct function is used as under_test function. Cannot remove.", False)
+                    return None
 
-    for test_func in test_funcs:
-        for index, test_case in enumerate(test_func.test_cases):
-            io = input_output[test_func.suite][test_func.test][index]
+    test_pairs = [(x,y) for x, y in product(test_funcs, input_output.tests) if x.suite == y.suite and x.test == y.test]
 
-            if nullfinder.search(" ".join([str(case["input_args"]) for case in io["cases"]])) != None:
-                Logger.error(file, "Input field in gcheck report contains null fields. Cannot substitute", False)
-                return None
+    for func_obj, test in test_pairs:
+        if func_obj.test_type == "FUNCTIONTEST":
+            func_obj.update_content(FunctionTest(test.results[0]).get_content())
+        elif func_obj.test_type == "IOTEST":
+            func_obj.update_content(IOTest(test.results[0]).get_content())
+        elif func_obj.test_type == "METHODTEST":
+            func_obj.update_content(MethodTest(test.results[0]).get_content())
+        elif func_obj.test_type == "METHODIOTEST":
+            func_obj.update_content(MethodIOTest(test.results[0]).get_content())
+        elif func_obj.test_type == "TEST":
+            for index, test_case in enumerate(func_obj.test_cases):
+                io = test.results[index]
 
-            arg_types = [func for func in top_scopes if func.name == test_case.correct_func]
-            if len(arg_types) == 0:
-                break # test_case.correct_func is not a known function (probably a variable)
+                if nullfinder.search(" ".join([str(case["input_args"]) for case in io["cases"]])) != None:
+                    Logger.error(file, "Input field in gcheck report contains null fields. Cannot substitute", False)
+                    return None
 
-            arg_types = arg_types[0].arg_types
+                arg_types = [func for func in top_scopes if func.name == test_case.correct_func]
+                if len(arg_types) == 0:
+                    break # test_case.correct_func is not a known function (probably a variable)
 
-            inputs = []
-            for case in io["cases"]:
-                if len(case["input_params"]) == 0:
-                    for index, arg in enumerate(case["input_args"]):
-                        item = type_arg_to_cpp(arg_types[index], arg)
-                        if len(inputs) > index:
-                            inputs[index].append(item)
-                        else:
-                            inputs.append([item])
-                else:
-                    if len(inputs) > 0:
-                        inputs[index].append(case["input_params"])
+                arg_types = arg_types[0].arg_types
+
+                inputs = []
+                for case in io["cases"]:
+                    if len(case["input_params"]) == 0:
+                        for index, arg in enumerate(case["input_args"]):
+                            item = type_arg_to_cpp(arg_types[index], arg)
+                            if len(inputs) > index:
+                                inputs[index].append(item)
+                            else:
+                                inputs.append([item])
                     else:
-                        inputs.append([case["input_params"]])
+                        if len(inputs) > 0:
+                            inputs[index].append(case["input_params"])
+                        else:
+                            inputs.append([case["input_params"]])
 
-            #inputs_str = ["std::get<"+str(index)+">(inputs_not_reserved[i_not_reserved])" for index in range(len(test_case.inputs))]
-            #inputs_str = ", ".join(inputs_str)
+                #inputs_str = ["std::get<"+str(index)+">(inputs_not_reserved[i_not_reserved])" for index in range(len(test_case.inputs))]
+                #inputs_str = ", ".join(inputs_str)
 
-            trans = str.maketrans({"\\":  "\\\\",
-                                "\n":  "\\n",
-                                "\t": "\\t",
-                                "\r": "\\r",
-                                "\b": "\\b",
-                                "\f": "\\f",
-                                "\"": "\\\"",
-                                "\'": "\\\'"})
+                trans = str.maketrans({"\\":  "\\\\",
+                                    "\n":  "\\n",
+                                    "\t": "\\t",
+                                    "\r": "\\r",
+                                    "\b": "\\b",
+                                    "\f": "\\f",
+                                    "\"": "\\\"",
+                                    "\'": "\\\'"})
 
-            indent = test_case.indent + "    "
-            ntests = "{\n"
-            if len(io["cases"][0]["output_params"]) == 0:
-                jsons = [case["output_json"] for case in io["cases"]]
-                jsons = ['"' + json.translate(trans) + '"' if isinstance(json, str) else ("true" if json else "false") if isinstance(json, bool) else str(json) for json in jsons]
-                ntests += indent + "std::vector correct_not_reserved = {" + ",".join(jsons) + "};\n"
-            else:
-                ntests += indent + "std::vector correct_not_reserved = {" + ",".join([case["output_params"] for case in io["cases"]]) + "};\n"
+                indent = test_case.indent + "    "
+                ntests = "{\n"
+                if len(io["cases"][0]["output_params"]) == 0:
+                    jsons = [case["output_json"] for case in io["cases"]]
+                    jsons = ['"' + json.translate(trans) + '"' if isinstance(json, str) else ("true" if json else "false") if isinstance(json, bool) else str(json) for json in jsons]
+                    ntests += indent + "std::vector correct_not_reserved = {" + ",".join(jsons) + "};\n"
+                else:
+                    ntests += indent + "std::vector correct_not_reserved = {" + ",".join([case["output_params"] for case in io["cases"]]) + "};\n"
 
-            for arg_index in range(len(inputs)):
-                item = "{" + ",".join(inputs[arg_index]) + "}"
-                ntests += f"{indent}gcheck::SequenceArgument inputs_not_reserved{arg_index}({item});\n"
+                for arg_index in range(len(inputs)):
+                    item = "{" + ",".join(inputs[arg_index]) + "}"
+                    ntests += f"{indent}gcheck::SequenceArgument inputs_not_reserved{arg_index}({item});\n"
 
-            #arg_str = ",".join(["auto arg" + str(index) for index in range(len(inputs))])
-            #arg_str_no_types = ",".join(["arg" + str(index) for index in range(len(inputs))])
-            #ntests += f"{indent}auto stringify = []({arg_str}) {{ return gcheck::UserObject({test_case.under_test}({arg_str_no_types})).json(); }};\n"
-            ntests += f"{indent}TestCase({test_case.repeats},correct_not_reserved,{test_case.under_test_w_template},"
-            ntests += ",".join(["inputs_not_reserved" + str(arg_index) for arg_index in range(len(inputs))]) + ");\n"
-            ntests += test_case.indent + "}"
+                #arg_str = ",".join(["auto arg" + str(index) for index in range(len(inputs))])
+                #arg_str_no_types = ",".join(["arg" + str(index) for index in range(len(inputs))])
+                #ntests += f"{indent}auto stringify = []({arg_str}) {{ return gcheck::UserObject({test_case.under_test}({arg_str_no_types})).json(); }};\n"
+                ntests += f"{indent}TestCase({test_case.repeats},correct_not_reserved,{test_case.under_test_w_template},"
+                ntests += ",".join(["inputs_not_reserved" + str(arg_index) for arg_index in range(len(inputs))]) + ");\n"
+                ntests += test_case.indent + "}"
 
-            test_case.content = ntests
-        test_func.update_content()
+                test_case.content = ntests
+            func_obj.update_content()
+        else:
+            raise NotImplementedError(f"Test type {func_obj.test_type} parsing not implemented")
 
-    ncontent = ""
+    ncontent = "#include <array>\n#include <vector>\n"
     for filler, scope in zip(fillers, top_scopes):
         ncontent += filler
         if scope.name not in remove_list:
