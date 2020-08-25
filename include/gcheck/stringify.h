@@ -57,6 +57,8 @@ std::string Stringify(const C<T>& container, Func func, const std::string& start
 template<template<typename> class allocator>
 class _UserObject;
 using UserObject = _UserObject<std::allocator>;
+template<typename T>
+class DeltaCompare;
 
 std::string toConstruct(const char* item);
 std::string toConstruct(char* item);
@@ -151,6 +153,11 @@ std::string toConstruct(const std::pair<Args...>& t) {
     return ret;
 }
 
+template<typename T>
+std::string toConstruct(const DeltaCompare<T>& v) {
+    return "gcheck::DeltaCompare(" + toConstruct((T)v) + "," + toConstruct(v.Delta()) + ")";;
+}
+
 
 std::string toString(const std::string& item);
 std::string toString(const char* item);
@@ -238,6 +245,11 @@ std::string toString(const std::pair<Args...>& t) {
     std::string ret;
     StringifyTuple(ret, t, toString, "[", ", ", "]");
     return ret;
+}
+
+template<typename T>
+std::string toString(const DeltaCompare<T>& v) {
+    return toString((T)v) + " +- " + toString(v.Delta());
 }
 
 }

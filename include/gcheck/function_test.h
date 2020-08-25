@@ -13,12 +13,61 @@
 
 namespace gcheck {
 
+template<typename T>
+class DeltaCompare {
+public:
+    DeltaCompare(T value, T delta = 0) : value_(value), delta_(delta) {}
+
+    T Delta() const { return delta_; }
+
+    T& operator=(T val) { value_ = val; return *this; }
+
+    operator T&() { return value_; }
+    operator T() const { return value_; }
+
+    bool operator==(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) == val.value_; }
+    bool operator!=(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) != val.value_; }
+    bool operator<(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) < val.value_; }
+    bool operator>(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) > val.value_; }
+    bool operator<=(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) <= val.value_; }
+    bool operator>=(const DeltaCompare& val) const { return DeltaCompare(value_, std::min(delta_, val.delta_)) >= val.value_; }
+
+    bool operator==(T val) const { return value_ + delta_ >= val && value_ - delta_ <= val; }
+    bool operator!=(T val) const { return !(*this == val); }
+    bool operator<(T val) const { return value_ < val; }
+    bool operator>(T val) const { return value_ > val; }
+    bool operator<=(T val) const { return value_ - delta_ <= val; }
+    bool operator>=(T val) const { return value_ + delta_ >= val; }
+private:
+    T value_;
+    T delta_;
+};
+template<typename T>
+bool operator==(T val, const DeltaCompare<T>& dc) { return dc == val; }
+template<typename T>
+bool operator!=(T val, const DeltaCompare<T>& dc) { return dc != val; }
+template<typename T>
+bool operator<(T val, const DeltaCompare<T>& dc) { return dc < val; }
+template<typename T>
+bool operator>(T val, const DeltaCompare<T>& dc) { return dc > val; }
+template<typename T>
+bool operator<=(T val, const DeltaCompare<T>& dc) { return dc <= val; }
+template<typename T>
+bool operator>=(T val, const DeltaCompare<T>& dc) { return dc >= val; }
+
 namespace {
+
+    template<typename T>
+    struct MakeDelta {
+        typedef std::conditional_t<std::is_floating_point_v<T>, DeltaCompare<T>, T> type;
+    };
+    template<typename T>
+    using MakeDelta_t = typename MakeDelta<T>::type;
 
     template<typename... Args>
     struct TupleWrapper : public std::tuple<Args...> {
         typedef std::tuple<Args...> tuple_type;
-        typedef std::tuple<std::remove_const_t<Args>...> constless_tuple_type;
+        typedef std::tuple<MakeDelta_t<std::remove_const_t<Args>>...> storage_tuple_type;
         typedef std::false_type is_empty;
         TupleWrapper(){}
         TupleWrapper(const std::tuple<Args...>& c) : std::tuple<Args...>(c) {}
