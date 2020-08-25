@@ -159,6 +159,7 @@ struct _FunctionEntry {
     std::optional<UO> object_after_expected;
     std::optional<std::chrono::nanoseconds> max_run_time;
     std::chrono::nanoseconds run_time;
+    std::chrono::duration<double> timeout;
     bool timed_out = false;
     bool result;
 
@@ -185,6 +186,8 @@ struct _FunctionEntry {
         object_after_expected = fe.object_after_expected;
         max_run_time = fe.max_run_time;
         run_time = fe.run_time;
+        timeout = fe.timeout;
+        timed_out = fe.timed_out;
         result = fe.result;
         return *this;
     }
@@ -297,7 +300,6 @@ struct _TestData {
     std::vector<TReport, allocator<TReport>> reports;
     GradingMethod grading_method = Partial;
     string output_format = "horizontal";
-    std::chrono::duration<double> timeout = std::chrono::duration<double>::zero();
     TestStatus status = NotStarted;
 
     double points = 0;
@@ -315,7 +317,6 @@ struct _TestData {
         reports = std::vector<TReport, allocator<TReport>>(td.reports.begin(), td.reports.end());
         grading_method = td.grading_method;
         output_format = td.output_format;
-        timeout = td.timeout;
         status = td.status;
         points = td.points;
         max_points = td.max_points;
@@ -330,7 +331,6 @@ struct _TestData {
         reports = std::vector<TReport, allocator<TReport>>(td.reports.begin(), td.reports.end());
         grading_method = td.grading_method;
         output_format = td.output_format;
-        timeout = td.timeout;
         status = td.status;
         points = td.points;
         max_points = td.max_points;
@@ -383,8 +383,6 @@ protected:
     TestReport& AddReport(TestReport& report);
     void SetGradingMethod(GradingMethod method);
     void OutputFormat(std::string format);
-    void SetTimeout(std::chrono::duration<double> seconds);
-    void SetTimeout(double seconds);
 
     /* Runs num tests with correct(args...) giving correct answer
     and under_test(arg...) giving the testing answer and adds the results to test data */

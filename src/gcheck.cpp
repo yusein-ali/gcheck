@@ -328,14 +328,6 @@ Test::Test(const TestInfo& info) : data_(info.max_points, info.prerequisite), su
     test_list_().push_back(this);
 }
 
-void Test::SetTimeout(std::chrono::duration<double> seconds) {
-    data_.timeout = seconds;
-}
-
-void Test::SetTimeout(double seconds) {
-    data_.timeout = std::chrono::duration<double>(seconds);
-}
-
 void Test::RunTest() {
     StdoutCapturer tout;
     StderrCapturer terr;

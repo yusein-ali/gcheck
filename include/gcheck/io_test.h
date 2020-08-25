@@ -99,7 +99,7 @@ private:
 #define _IOTEST5(suitename, testname, num_runs, ...) \
     template<typename ReturnT, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::IOTest<ReturnT, Args...> { \
-        using gcheck::Test::SetTimeout; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
@@ -124,7 +124,7 @@ private:
 #define _IOTEST4(suitename, testname, num_runs, tobetested) \
     template<typename ReturnT, typename... Args> \
     class GCHECK_TEST_##suitename##_##testname : public gcheck::IOTest<ReturnT, Args...> { \
-        using gcheck::Test::SetTimeout; \
+        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
         using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
         using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
