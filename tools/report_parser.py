@@ -1,5 +1,6 @@
 import json
 from enum import Enum
+from typing import Union
 
 class Prerequisite:
     def __init__(self, report):
@@ -28,17 +29,29 @@ class FunctionEntry:
     def __init__(self, report):
         self.result = report["result"]
 
-        def UO_or_None(var):
+        def or_None(var) -> Union[str, None]:
+            return report[var] if var in report else None
+        def UO_or_None(var) -> Union[UserObject, None]:
             return UserObject(report[var]) if var in report else None
 
-        self.error = UO_or_None("error")
-        self.output = UO_or_None("output")
         self.input = UO_or_None("input")
+        self.output = UO_or_None("output")
+        self.output_expected = UO_or_None("output_expected")
+        self.error = UO_or_None("error")
+        self.error_expected = UO_or_None("error_expected")
         self.arguments = UO_or_None("arguments")
         self.arguments_after = UO_or_None("arguments_after")
         self.arguments_after_expected = UO_or_None("arguments_after_expected")
         self.return_value = UO_or_None("return_value")
         self.return_value_expected = UO_or_None("return_value_expected")
+        self.object = UO_or_None("object")
+        self.object_after = UO_or_None("object_after")
+        self.object_after_expected = UO_or_None("object_after_expected")
+        self.max_run_time = or_None("max_run_time")
+        self.run_time = or_None("run_time")
+        self.timeout = or_None("timeout")
+        self.timed_out = or_None("timed_out")
+
 
 class CaseEntry:
     def __init__(self, report):
