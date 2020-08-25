@@ -22,6 +22,8 @@ struct has_toconstruct : decltype(detail::has_toconstruct<T>(0)) {};
 
 } // anonymous
 
+std::string UTF8Encode(std::string);
+
 template<template<typename> class C, typename T, typename Func>
 std::string Stringify(const C<T>& container, Func func, const std::string& start, const std::string& separator, const std::string& end) {
     std::stringstream ss;
@@ -106,7 +108,7 @@ template<typename T = float>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
 toConstruct(float item) {
     std::stringstream ss;
-    ss << "std::stof(" << std::hexfloat << item << ')';
+    ss << std::hexfloat << item << 'f';
     return ss.str();
 }
 
@@ -114,7 +116,7 @@ template<typename T = double>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
 toConstruct(double item) {
     std::stringstream ss;
-    ss << "std::stod(" << std::hexfloat << item << ')';
+    ss << std::hexfloat << item;
     return ss.str();
 }
 
@@ -122,7 +124,7 @@ template<typename T = long double>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
 toConstruct(long double item) {
     std::stringstream ss;
-    ss << "std::stold(" << std::hexfloat << item << ')';
+    ss << std::hexfloat << item << 'l';
     return ss.str();
 }
 
@@ -148,7 +150,6 @@ std::string toConstruct(const std::pair<Args...>& t) {
     StringifyTuple(ret, t, toConstruct, "std::pair(", ",", ")");
     return ret;
 }
-
 
 
 std::string toString(const std::string& item);
