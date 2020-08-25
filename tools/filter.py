@@ -84,14 +84,14 @@ class Logger:
 
     @staticmethod
     def fatal(file, msg, code):
-        print("remove_correct.py encoutered a fatal error:", msg)
+        print("filter.py encoutered a fatal error:", msg)
         print("Stopping.")
         Logger.exit(code)
 
     @staticmethod
     def exit(code):
 
-        with open("remove_correct.log", "w") as f:
+        with open("filter.log", "w") as f:
             temp = ["   " + error[0] + ": " + error[1] for error in Logger.errors if not error[2]]
             f.write("Files with errors that weren't copied (" + str(len(temp)) + "):\n")
             f.write("\n".join(temp))
@@ -105,10 +105,10 @@ class Logger:
 
         if not args.quiet:
             if code == 0:
-                print("remove_correct.py finished with", len(Logger.ignored), "ignored files and", len(Logger.errors),
+                print("filter.py finished with", len(Logger.ignored), "ignored files and", len(Logger.errors),
                     "files with errors of which", len([err for err in Logger.errors if err[2]]), "was copied anyway.")
             else:
-                print("remove_correct.py exited with code", code, "with", len(Logger.ignored), "ignored files and", len(Logger.errors),
+                print("filter.py exited with code", code, "with", len(Logger.ignored), "ignored files and", len(Logger.errors),
                     "files with errors of which", len([err for err in Logger.errors if err[2]]), "was copied anyway.")
 
         sys.exit(code)
@@ -705,7 +705,7 @@ def remove(infile, outdir):
 
 def add_ignore(dir, prev):
     ignore = []
-    ignorepath = os.path.join(dir, ".remignore")
+    ignorepath = os.path.join(dir, ".filterignore")
     try:
         if os.path.isfile(ignorepath):
             with open(ignorepath) as f:
@@ -717,7 +717,7 @@ def add_ignore(dir, prev):
                     for ig in ignore if ig[0] != "#"]
             ignore = [(regex.compile(ig[0]),ig[1]) for ig in ignore]
     except Exception as e:
-        Logger.fatal(ignorepath, "Failed to compile .remignore. " + str(e), False)
+        Logger.fatal(ignorepath, "Failed to compile .filterignore. " + str(e), False)
 
     return prev + ignore
 
@@ -743,7 +743,7 @@ def rem_in_dir(dir, ignore):
                 rem_in_dir(dir, ignore)
 
 if is_dir:
-    ignore = [(regex.compile(ig), False) for ig in [".remignore$", "remove_correct.log$", "remove_correct.py$"]]
+    ignore = [(regex.compile(ig), False) for ig in [".filterignore$", "filter.log$", "filter.py$"]]
     ignore = add_ignore(cwd, ignore)
     rem_in_dir(input, ignore)
 
