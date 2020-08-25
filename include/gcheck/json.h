@@ -80,7 +80,7 @@ public:
     _JSON(const T&) : _JSON() {}
 
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE>
-    _JSON(const T& value) : _JSON(std::to_string(value)) {}
+    _JSON(const T& value) : string(std::to_string(value)) {}
 
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && has_tostring<T>::value>, typename A = SFINAE>
     _JSON(const T& value) : _JSON(to_string(value)) {}

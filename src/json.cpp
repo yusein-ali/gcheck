@@ -145,7 +145,7 @@ _JSON<std::allocator>::_JSON(const Prerequisite& pre) {
         });
 
     std::string out = "{";
-    out += _JSON("isfullfilled", pre.IsFulfilled());
+    out += _JSON("isfullfilled", pre.IsFulfilled()) + ',';
     out += _JSON("details", v2);
     out += "}";
     Set(out);
