@@ -3,3 +3,4 @@ lib/*
 tests/build/*
 tests/bin/*
 report.json
+__pycache__
