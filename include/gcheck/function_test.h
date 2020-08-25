@@ -79,7 +79,7 @@ namespace {
     template<>
     struct TupleWrapper<> : public std::tuple<> {
         typedef std::tuple<> tuple_type;
-        typedef std::tuple<> constless_tuple_type;
+        typedef std::tuple<> storage_tuple_type;
         typedef std::true_type is_empty;
         TupleWrapper(){}
         TupleWrapper(const std::tuple<>& c) : std::tuple<>(c) {}
@@ -101,6 +101,8 @@ namespace {
         typedef char type;
         typedef std::false_type is_defined;
     };
+    template<typename T>
+    using ConditionalT_t = typename ConditionalT<T>::type;
 
 } // anonymous
 
@@ -146,9 +148,9 @@ auto ClassPtrGenerator(NextType<Args2...>& args) {
 template<typename ReturnT, typename... Args>
 class FunctionTest : public Test {
 public:
-    typedef typename ConditionalT<ReturnT>::type ReturnType;
-    typedef TupleWrapper<typename std::remove_reference<Args>::type...> TupleWrapperType;
-    typedef typename TupleWrapperType::constless_tuple_type ConstlessTupleType;
+    typedef MakeDelta_t<ConditionalT_t<ReturnT>> ReturnType;
+    typedef TupleWrapper<std::remove_cv_t<std::remove_reference_t<Args>>...> TupleWrapperType;
+    typedef typename TupleWrapperType::storage_tuple_type StorageTupleType;
     typedef typename TupleWrapperType::tuple_type TupleType;
     typedef void(*CompareFunc)(void);
 
@@ -169,13 +171,13 @@ public:
 protected:
     CompareFunc comp_function_ = nullptr;
 
-    std::optional<ConstlessTupleType> args_;
-    std::optional<ConstlessTupleType> args_after_;
+    std::optional<StorageTupleType> args_;
+    std::optional<StorageTupleType> args_after_;
     std::optional<ReturnType> expected_return_value_;
     std::optional<std::chrono::nanoseconds> max_run_time_;
     std::chrono::duration<double> timeout_ = std::chrono::duration<double>::zero();
 
-    std::optional<ConstlessTupleType> last_args_;
+    std::optional<StorageTupleType> last_args_;
     int num_runs_;
     size_t run_index_ = 0;
     bool check_arguments_ = true;
@@ -185,8 +187,15 @@ protected:
     std::vector<std::function<void(size_t, FunctionEntry&)>> post_run_functions_;
 
     // Sets the input arguments given to the tested function
-    void SetArguments(const typename std::remove_reference<Args>::type&... args) { args_ = std::tuple(args...);}
+    template<typename... Args2>
+    void SetArguments(Args2&&... args) {
+        args_ = std::tuple(std::forward<Args2>(args)...);
+    }
     void SetArguments(const TupleType& args) {
+        std::apply([this](auto... x){this->SetArguments(x...);}, args);
+    }
+    template<typename A = ReturnT, class = std::enable_if_t<std::is_same_v<TupleType, StorageTupleType>>>
+    void SetArguments(const StorageTupleType& args) {
         std::apply([this](auto... x){this->SetArguments(x...);}, args);
     }
     // Sets what the input arguments given to the tested function should be after the call
