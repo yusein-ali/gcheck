@@ -346,20 +346,23 @@ SequenceArgument(const std::initializer_list<T>& v) -> SequenceArgument<T>;
 
 template<typename T, typename F>
 class Generator : public Argument<T> {
-    Generator(const F& functor, size_t index) : index_(index), functor_(functor) {}
+    static T CallF(const F& functor, size_t index = 0) {
+        if constexpr(std::is_invocable<F, size_t>::value) {
+            return functor(index);
+        } else {
+            (void)index;
+            return functor();
+        }
+    }
 public:
-    Generator(F&& functor) : functor_(functor) {}
+    Generator(const F& functor, size_t index = 0) : Argument<T>(CallF(functor, index)), index_(index), functor_(functor) {}
 
     const F& Functor() {
         return functor_;
     }
 
     T& Next() override {
-        if constexpr(std::is_invocable<F, size_t>::value) {
-            return this->value_ = functor_(index_++);
-        } else {
-            return this->value_ = functor_();
-        }
+        return this->value_ = CallF(functor_, index_++);
     }
     NextType<T>* Clone() const override {
         return new Generator(functor_, index_);
