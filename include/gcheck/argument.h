@@ -192,28 +192,35 @@ template<typename T>
 struct argumentize {
     typedef typename std::conditional<is_base_of_template<T, Argument>::value, T, Argument<T>>::type type;
 };
-template<typename T>
+
+template<typename T, class = void>
 struct strip_next {
-    typedef std::conditional<is_base_of_template<T, NextType>::value, typename strip_next<decltype(std::declval<T>().Next())>::type, T> type;
+    typedef T type;
+};
+template<typename T>
+struct strip_next<T, std::enable_if_t<is_base_of_template<T, NextType>::value>> {
+    typedef typename strip_next<decltype(std::declval<T>().Next())>::type type;
 };
 /*
     An argument that contains a container
 */
-template <template <typename...> class ContainerT, typename T>
-class Container : public Argument<ContainerT<strip_next<T>>> {
-    typedef ContainerT<strip_next<T>> ReturnType;
+template <typename T, template <typename...> class ContainerT = std::vector>
+class Container : public Argument<ContainerT<typename strip_next<T>::type>> {
+    typedef ContainerT<typename strip_next<T>::type> ReturnType;
     typedef std::vector<NextType<T>*> SourceType;
 public:
-    Container(const NextType<size_t>& size, T def = T())
-            : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
+    Container(const Argument<size_t>& size, T def = T())
+            : Argument<ReturnType>(ReturnType((size_t)size, def)) {
         Resize(size, def);
     }
     Container(size_t size, T def = T())
-            : Argument<ContainerT<T>>(ContainerT<T>(size, def)) {
+            : Argument<ReturnType>(ReturnType(size, def)) {
         Resize(size, def);
     }
-    Container(const Container<ContainerT, T>& container)
-            : Argument<ContainerT<T>>(container), size_(container.size_->Clone()) {
+    template <template<typename...> class S, typename K, class = std::enable_if_t<is_base_of_template<S<K>, Argument>::value && !std::is_same_v<size_t, K>>>
+    Container(S<K> size, T def) = delete; // disallow converting of size paramerer
+    Container(const Container<T, ContainerT>& container)
+            : Argument<ReturnType>(container), size_(container.size_->Clone()) {
         SetSource(container.source_);
     }
     ~Container() {
@@ -246,8 +253,8 @@ public:
         std::transform(source.begin(), source.end(), source_.begin(), [](const NextType<T>* in){ return in->Clone(); });
     }
     template<typename S>
-    Container& operator<<(const S* item) {
-        source_.push_back(((typename argumentize<S>::type*)&item).Clone());
+    Container& operator<<(const S& item) {
+        source_.push_back(((typename argumentize<S>::type*)&item)->Clone());
         return *this;
     }
     ReturnType& Next() {
@@ -257,7 +264,7 @@ public:
             for(auto it = this->value_.begin(); it != this->value_.end(); ++it, ++it2) {
                 if(it2 == source_.end())
                     it2 = source_.begin();
-                *it = it2->Next();
+                *it = (*it2)->Next();
             }
         }
         return this->value_;
