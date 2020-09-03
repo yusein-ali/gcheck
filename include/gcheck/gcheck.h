@@ -419,6 +419,16 @@ public:
     static Test* FindTest(std::string suite, std::string test);
 };
 
+template<typename T, class = std::enable_if_t<!is_base_of_template<T, Argument>::value>>
+auto extract_argument(T&& n) {
+    return std::forward<T>(n);
+}
+
+template<typename T>
+auto extract_argument(const Argument<T>& n) {
+    return n();
+}
+
 template <class F, class S, class... Args>
 void Test::CompareWithCallable(int num, const F& correct, const S& under_test, Args&... args) {
 
@@ -431,7 +441,7 @@ void Test::CompareWithCallable(int num, const F& correct, const S& under_test, A
 
         gcheck::advance(args...);
 
-        it->arguments = UserObject(std::tuple(args...));
+        it->arguments = UserObject(std::tuple(extract_argument(args)...));
         auto correct_res = Result(correct(args...));
         auto correct_ans = correct_res.output;
         it->output_expected = UserObject(correct_ans);
