@@ -48,15 +48,17 @@ _JSON<std::allocator>::_JSON(const _UserObject<std::allocator>& o)
         }) {}
 
 _JSON<std::allocator>::_JSON(const _CaseEntry<std::allocator>& e) {
-    std::string out = "{";
-    out += _JSON("output", e.output) + ',';
-    out += _JSON("output_expected", e.output_expected) + ',';
-    out += _JSON("arguments", e.arguments) + ',';
-    out += _JSON("result", e.result) + ',';
-    out += _JSON("input", e.input) + ',';
-    out += "}";
+    std::vector<_JSON> data;
+    auto add_if = [&data](const std::string& str, auto a) {
+        if(a) data.emplace_back(str, *a);
+    };
+    add_if("input", e.input);
+    add_if("output", e.output);
+    add_if("output_expected", e.output_expected);
+    add_if("arguments", e.arguments);
+    data.emplace_back("result", e.result);
 
-    Set(out);
+    Set(Stringify(data, [](const _JSON& a) -> std::string { return a; }, "{", ",", "}"));
 }
 
 _JSON<std::allocator>::_JSON(const _TestReport<std::allocator>& r) {
