@@ -54,6 +54,7 @@ class NextType {
 public:
     virtual T& Next() = 0;
     virtual NextType<T>* Clone() const = 0;
+    virtual ~NextType() {}
 };
 
 template<typename T>
