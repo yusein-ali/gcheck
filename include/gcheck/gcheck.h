@@ -461,7 +461,7 @@ void Test::CompareWithCallable(int num, const F& correct, const S& under_test, A
 template <class T, class S, class... Args>
 void Test::CompareWithAnswer(int num, const T& correct, const S& under_test, Args&... args) {
     auto forwarder = [correct](auto...) -> T { return correct; };
-    TestCase(num, forwarder, under_test, args...);
+    CompareWithCallable(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
 
@@ -469,7 +469,7 @@ template <class T, class S, class... Args>
 void Test::CompareWithAnswer(int num, const std::vector<T>& correct, const S& under_test, Args&... args) {
     int index = 0;
     auto forwarder = [&index, &correct](auto...) -> T { return correct[index++]; };
-    TestCase(num, forwarder, under_test, args...);
+    CompareWithCallable(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
 
