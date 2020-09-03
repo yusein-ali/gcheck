@@ -2,7 +2,28 @@ import json
 from enum import Enum
 from typing import Union
 
-class Prerequisite:
+class Dictifiable:
+    @staticmethod
+    def _value(v):
+        if isinstance(v, Dictifiable):
+            return v.to_dict()
+        elif isinstance(v, Enum):
+            return v.value
+        elif isinstance(v, list):
+            return [Dictifiable._value(val) for val in v]
+        return v
+
+    def to_dict(self):
+        d = {}
+        for k, v in vars(self).items():
+            d[k] = Dictifiable._value(v)
+        return d
+
+    def __iter__(self):
+        for k, v in self.to_dict().items():
+            yield (k, v)
+
+class Prerequisite(Dictifiable):
     def __init__(self, report):
         self.fullfilled = report["isfullfilled"]
         self.details = report["details"]
@@ -19,13 +40,13 @@ class Status(Enum):
     Started = 2
     Finished = 3
 
-class UserObject:
+class UserObject(Dictifiable):
     def __init__(self, report):
         self.json = report["json"]
         self.string = report["string"]
         self.construct = report["construct"]
 
-class FunctionEntry:
+class FunctionEntry(Dictifiable):
     def __init__(self, report):
         self.result = report["result"]
 
@@ -53,7 +74,7 @@ class FunctionEntry:
         self.timed_out = or_None("timed_out")
 
 
-class CaseEntry:
+class CaseEntry(Dictifiable):
     def __init__(self, report):
         self.result = report["result"]
 
@@ -65,7 +86,7 @@ class CaseEntry:
         self.input = UO_or_None("input")
         self.arguments = UO_or_None("arguments")
 
-class Result:
+class Result(Dictifiable):
     def __init__(self, report):
         self.type = Type[report["type"]]
         self.info = report["info"]
@@ -82,7 +103,7 @@ class Result:
                 self.output_expected = report["output_expected"]
                 self.output = report["output"]
 
-class Test:
+class Test(Dictifiable):
     def __init__(self, suite, test, report):
         self.suite = suite
         self.test = test
@@ -101,7 +122,7 @@ class Test:
     def get_name(self):
         return self.suite + " : " + self.test
 
-class Report:
+class Report(Dictifiable):
     points = 0
     max_points = 0
     def __init__(self, filename):
@@ -113,3 +134,11 @@ class Report:
 
     def get_json(self):
         return json.dumps(self.data)
+
+    def scale_points(self, max_points):
+        multiplier = max_points/self.max_points
+        self.points = multiplier*self.points
+        self.max_points = multiplier*self.max_points
+        for test in self.tests:
+            test.points = multiplier*test.points
+            test.max_points = multiplier*test.max_points
