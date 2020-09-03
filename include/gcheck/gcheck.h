@@ -299,7 +299,7 @@ struct _TestData {
 
     std::vector<TReport, allocator<TReport>> reports;
     GradingMethod grading_method = Partial;
-    string output_format = "horizontal";
+    string output_format = "vertical";
     TestStatus status = NotStarted;
 
     double points = 0;
