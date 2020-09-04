@@ -136,7 +136,8 @@ toConstruct(T item) { return to_construct(item); }
 
 template<typename T>
 std::string toConstruct(const std::vector<T>& cont) {
-    return Stringify(cont, toConstruct, "std::vector({", ",", "})");
+    std::string(&ads)(T) = toConstruct;
+    return Stringify(cont, ads, "std::vector({", ",", "})");
 }
 
 template <class... Args>
@@ -230,7 +231,8 @@ toString(T item) { return to_string(item); }
 
 template<typename T>
 std::string toString(const std::vector<T>& cont) {
-    return Stringify(cont, toString, "[", ", ", "]");
+    std::string(&ads)(T) = toString;
+    return Stringify(cont, ads, "[", ", ", "]");
 }
 
 template <class... Args>
