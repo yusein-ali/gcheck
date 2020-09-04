@@ -24,6 +24,7 @@ public:
         FileInjecter(stdin) or StdinInjecter() for standard input injection.
     */
     FileInjecter(FILE* stream, std::string str = "", std::istream* associate = nullptr);
+    FileInjecter(FILE* stream, const char* str, std::istream* associate = nullptr) : FileInjecter(stream, (std::string)str, associate) {}
     FileInjecter(FILE* stream, bool capture, std::istream* associate = nullptr);
     ~FileInjecter();
 
@@ -41,6 +42,7 @@ public:
 class StdinInjecter : public FileInjecter {
 public:
     StdinInjecter(std::string str = "");
+    StdinInjecter(const char* str);
     StdinInjecter(bool capture);
 };
 

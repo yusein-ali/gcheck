@@ -181,6 +181,7 @@ FileCapturer& FileCapturer::Capture() {
 }
 
 StdinInjecter::StdinInjecter(std::string str) : FileInjecter(stdin, str, &std::cin) {}
+StdinInjecter::StdinInjecter(const char* str) : StdinInjecter((std::string)str) {}
 StdinInjecter::StdinInjecter(bool capture) : FileInjecter(stdin, capture, &std::cin) {}
 StdoutCapturer::StdoutCapturer(bool capture) : FileCapturer(stdout, capture) {}
 StderrCapturer::StderrCapturer(bool capture) : FileCapturer(stderr, capture) {}
