@@ -40,7 +40,7 @@ if os.path.isfile(output):
 if args.clear and os.path.isdir(output):
     shutil.rmtree(output)
 
-test_source_checker = regex.compile(r"(TEST|IOTEST|FUNCTIONTEST)\([^\n]*\)\s*{")
+test_source_checker = regex.compile(r"(TEST|IOTEST|FUNCTIONTEST|METHODIOTEST)\([^\n]*\)\s*{")
 template_checker = regex.compile(r"<([^\";<>]|(?0))*>")
 template_checker2 = regex.compile(r"<([^\";<>]|(?0))*>$")
 nullfinder = regex.compile(r"null([^\w]|$)")
@@ -169,7 +169,7 @@ def CppProcessor(file, content):
         dir = os.path.split(file)[0]
         subprocess.run(["make", "-s", "get-report"], cwd=dir)
 
-        out = Report("report.json")
+        out = Report(os.path.join(dir, "report.json"))
 
         subprocess.run(["make", "-s", "clean"], cwd=dir)
 
@@ -278,7 +278,7 @@ def CppProcessor(file, content):
 
         return (args, arg_start+1, arg_end)
 
-    class TestCase:
+    class CompareWithCallable:
         def __init__(self, case):
             self.args, self.arg_start, self.arg_end = get_args(case, case.find("("))
             self.arg_end += 1
@@ -288,7 +288,7 @@ def CppProcessor(file, content):
             self.under_test_w_template = self.args[2][0]
             self.under_test = regex.sub(template_remover, "", self.under_test_w_template)
             self.inputs = [arg[0] for arg in self.args[3:]]
-            self.content = "TestCase" + case[:self.arg_end]
+            self.content = "CompareWithCallable" + case[:self.arg_end]
     class FunctionTest:
         def __init__(self, results: Result):
             self.data = {}
@@ -425,15 +425,15 @@ def CppProcessor(file, content):
         def __populate_contents(self):
             content = self.content
             if self.test_type == "TEST":
-                parts = content.split("TestCase")
+                parts = content.split("CompareWithCallable")
                 part2 = [p[p.rfind("\n")+1:] for p in parts]
                 self.parted_content = [parts[0]]
                 self.test_cases = []
                 for index, case in enumerate(parts[1:]):
                     if is_in_comment(parts[index], len(parts[index])-1):
-                        self.parted_content.append("TestCase"+case)
+                        self.parted_content.append("CompareWithCallable"+case)
                     else:
-                        test_case = TestCase(case)
+                        test_case = CompareWithCallable(case)
                         test_case.indent = part2[index] if part2[index].strip() == "" else ""
                         self.test_cases.append(test_case)
                         self.parted_content.append(test_case)
@@ -443,7 +443,7 @@ def CppProcessor(file, content):
             if content is None:
                 self.content = ""
                 for part in self.parted_content:
-                    if type(part) is TestCase:
+                    if type(part) is CompareWithCallable:
                         self.content += part.content
                     else:
                         self.content += part
@@ -569,7 +569,7 @@ def CppProcessor(file, content):
             for index, test_case in enumerate(func_obj.test_cases):
                 io = test.results[index]
 
-                if nullfinder.search(" ".join([str(case["input_args"]) for case in io["cases"]])) != None:
+                if nullfinder.search(" ".join([str(case.input.construct) for case in io.cases])) != None:
                     Logger.error(file, "Input field in gcheck report contains null fields. Cannot substitute", False)
                     return None
 
@@ -578,24 +578,6 @@ def CppProcessor(file, content):
                     break # test_case.correct_func is not a known function (probably a variable)
 
                 arg_types = arg_types[0].arg_types
-
-                inputs = []
-                for case in io["cases"]:
-                    if len(case["input_params"]) == 0:
-                        for index, arg in enumerate(case["input_args"]):
-                            item = type_arg_to_cpp(arg_types[index], arg)
-                            if len(inputs) > index:
-                                inputs[index].append(item)
-                            else:
-                                inputs.append([item])
-                    else:
-                        if len(inputs) > 0:
-                            inputs[index].append(case["input_params"])
-                        else:
-                            inputs.append([case["input_params"]])
-
-                #inputs_str = ["std::get<"+str(index)+">(inputs_not_reserved[i_not_reserved])" for index in range(len(test_case.inputs))]
-                #inputs_str = ", ".join(inputs_str)
 
                 trans = str.maketrans({"\\":  "\\\\",
                                     "\n":  "\\n",
@@ -608,22 +590,17 @@ def CppProcessor(file, content):
 
                 indent = test_case.indent + "    "
                 ntests = "{\n"
-                if len(io["cases"][0]["output_params"]) == 0:
-                    jsons = [case["output_json"] for case in io["cases"]]
+                ntests += indent + f"auto forwarder = [](decltype({io.cases[0].arguments.construct}) t) {{ return std::apply({test_case.under_test_w_template}, t); }};\n"
+                if len(io.cases[0].output.construct) == 0:
+                    jsons = [case.output.json for case in io.cases]
                     jsons = ['"' + json.translate(trans) + '"' if isinstance(json, str) else ("true" if json else "false") if isinstance(json, bool) else str(json) for json in jsons]
-                    ntests += indent + "std::vector correct_not_reserved = {" + ",".join(jsons) + "};\n"
+                    ntests += indent + "std::vector correct = {" + ",".join(jsons) + "};\n"
                 else:
-                    ntests += indent + "std::vector correct_not_reserved = {" + ",".join([case["output_params"] for case in io["cases"]]) + "};\n"
+                    ntests += indent + "std::vector correct = {" + ",".join([case.output.construct for case in io.cases]) + "};\n"
 
-                for arg_index in range(len(inputs)):
-                    item = "{" + ",".join(inputs[arg_index]) + "}"
-                    ntests += f"{indent}gcheck::SequenceArgument inputs_not_reserved{arg_index}({item});\n"
+                ntests += f"{indent}gcheck::SequenceArgument inputs(std::vector({{{','.join(case.arguments.construct for case in io.cases)}}}));\n"
 
-                #arg_str = ",".join(["auto arg" + str(index) for index in range(len(inputs))])
-                #arg_str_no_types = ",".join(["arg" + str(index) for index in range(len(inputs))])
-                #ntests += f"{indent}auto stringify = []({arg_str}) {{ return gcheck::UserObject({test_case.under_test}({arg_str_no_types})).json(); }};\n"
-                ntests += f"{indent}TestCase({test_case.repeats},correct_not_reserved,{test_case.under_test_w_template},"
-                ntests += ",".join(["inputs_not_reserved" + str(arg_index) for arg_index in range(len(inputs))]) + ");\n"
+                ntests += f"{indent}CompareWithAnswer({test_case.repeats},correct,forwarder,inputs);\n"
                 ntests += test_case.indent + "}"
 
                 test_case.content = ntests

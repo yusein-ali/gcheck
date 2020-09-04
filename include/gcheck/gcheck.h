@@ -460,7 +460,7 @@ void Test::CompareWithCallable(int num, const F& correct, const S& under_test, A
 
 template <class T, class S, class... Args>
 void Test::CompareWithAnswer(int num, const T& correct, const S& under_test, Args&... args) {
-    auto forwarder = [correct](auto...) -> T { return correct; };
+    auto forwarder = [&correct](auto...) -> T { return correct; };
     CompareWithCallable(num, forwarder, under_test, args...);
     //TODO: not tested.
 }
