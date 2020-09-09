@@ -315,13 +315,13 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
         SetInputsAndOutputs();
 
         if(do_safe_run_) {
-#if defined(_WIN32) || defined(WIN32)
-            throw std::runtime_error("Safe running is not yet supported on windows.");
-#else
+#if defined(__linux__)
             if(!gcheck::RunForked(timeout_, *it, 1024*1024, std::bind(&FunctionTest::RunOnce, this, std::placeholders::_1), *it)) {
                 it->timed_out = true;
                 it->result = false;
             }
+#else
+            throw std::runtime_error("Safe running is only supported on linux.");
 #endif
         } else {
             RunOnce(*it);

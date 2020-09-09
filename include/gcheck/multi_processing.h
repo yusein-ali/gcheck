@@ -6,7 +6,7 @@
 
 namespace gcheck {
 
-#if !defined(_WIN32) && !defined(WIN32)
+#if defined(__linux__)
 bool wait_timeout(pid_t pid, std::chrono::duration<double> time) {
     sigset_t mask;
     sigemptyset(&mask);
