@@ -194,7 +194,7 @@ protected:
     void SetArguments(const TupleType& args) {
         std::apply([this](auto... x){this->SetArguments(x...);}, args);
     }
-    template<typename A = ReturnT, class = std::enable_if_t<std::is_same_v<TupleType, StorageTupleType>>>
+    template<typename A = TupleType, class = std::enable_if_t<std::is_same_v<A, StorageTupleType>>>
     void SetArguments(const StorageTupleType& args) {
         std::apply([this](auto... x){this->SetArguments(x...);}, args);
     }
