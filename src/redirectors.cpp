@@ -151,6 +151,8 @@ std::string FileCapturer::str() {
         ss.put(c);
     }
 
+    last_pos_ = ftell(new_);
+
     return ss.str();
 }
 
