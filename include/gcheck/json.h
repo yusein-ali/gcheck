@@ -91,6 +91,33 @@ public:
     template<typename T>
     _JSON(const std::string& key, const T& value) : string("\"" + key + "\":" + _JSON(value)) {}
 
+    template<template<typename...> class C, typename... Args, class = std::enable_if_t<has_begin_end<C<Args...>>::value>>
+    _JSON(const C<Args...>& c) {
+        std::string ret = "[";
+        for(auto it = c.begin(); it != c.end();) {
+            ret += _JSON(*it);
+            if(++it != c.end())
+                ret += ",";
+        }
+        ret += "]";
+
+        Set(ret);
+    }
+
+    template<template<typename...> class C, typename... Args, class = std::enable_if_t<has_begin_end<C<std::pair<std::string, Args...>>>::value>>
+    _JSON(const C<std::pair<std::string, Args...>>& c) {
+        std::string ret = "{";
+
+        for(auto it = c.begin(); it != c.end();) {
+            ret += _JSON(it->first, it->second);
+            if(++it != c.end())
+                ret += ",";
+        }
+        ret += "}";
+
+        Set(ret);
+    }
+
     template<typename T>
     _JSON(const std::vector<T>& v) {
         std::string ret = "[";

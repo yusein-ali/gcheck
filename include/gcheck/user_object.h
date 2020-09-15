@@ -13,23 +13,6 @@
 #include "stringify.h"
 
 namespace gcheck {
-namespace {
-namespace detail {
-    template<class T>
-    static auto has_begin(int) -> sfinae_true<decltype(std::declval<T>().begin())>;
-    template<class T>
-    static auto has_begin(long) -> sfinae_false<T>;
-    template<class T>
-    static auto has_end(int) -> sfinae_true<decltype(std::declval<T>().end())>;
-    template<class T>
-    static auto has_end(long) -> sfinae_false<T>;
-} // detail
-
-template<class T>
-struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0)){};
-
-} // anonymous
-
 /*
     Wrapper class for anything passed by users from tests.
     Includes a descriptor string constructed using operator std::string, to_string, std::to_string or "",

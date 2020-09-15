@@ -35,6 +35,14 @@ namespace {
     template<class T>
     static auto has_std_tostring(long) -> sfinae_false<T>;
 
+    template<class T>
+    static auto has_begin(int) -> sfinae_true<decltype(std::declval<T>().begin())>;
+    template<class T>
+    static auto has_begin(long) -> sfinae_false<T>;
+    template<class T>
+    static auto has_end(int) -> sfinae_true<decltype(std::declval<T>().end())>;
+    template<class T>
+    static auto has_end(long) -> sfinae_false<T>;
     } // detail
 } // anonymous
 
@@ -42,6 +50,9 @@ template<class T>
 struct has_tostring : decltype(detail::has_tostring<T>(0)){};
 template<class T>
 struct has_std_tostring : decltype(detail::has_std_tostring<T>(0)){};
+
+template<class T>
+struct has_begin_end : decltype(detail::has_begin<T>(0) * detail::has_end<T>(0)){};
 
 template<size_t... Args>
 auto index_tuple(std::index_sequence<Args...>) {
