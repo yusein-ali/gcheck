@@ -211,7 +211,7 @@ class Beautify:
             rows = [["correct" if result.result else "incorrect", result.descriptor, *mark_differences(result.output, result.output_expected)]]
             return self.render(self.templates[format], headers=["Result", "Condition", "Value (Output)", "Should be"], rows=rows)
         elif result.type == Type.ET or result.type == Type.EF:
-            rows = [["correct" if result.result else "incorrect", result.descriptor, *mark_differences(result.value, True)]]
+            rows = [["correct" if result.result else "incorrect", result.descriptor, *mark_differences(result.value, result.type == Type.ET)]]
             return self.render(self.templates[format], headers=["Result", "Condition", "Value (Output)", "Should be"], rows=rows)
         elif result.type == Type.FC:
             all_keys = ["run_time", "max_run_time",
