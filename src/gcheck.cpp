@@ -161,7 +161,7 @@ namespace {
                     row.push_back(d->output.string());
                     row.push_back(it->info_stream.str());
 
-                    writer.SetHeaders({"Result", "Condition", "Left", "Right", "Info"});
+                    writer.SetHeaders({"Result", "Condition", "Correct", "Output", "Info"});
                 } else if(const auto d = std::get_if<TrueData>(&it->data)) {
 
                     cells.push_back({});
