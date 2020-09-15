@@ -541,7 +541,7 @@ extern template std::stringstream& Test::ExpectEqual(const char* left, std::stri
     ExpectTrue(b, #b)
 
 #define EXPECT_FALSE(b) \
-    ExpectFalse(b, "!" #b)
+    ExpectFalse(b, #b)
 
 #define EXPECT_EQ(left, right) \
     ExpectEqual(left, right, #left " == " #right)
