@@ -581,6 +581,38 @@ auto operator*(const T& l, const S& r) {
     return Join(l, r);
 }
 
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(const Random<size_t>& rnd, const Argument<T>& next) {
+    Container<T, ContainerT> cont(rnd);
+    cont << next;
+    return cont;
+}
+
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(size_t min_size, size_t max_size, T min_value, T max_value) {
+    return RandomSizeContainer<ContainerT, T>(Random<size_t>(min_size, max_size), Random<T>(min_value, max_value));
+}
+
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(size_t min_size, size_t max_size, std::vector<T> values) {
+    return RandomSizeContainer<ContainerT, T>(Random<size_t>(min_size, max_size), Random<T>(values));
+}
+
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(std::vector<size_t> sizes, T min_value, T max_value) {
+    return RandomSizeContainer<ContainerT, T>(Random<size_t>(sizes), Random<T>(min_value, max_value));
+}
+
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(std::vector<size_t> sizes, std::vector<T> values) {
+    return RandomSizeContainer<ContainerT, T>(Random<size_t>(sizes), Random<T>(values));
+}
+
+template<template<typename...> class ContainerT = std::vector, typename T>
+auto RandomSizeContainer(const Random<size_t>& rnd, std::vector<T> values) {
+    return RandomSizeContainer<ContainerT, T>(rnd, Random<T>(values));
+}
+
 // is_Argument<A>::value; true if A is any of the argument types, false otherwise
 template<typename A>
 struct is_Argument : public is_base_of_template<A, Argument> {};
