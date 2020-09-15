@@ -590,7 +590,7 @@ def CppProcessor(file, content):
 
                 indent = test_case.indent + "    "
                 ntests = "{\n"
-                ntests += indent + f"auto forwarder = [](decltype({io.cases[0].arguments.construct}) t) {{ return std::apply({test_case.under_test_w_template}, t); }};\n"
+                ntests += indent + f"auto forwarder = [](decltype({io.cases[0].input.construct}) t) {{ return std::apply({test_case.under_test_w_template}, t); }};\n"
                 if len(io.cases[0].output.construct) == 0:
                     jsons = [case.output.json for case in io.cases]
                     jsons = ['"' + json.translate(trans) + '"' if isinstance(json, str) else ("true" if json else "false") if isinstance(json, bool) else str(json) for json in jsons]
@@ -598,7 +598,7 @@ def CppProcessor(file, content):
                 else:
                     ntests += indent + "std::vector correct = {" + ",".join([case.output.construct for case in io.cases]) + "};\n"
 
-                ntests += f"{indent}gcheck::SequenceArgument inputs(std::vector({{{','.join(case.arguments.construct for case in io.cases)}}}));\n"
+                ntests += f"{indent}gcheck::SequenceArgument inputs(std::vector({{{','.join(case.input.construct for case in io.cases)}}}));\n"
 
                 ntests += f"{indent}CompareWithAnswer({test_case.repeats},correct,forwarder,inputs);\n"
                 ntests += test_case.indent + "}"

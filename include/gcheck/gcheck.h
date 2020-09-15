@@ -17,26 +17,28 @@
 
 namespace gcheck {
 
-template<typename T, typename S = std::string>
+template<typename T, typename S = std::string, typename... Ss>
 struct Result {
+    typedef std::tuple<S, Ss...> InputT;
+
     T output;
     std::string error;
 
     Result() : output() { }
     Result(T out) : output(out) { }
 
-    Result(const Result<T, S>& r) = default;
+    Result(const Result& r) = default;
 
-    Result<T, S>& operator=(const T& item) {
+    Result& operator=(const T& item) {
         output = item;
         return *this;
     }
-    Result<T, S>& operator=(const Result<T, S>& r) = default;
+    Result& operator=(const Result& r) = default;
 
-    void SetInput(const S& data) { input = data; }
-    const std::optional<S>& GetInput() const { return input; }
+    void SetInput(const S& first, const Ss&... args) { input = std::tuple(first, args...); }
+    const std::optional<InputT>& GetInput() const { return input; }
 private:
-    std::optional<S> input;
+    std::optional<InputT> input;
 };
 
 template<template<typename> class allocator = std::allocator>
