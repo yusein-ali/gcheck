@@ -46,9 +46,11 @@ protected:
     }
 private:
     void PreRun(size_t, FunctionEntry&) {
-        //tin_.Capture();
-        //if(input_) tin_.Write(*input_);
-        //if(do_close) tin_.Close();
+        if(input_) {
+            tin_.Capture();
+            tin_.Write(*input_);
+            if(do_close) tin_.Close();
+        }
 
         tout_.Capture();
         terr_.Capture();
