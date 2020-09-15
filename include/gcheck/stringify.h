@@ -5,6 +5,7 @@
 #include <vector>
 #include <tuple>
 #include <sstream>
+#include <list>
 
 #include "sfinae.h"
 
@@ -21,6 +22,27 @@ template<class T>
 struct has_toconstruct : decltype(detail::has_toconstruct<T>(0)) {};
 
 } // anonymous
+
+template <typename T>
+constexpr auto type_name() noexcept {
+  std::string_view name, prefix, suffix;
+#ifdef __clang__
+  name = __PRETTY_FUNCTION__;
+  prefix = "auto gcheck::type_name() [T = ";
+  suffix = "]";
+#elif defined(__GNUC__)
+  name = __PRETTY_FUNCTION__;
+  prefix = "constexpr auto gcheck::type_name() [with T = ";
+  suffix = "]";
+#elif defined(_MSC_VER)
+  name = __FUNCSIG__;
+  prefix = "auto __cdecl gcheck::type_name<";
+  suffix = ">(void) noexcept";
+#endif
+  name.remove_prefix(prefix.size());
+  name.remove_suffix(suffix.size());
+  return std::string(name);
+}
 
 std::string UTF8Encode(std::string);
 
@@ -60,14 +82,26 @@ using UserObject = _UserObject<std::allocator>;
 template<typename T>
 class DeltaCompare;
 
-std::string toConstruct(const char* item);
-std::string toConstruct(char* item);
+template<typename T>
+constexpr auto to_constructer() -> std::string(&)(const T&);
+
+std::string toConstruct(const char* const& item);
+std::string toConstruct(const char*& item);
 std::string toConstruct(const std::string& item);
-std::string toConstruct(unsigned char item);
-std::string toConstruct(char item);
-std::string toConstruct(bool b);
+std::string toConstruct(const unsigned char& item);
+std::string toConstruct(const char& item);
+std::string toConstruct(const bool& b);
 std::string toConstruct(const UserObject& u);
 std::string toConstruct(decltype(nullptr));
+std::string toConstruct(const int& item);
+std::string toConstruct(const long& item);
+std::string toConstruct(const long long& item);
+std::string toConstruct(const unsigned& item);
+std::string toConstruct(const unsigned long& item);
+std::string toConstruct(const unsigned long long& item);
+std::string toConstruct(const float& item);
+std::string toConstruct(const double& item);
+std::string toConstruct(const long double& item);
 
 template<typename T>
 typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
@@ -75,69 +109,30 @@ toConstruct(const T&) { return ""; }
 
 template<typename T>
 typename std::enable_if<!has_toconstruct<T*>::value, std::string>::type
-toConstruct(const T* item) {
+toConstruct(const T*& item) {
     if(item == nullptr)
         return "nullptr";
 
     return "new " + toConstruct(*item);
 }
 
-template<typename T = int>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(int item) { return std::to_string(item); }
-
-template<typename T = long>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(long item) { return std::to_string(item) + 'L'; }
-
-template<typename T = long long>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(long long item) { return std::to_string(item) + "LL"; }
-
-template<typename T = unsigned>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(unsigned item) { return std::to_string(item) + 'U'; }
-
-template<typename T = unsigned long>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(unsigned long item) { return std::to_string(item) + "UL"; }
-
-template<typename T = unsigned long long>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(unsigned long long item) { return std::to_string(item) + "ULL"; }
-
-template<typename T = float>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(float item) {
-    std::stringstream ss;
-    ss << std::hexfloat << item << 'f';
-    return ss.str();
-}
-
-template<typename T = double>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(double item) {
-    std::stringstream ss;
-    ss << std::hexfloat << item;
-    return ss.str();
-}
-
-template<typename T = long double>
-typename std::enable_if<!has_toconstruct<T>::value, std::string>::type
-toConstruct(long double item) {
-    std::stringstream ss;
-    ss << std::hexfloat << item << 'l';
-    return ss.str();
-}
-
 template<typename T>
 typename std::enable_if<has_toconstruct<T>::value, std::string>::type
-toConstruct(T item) { return to_construct(item); }
+toConstruct(const T& item) { return to_construct(item); }
 
 template<typename T>
-std::string toConstruct(const std::vector<T>& cont) {
-    std::string(&ads)(T) = toConstruct;
-    return Stringify(cont, ads, "std::vector({", ",", "})");
+std::string toConstruct(const DeltaCompare<T>& v) {
+    return "gcheck::DeltaCompare(" + toConstruct((T)v) + "," + toConstruct(v.Delta()) + ")";;
+}
+
+template<typename T, typename... Args>
+std::string toConstruct(const std::vector<T, Args...>& cont) {
+    return Stringify(cont, to_constructer<T>(), "std::vector<" + type_name<T>() + ">({", ",", "})");
+}
+
+template<typename T>
+std::string toConstruct(const std::list<T>& cont) {
+    return Stringify(cont, to_constructer<T>(), "std::list<" + type_name<T>() + ">({", ",", "})");
 }
 
 template <class... Args>
@@ -155,26 +150,37 @@ std::string toConstruct(const std::pair<Args...>& t) {
 }
 
 template<typename T>
-std::string toConstruct(const DeltaCompare<T>& v) {
-    return "gcheck::DeltaCompare(" + toConstruct((T)v) + "," + toConstruct(v.Delta()) + ")";;
+constexpr auto to_constructer() -> std::string(&)(const T&) {
+    return toConstruct;
 }
 
 
+template<typename T>
+constexpr auto to_stringer() -> std::string(&)(const T&);
+
 std::string toString(const std::string& item);
-std::string toString(const char* item);
-std::string toString(char* item);
-std::string toString(char item);
-std::string toString(bool b);
+std::string toString(const char* const& item);
+std::string toString(const char*& item);
+std::string toString(const char& item);
+std::string toString(const bool& b);
 std::string toString(const UserObject& u);
 std::string toString(decltype(nullptr));
+std::string toString(const int& item);
+std::string toString(const long& item);
+std::string toString(const long long& item);
+std::string toString(const unsigned& item);
+std::string toString(const unsigned long& item);
+std::string toString(const unsigned long long& item);
+std::string toString(const float& item);
+std::string toString(const double& item);
+std::string toString(const long double& item);
 
 template<typename T>
-typename std::enable_if<!has_tostring<T>::value && !has_std_tostring<T>::value, std::string>::type
+typename std::enable_if<!has_tostring<T>::value, std::string>::type
 toString(const T&) { return "error-type"; }
 
 template<typename T>
-typename std::enable_if<!has_tostring<T*>::value && !has_std_tostring<T*>::value, std::string>::type
-toString(T* item) {
+std::string toString(const T*& item) {
     if(item == nullptr)
         return "nullptr";
 
@@ -182,58 +188,26 @@ toString(T* item) {
     ss << static_cast<const void*>(item);
     return ss.str();
 }
-/*template<typename T>
-typename std::enable_if<!has_tostring<T>::value && has_std_tostring<T>::value>::type
-toString(T item) {
-    as_string_ = std::to_string(item);
-}
-
-For some reason the above doesn't work on all systems, so make it explicit*/
-template<typename T = int>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(int item) { return std::to_string(item); }
-
-template<typename T = long>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(long item) { return std::to_string(item); }
-
-template<typename T = long long>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(long long item) { return std::to_string(item); }
-
-template<typename T = unsigned>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(unsigned item) { return std::to_string(item); }
-
-template<typename T = unsigned long>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(unsigned long item) { return std::to_string(item); }
-
-template<typename T = unsigned long long>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(unsigned long long item) { return std::to_string(item); }
-
-template<typename T = float>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(float item) { return std::to_string(item); }
-
-template<typename T = double>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(double item) { return std::to_string(item); }
-
-template<typename T = long double>
-typename std::enable_if<!has_tostring<T>::value, std::string>::type
-toString(long double item) { return std::to_string(item); }
 
 template<typename T>
 typename std::enable_if<has_tostring<T>::value, std::string>::type
-toString(T item) { return to_string(item); }
+toString(const T& item) { return to_string(item); }
+
+template<typename T>
+std::string toString(const DeltaCompare<T>& v) {
+    return toString((T)v) + " +- " + toString(v.Delta());
+}
 
 template<typename T>
 std::string toString(const std::vector<T>& cont) {
-    std::string(&ads)(T) = toString;
-    return Stringify(cont, ads, "[", ", ", "]");
+    return Stringify(cont, to_stringer<T>(), "[", ", ", "]");
 }
+
+template<typename T>
+std::string toString(const std::list<T>& cont) {
+    return Stringify(cont, to_stringer<T>(), "[", ", ", "]");
+}
+
 
 template <class... Args>
 std::string toString(const std::tuple<Args...>& t) {
@@ -250,8 +224,8 @@ std::string toString(const std::pair<Args...>& t) {
 }
 
 template<typename T>
-std::string toString(const DeltaCompare<T>& v) {
-    return toString((T)v) + " +- " + toString(v.Delta());
+constexpr auto to_stringer() -> std::string(&)(const T&) {
+    return toString;
 }
 
 }

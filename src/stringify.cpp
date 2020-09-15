@@ -101,23 +101,57 @@ std::string UTF8Encode(std::string str) {
     return str;
 }
 
-std::string toConstruct(const char* item) { return '"' + UTF8Encode(item) + '"'; }
-std::string toConstruct(char* item) { return (const char*)item; }
+std::string toConstruct(const char* const& item) { return '"' + UTF8Encode(item) + '"'; }
+std::string toConstruct(const char*& item) { return (const char*)item; }
 std::string toConstruct(const std::string& item) {
     return "std::string(" + toConstruct((const char*)item.c_str()) + ")";
 }
-std::string toConstruct(unsigned char item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
-std::string toConstruct(char item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
-std::string toConstruct(bool b) { return b ? "true" : "false"; }
+std::string toConstruct(const unsigned char& item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
+std::string toConstruct(const char& item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
+std::string toConstruct(const bool& b) { return b ? "true" : "false"; }
 std::string toConstruct(const UserObject& u) { return u.construct(); }
 std::string toConstruct(decltype(nullptr)) { return "nullptr"; }
+std::string toConstruct(const int& item) { return std::to_string(item); }
+std::string toConstruct(const long& item) { return std::to_string(item) + 'L'; }
+std::string toConstruct(const long long& item) { return std::to_string(item) + "LL"; }
+std::string toConstruct(const unsigned& item) { return std::to_string(item) + 'U'; }
+std::string toConstruct(const unsigned long& item) { return std::to_string(item) + "UL"; }
+std::string toConstruct(const unsigned long long& item) { return std::to_string(item) + "ULL"; }
+
+std::string toConstruct(const float& item) {
+    std::stringstream ss;
+    ss << std::hexfloat << item << 'f';
+    return ss.str();
+}
+
+std::string toConstruct(const double& item) {
+    std::stringstream ss;
+    ss << std::hexfloat << item;
+    return ss.str();
+}
+
+std::string toConstruct(const long double& item) {
+    std::stringstream ss;
+    ss << std::hexfloat << item << 'l';
+    return ss.str();
+}
+
 
 std::string toString(const std::string& item) { return '"' + item + '"'; }
-std::string toString(const char* item) { return toString(std::string(item)); }
-std::string toString(char* item) { return toString((const char*)item); }
-std::string toString(char item) { return std::string("'") + item + "'"; }
-std::string toString(bool b) { return b ? "true" : "false"; }
+std::string toString(const char* const&item) { return toString(std::string(item)); }
+std::string toString(const char*& item) { return toString((const char*)item); }
+std::string toString(const char& item) { return std::string("'") + item + "'"; }
+std::string toString(const bool& b) { return b ? "true" : "false"; }
 std::string toString(const UserObject& u) { return u.string(); }
 std::string toString(decltype(nullptr)) { return "nullptr"; }
+std::string toString(const int& item) { return std::to_string(item); }
+std::string toString(const long& item) { return std::to_string(item); }
+std::string toString(const long long& item) { return std::to_string(item); }
+std::string toString(const unsigned& item) { return std::to_string(item); }
+std::string toString(const unsigned long& item) { return std::to_string(item); }
+std::string toString(const unsigned long long& item) { return std::to_string(item); }
+std::string toString(const float& item) { return std::to_string(item); }
+std::string toString(const double& item) { return std::to_string(item); }
+std::string toString(const long double& item) { return std::to_string(item); }
 
 } // gcheck
