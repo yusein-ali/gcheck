@@ -166,6 +166,5 @@ template _JSON<std::allocator>::_JSON(const double& v);
 template _JSON<std::allocator>::_JSON(const std::string& key, const float& value);
 template _JSON<std::allocator>::_JSON(const float& v);
 template _JSON<std::allocator>::_JSON(const std::string& key, const std::string& value);
-template _JSON<std::allocator>::_JSON(const std::string& v);
 
 }
