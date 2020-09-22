@@ -1,5 +1,16 @@
 <div class="gcheck gcheck-content">
-{% if results | length == 0 %}
+{% if not obj.prerequisite.fullfilled %}
+    <div class="gcheck gcheck-prereqs">
+        Prerequisites weren't fullfilled:
+        {% for detail in obj.prerequisite.details %}
+            {% if not detail['ispassed'] %}
+                <div class="gcheck gcheck-prereq">
+                    - {{detail['suite']}}: {{detail['test']}}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% elif results | length == 0 %}
     <div class="gcheck gcheck-noresults">
         Nothing to show
     </div>
