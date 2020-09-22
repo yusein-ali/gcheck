@@ -14,9 +14,11 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(GCHECK_INCLUDE_DIR) -Isrc
 ifeq ($(OS),Windows_NT)
 	RM=del /f /q
 	LIBNAME=$(GCHECK_LIB)
+	FixPath = $(subst /,\,$1)
 else
 	RM=rm -f
 	LIBNAME=lib$(GCHECK_LIB).a
+	FixPath = $1
 endif
 
 .PHONY: clean all debug set-debug
@@ -32,15 +34,16 @@ build/%.o : src/%.cpp $(HEADERS) | build
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(GCHECK_LIB_DIR)/$(LIBNAME): $(OBJECTS) | $(GCHECK_LIB_DIR)
-	ar rcs $@ $(OBJECTS)
+	ar rcs $(call FixPath, $@ $(OBJECTS))
 
 get-report: $(EXECUTABLE)
-	./$(EXECUTABLE) --json 2>&1
+	$(call FixPath, ./$(EXECUTABLE)) --json 2>&1
 
 clean:
-	$(RM) build/* $(GCHECK_LIB_DIR)/* $(EXECUTABLE) output.html report.json
+	$(RM) $(call FixPath, build/* $(GCHECK_LIB_DIR)/* $(EXECUTABLE) output.html report.json)
 
 build:
 	mkdir build
+
 $(GCHECK_LIB_DIR):
 	mkdir $(GCHECK_LIB_DIR)
