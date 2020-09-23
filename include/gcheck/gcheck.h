@@ -14,6 +14,7 @@
 #include "user_object.h"
 #include "sfinae.h"
 #include "macrotools.h"
+#include "multiprocessing.h"
 
 namespace gcheck {
 

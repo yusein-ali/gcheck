@@ -49,7 +49,7 @@ public:
     }
 private:
     stdstring as_string_;
-    JSON as_json_;
+    _JSON<allocator> as_json_;
     stdstring construct_; // a string representation on how to construct the object e.g. std::vector<int>({0, 1, 2})
 };
 
