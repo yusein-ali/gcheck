@@ -468,6 +468,7 @@ int main(int argc, char** argv) {
         auto param = next_param();
         if(param == std::string("--json")) Formatter::pretty_ = false;
         else if(param == std::string("--safe")) Test::do_safe_run_ = true;
+        else if(strncmp(param, "--", 2) == 0) throw std::runtime_error(std::string("Argument not recognized: ") + param);
         else Formatter::filename_ = param;
     }
     if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
