@@ -327,6 +327,7 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
         it->timeout = timeout_;
     }
     AddReport(report);
+    data_.status = Finished;
 }
 
 } // gcheck

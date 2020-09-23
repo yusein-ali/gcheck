@@ -381,30 +381,6 @@ void Test::OutputFormat(std::string format) {
     data_.output_format = format;
 }
 
-std::stringstream& Test::ExpectTrue(bool b, std::string descriptor) {
-
-    TestReport report = TestReport::Make<TrueData>();
-    auto& data = report.Get<TrueData>();
-
-    data.value = b;
-    data.descriptor = descriptor;
-    data.result = b;
-
-    return AddReport(report).info_stream;
-}
-
-std::stringstream& Test::ExpectFalse(bool b, std::string descriptor) {
-
-    TestReport report = TestReport::Make<FalseData>();
-    auto& data = report.Get<FalseData>();
-
-    data.value = b;
-    data.descriptor = descriptor;
-    data.result = !b;
-
-    return AddReport(report).info_stream;
-}
-
 bool Test::IsPassed() const {
     return data_.status == Finished && data_.max_points == data_.points;
 }
@@ -444,14 +420,6 @@ Test* Test::FindTest(std::string suite, std::string test) {
 
     return nullptr;
 }
-
-template std::stringstream& Test::ExpectEqual(unsigned int left, unsigned int right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(int left, int right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(float left, float right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(double left, double right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(std::string left, std::string right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(std::string left, const char* right, std::string descriptor);
-template std::stringstream& Test::ExpectEqual(const char* left, std::string right, std::string descriptor);
 
 } // gcheck
 
