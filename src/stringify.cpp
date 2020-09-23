@@ -1,6 +1,7 @@
 #include <string>
 #include <stack>
 #include <cstring>
+#include <sstream>
 
 #include "stringify.h"
 #include "user_object.h"
