@@ -50,6 +50,8 @@ private:
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetInput; \
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetOutput; \
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetError; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
@@ -80,6 +82,8 @@ private:
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetInput; \
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetOutput; \
         using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetError; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \

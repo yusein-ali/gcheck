@@ -130,6 +130,8 @@ private:
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObject; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
@@ -159,6 +161,8 @@ private:
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObject; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
         using gcheck::MethodTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \

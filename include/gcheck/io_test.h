@@ -114,6 +114,8 @@ private:
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
@@ -139,6 +141,8 @@ private:
         using gcheck::IOTest<ReturnT, Args...>::SetInput; \
         using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
         using gcheck::IOTest<ReturnT, Args...>::SetError; \
+        using gcheck::Test::OutputFormat; \
+        using gcheck::Test::SetGradingMethod; \
         void SetInputsAndOutputs(); \
     public: \
         GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \
