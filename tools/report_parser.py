@@ -23,10 +23,16 @@ class Dictifiable:
         for k, v in self.to_dict().items():
             yield (k, v)
 
+class Detail(Dictifiable):
+    def __init__(self, report):
+        self.test = report["test"]
+        self.suite = report["suite"]
+        self.fullfilled = report["isfullfilled"]
+
 class Prerequisite(Dictifiable):
     def __init__(self, report):
         self.fullfilled = report["isfullfilled"]
-        self.details = report["details"]
+        self.details = [Detail(detail) for detail in report["details"]]
 
 class Type(Enum):
     FC = 1

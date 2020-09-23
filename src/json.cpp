@@ -158,7 +158,7 @@ _JSON<std::allocator>::_JSON(const Prerequisite& pre) {
             return std::tuple(
                 std::pair("suite", std::get<0>(t)),
                 std::pair("test", std::get<1>(t)),
-                std::pair("ispassed", std::get<2>(t))
+                std::pair("isfullfilled", std::get<2>(t))
             );
         });
 

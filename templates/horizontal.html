@@ -5,9 +5,17 @@
             {{headers[i]}}
         </th>
     {% for row in rows %}
-        <td class="gcheck gcheck-td gcheck-horizontal-td">
-            <pre>{{row[i] | diff('<span style="background-color: red">', '</span>')}}</pre>
-        </td>
+        {% if row | length == 1 %}
+            {% if i == 0 %}
+                <td rowspan="{{headers | length}}" class="gcheck gcheck-td gcheck-horizontal-td">
+                    <pre>{{row[0] | diff('<span style="background-color: red">', '</span>')}}</pre>
+                </td>
+            {% endif %}
+        {% else %}
+            <td class="gcheck gcheck-td gcheck-horizontal-td">
+                <pre>{{row[i] | diff('<span style="background-color: red">', '</span>')}}</pre>
+            </td>
+        {% endif %}
     {% endfor %}
     </tr>
 {% endfor %}
