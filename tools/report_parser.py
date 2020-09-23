@@ -35,6 +35,11 @@ class Type(Enum):
     EF = 4
     ET = 5
 
+class ForkStatus(Enum):
+    OK = 1
+    TIMEDOUT = 2
+    ERROR = 3
+
 class Status(Enum):
     NotStarted = 1
     Started = 2
@@ -71,7 +76,7 @@ class FunctionEntry(Dictifiable):
         self.max_run_time = or_None("max_run_time")
         self.run_time = or_None("run_time")
         self.timeout = or_None("timeout")
-        self.timed_out = or_None("timed_out")
+        self.status = ForkStatus[report["status"]]
 
 
 class CaseEntry(Dictifiable):

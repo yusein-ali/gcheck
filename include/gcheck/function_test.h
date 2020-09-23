@@ -9,7 +9,7 @@
 #include "gcheck.h"
 #include "sfinae.h"
 #include "user_object.h"
-#include "multi_processing.h"
+#include "multiprocessing.h"
 
 namespace gcheck {
 
@@ -316,10 +316,8 @@ void FunctionTest<ReturnT, Args...>::ActualTest() {
 
         if(do_safe_run_) {
 #if defined(__linux__)
-            if(!gcheck::RunForked(timeout_, *it, 1024*1024, std::bind(&FunctionTest::RunOnce, this, std::placeholders::_1), *it)) {
-                it->timed_out = true;
-                it->result = false;
-            }
+            it->status = gcheck::RunForked(timeout_, *it, 1024*1024, std::bind(&FunctionTest::RunOnce, this, std::placeholders::_1), *it);
+            it->result = it->result && it->status == OK;
 #else
             throw std::runtime_error("Safe running is only supported on linux.");
 #endif

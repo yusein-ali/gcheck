@@ -6,6 +6,7 @@
 #include "user_object.h"
 #include "gcheck.h"
 #include "stringify.h"
+#include "multiprocessing.h"
 
 namespace gcheck {
 
@@ -34,7 +35,7 @@ _JSON<std::allocator>::_JSON(const _FunctionEntry<std::allocator>& e) {
     add_if("object_after_expected", e.object_after_expected);
     data.emplace_back("run_time", e.run_time.count());
     data.emplace_back("timeout", e.timeout.count());
-    data.emplace_back("timed_out", e.timed_out);
+    data.emplace_back("status", e.status);
     data.emplace_back("result", e.result);
 
     Set(Stringify(data, [](const _JSON& a) -> std::string { return a; }, "{", ",", "}"));
@@ -59,6 +60,21 @@ _JSON<std::allocator>::_JSON(const _CaseEntry<std::allocator>& e) {
     data.emplace_back("result", e.result);
 
     Set(Stringify(data, [](const _JSON& a) -> std::string { return a; }, "{", ",", "}"));
+}
+
+_JSON<std::allocator>::_JSON(const ForkStatus& s) {
+    switch(s) {
+    case OK:
+        Set("\"OK\"");
+        break;
+    case TIMEDOUT:
+        Set("\"TIMEDOUT\"");
+        break;
+    case ERROR:
+    default:
+        Set("\"ERROR\"");
+        break;
+    }
 }
 
 _JSON<std::allocator>::_JSON(const _TestReport<std::allocator>& r) {

@@ -42,6 +42,8 @@ struct _TestData;
 template<template<typename> class allocator>
 class _UserObject;
 
+enum ForkStatus : unsigned int;
+
 class Prerequisite;
 
 template<template<typename> class allocator = std::allocator>
@@ -75,6 +77,7 @@ public:
     _JSON(const _UserObject<std::allocator>& o);
     _JSON(const TestStatus& status);
     _JSON(const Prerequisite& o);
+    _JSON(const ForkStatus& s);
 
     template<typename T, typename SFINAE = typename std::enable_if_t<!has_tojson<T>::value && !has_tostring<T>::value && !has_std_tostring<T>::value>, typename A = SFINAE, typename A2 = SFINAE, typename A3 = SFINAE>
     _JSON(const T&) : _JSON() {}

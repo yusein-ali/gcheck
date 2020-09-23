@@ -205,8 +205,11 @@ namespace {
                     for(auto it2 = d->begin(); it2 != d->end(); it2++) {
                         cells.push_back({});
                         auto& row = cells[cells.size()-1];
-                        if(it2->timed_out) {
+                        if(it2->status == TIMEDOUT) {
                             row.push_back("Timed out");
+                            continue;
+                        } else if(it2->status == ERROR) {
+                            row.push_back("Crashed");
                             continue;
                         }
                         row.push_back(it2->result ? "correct" : "incorrect");

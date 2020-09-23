@@ -162,7 +162,7 @@ struct _FunctionEntry {
     std::optional<std::chrono::nanoseconds> max_run_time;
     std::chrono::nanoseconds run_time;
     std::chrono::duration<double> timeout;
-    bool timed_out = false;
+    ForkStatus status = OK;
     bool result;
 
     _FunctionEntry() {}
@@ -189,7 +189,7 @@ struct _FunctionEntry {
         max_run_time = fe.max_run_time;
         run_time = fe.run_time;
         timeout = fe.timeout;
-        timed_out = fe.timed_out;
+        status = fe.status;
         result = fe.result;
         return *this;
     }

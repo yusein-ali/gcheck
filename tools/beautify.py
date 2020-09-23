@@ -6,7 +6,7 @@ import sys
 import argparse
 import html
 from jinja2 import Environment, FileSystemLoader, evalcontextfilter, Markup
-from report_parser import Report, Test, Result, Type, UserObject
+from report_parser import Report, Test, Result, Type, UserObject, ForkStatus
 
 default_format = "vertical"
 
@@ -236,8 +236,10 @@ class Beautify:
                     ("output", "output_expected"), ("error", "error_expected"), ("return_value", "return_value_expected")]
             rows = []
             for case in result.cases:
-                if case.timed_out:
-                    rows.append(f"Timed out (max time: {case.timeout})")
+                if case.status == ForkStatus.TIMEDOUT:
+                    rows.append([f"Timed out (max time: {case.timeout})"])
+                elif case.status == ForkStatus.ERROR:
+                    rows.append(["Crashed"])
                 else:
                     data = {d[0]: d[1] for p in diff_pairs for d in zip(p, mark_differences(getattr(case, p[0]), getattr(case, p[1])))}
                     data.update({key: getattr(case, key) for key in keys if key not in data})
