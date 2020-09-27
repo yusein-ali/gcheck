@@ -122,6 +122,9 @@ _JSON<std::allocator>::_JSON(const TestStatus& status) {
     case TestStatus::Started:
         *this = _JSON("Started");
         break;
+    case TestStatus::TimedOut:
+        *this = _JSON("TimedOut");
+        break;
     case TestStatus::Finished:
         *this = _JSON("Finished");
         break;

@@ -50,6 +50,7 @@ class Status(Enum):
     NotStarted = 1
     Started = 2
     Finished = 3
+    TimedOut = 4
 
 class UserObject(Dictifiable):
     def __init__(self, report):
