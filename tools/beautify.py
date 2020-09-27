@@ -6,7 +6,7 @@ import sys
 import argparse
 import html
 from jinja2 import Environment, FileSystemLoader, evalcontextfilter, Markup
-from report_parser import Report, Test, Result, Type, UserObject, ForkStatus
+from report_parser import Report, Test, Result, Type, UserObject, ForkStatus, Status
 
 default_format = "vertical"
 
@@ -199,7 +199,7 @@ class Beautify:
 
     def render_test(self, test: Test):
         format_name = default_format if not test.format else test.format
-        return self.render(self.templates["testbody"], obj=test, format=format_name, render_result=self.render_result, suite=test.suite, test=test.test, points=test.points, max_points=test.max_points, results=test.results)
+        return self.render(self.templates["testbody"], Status=Status, obj=test, format=format_name, render_result=self.render_result, suite=test.suite, test=test.test, points=test.points, max_points=test.max_points, results=test.results)
 
     def render_result(self, result: Result, format):
         if result.type == Type.TC:
