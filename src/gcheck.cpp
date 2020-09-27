@@ -35,6 +35,7 @@ namespace {
         static std::string filename_;
 
         static void AddTest(const std::string& suite, const std::string& test, const TestData& data);
+        static void StartTest(const std::string& suite, const std::string& test);
         static void FinishTest(const std::string& suite, const std::string& test);
         static void Finish();
     };
@@ -102,6 +103,37 @@ namespace {
             out << std::endl << "Press enter to exit." << std::endl;
             std::cin.get();
         }
+
+        if(filename_ != "")
+            file.close();
+    }
+
+    void Formatter::StartTest(const std::string& suite, const std::string& test) {
+        std::fstream file;
+        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
+
+        auto data_ptr = GetTest(suite, test);
+        if(!data_ptr) {
+            out << "error" << std::endl; //TODO actual error processing
+            return;
+        }
+
+        total_points_ += data_ptr->points;
+
+        if(!pretty_) { //if not pretty, print out the whole json
+            std::vector<std::pair<std::string, JSON>> output;
+            output.push_back({"test_results", suites_});
+            output.push_back({"points", total_points_});
+            output.push_back({"max_points", total_max_points_});
+
+            out << JSON(output) << std::endl << std::endl;
+        } else { //if pretty and not finished, print out only current test
+            ConsoleWriter writer;
+            writer.WriteSeparator();
+        }
+
+        if(filename_ != "")
+            file.close();
     }
 
     void Formatter::FinishTest(const std::string& suite, const std::string& test) {
@@ -141,10 +173,9 @@ namespace {
                 return;
             }
 
-            ConsoleWriter writer;
-            writer.WriteSeparator();
-
             const TestData& test_data = *data_ptr;
+
+            ConsoleWriter writer;
 
             writer.SetColor(test_data.points == test_data.max_points ? ConsoleWriter::Green : ConsoleWriter::Red);
             out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
@@ -399,6 +430,7 @@ bool Test::RunTests() {
         for(auto it = test_list.begin(); it != test_list.end(); it++) {
             if((*it)->data_.status != Finished && (*it)->data_.prerequisite.IsFulfilled()) {
                 (*it)->data_.status = Started;
+                Formatter::StartTest((*it)->suite_, (*it)->test_);
                 (*it)->RunTest();
                 Formatter::FinishTest((*it)->suite_, (*it)->test_);
                 counter++;
