@@ -6,7 +6,12 @@
 
 namespace gcheck {
 
+int ConsoleWriter::width_ = -1;
+
 int ConsoleWriter::GetWidth() {
+    if(width_ != -1)
+        return width_;
+
     int w = 0;
 #if defined(_WIN32) || defined(WIN32)
     CONSOLE_SCREEN_BUFFER_INFO csbi;

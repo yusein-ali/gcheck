@@ -476,6 +476,7 @@ int main(int argc, char** argv) {
         else if(param == std::string("--pretty")) Formatter::pretty_ = true;
         else if(param == std::string("--no-confirm")) Formatter::do_confirm_ = false;
         else if(param == std::string("--safe")) Test::do_safe_run_ = true;
+        else if(param == std::string("--width")) ConsoleWriter::width_ = std::stoi(next_param());
         else if(strncmp(param, "--", 2) == 0) throw std::runtime_error(std::string("Argument not recognized: ") + param);
         else Formatter::filename_ = param;
     }

@@ -15,6 +15,8 @@ namespace gcheck {
 
 class ConsoleWriter {
 public:
+    static int width_;
+
 #if defined(_WIN32) || defined(WIN32)
     enum Color : int {
         Original,
