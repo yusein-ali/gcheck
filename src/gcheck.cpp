@@ -32,6 +32,8 @@ namespace {
         static const TestData* GetTest(const std::string& suite, const std::string& test);
     public:
         static bool pretty_;
+        static bool json_;
+        static bool do_confirm_;
         static std::string filename_;
 
         static void AddTest(const std::string& suite, const std::string& test, const TestData& data);
@@ -43,7 +45,9 @@ namespace {
     double Formatter::total_points_ = 0;
     double Formatter::total_max_points_ = 0;
     bool Formatter::pretty_ = true;
-    std::string Formatter::filename_ = "";
+    bool Formatter::json_ = false;
+    bool Formatter::do_confirm_ = true;
+    std::string Formatter::filename_ = "report.json";
     std::string Formatter::default_format_ = "horizontal";
     std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
 
@@ -80,84 +84,88 @@ namespace {
     }
 
     void Formatter::Finish() {
-        std::fstream file;
-        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
+        if(json_) {
+            std::fstream file(filename_, std::ios_base::out);
 
-        if(!pretty_) { //if not pretty, print out the whole json
             std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", JSON(suites_)});
             output.push_back({"points", JSON(total_points_)});
             output.push_back({"max_points", JSON(total_max_points_)});
 
-            out << JSON(output) << std::endl << std::endl;
-        } else {
-            ConsoleWriter writer;
-            writer.WriteSeparator();
-            out << "Total: ";
-            writer.SetColor(total_points_ == total_max_points_ ? ConsoleWriter::Green : ConsoleWriter::Red);
-            out << total_points_ << " / " << total_max_points_;
-            writer.SetColor(ConsoleWriter::Black);
-            out << std::endl;
+            std::cout << JSON(output) << std::endl << std::endl;
 
-            // Wait for user confirmation
-            out << std::endl << "Press enter to exit." << std::endl;
-            std::cin.get();
+            file.close();
         }
 
-        if(filename_ != "")
-            file.close();
+        if(pretty_) {
+            ConsoleWriter writer;
+            writer.WriteSeparator();
+            std::cout << "Total: ";
+            writer.SetColor(total_points_ == total_max_points_ ? ConsoleWriter::Green : ConsoleWriter::Red);
+            std::cout << total_points_ << " / " << total_max_points_;
+            writer.SetColor(ConsoleWriter::Black);
+            std::cout << std::endl;
+
+            if(do_confirm_) {
+                // Wait for user confirmation
+                std::cout << std::endl << "Press enter to exit." << std::endl;
+                std::cin.get();
+            }
+        }
     }
 
     void Formatter::StartTest(const std::string& suite, const std::string& test) {
-        std::fstream file;
-        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
-
         auto data_ptr = GetTest(suite, test);
         if(!data_ptr) {
-            out << "error" << std::endl; //TODO actual error processing
+            std::cerr << "error" << std::endl; //TODO actual error processing
             return;
         }
 
         total_points_ += data_ptr->points;
 
-        if(!pretty_) { //if not pretty, print out the whole json
+        if(json_) {
+            std::fstream file(filename_, std::ios_base::out);
+
             std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", suites_});
             output.push_back({"points", total_points_});
             output.push_back({"max_points", total_max_points_});
 
-            out << JSON(output) << std::endl << std::endl;
-        } else { //if pretty and not finished, print out only current test
+            file << JSON(output) << std::endl << std::endl;
+
+            file.close();
+        }
+
+        if(pretty_) {
             ConsoleWriter writer;
             writer.WriteSeparator();
         }
-
-        if(filename_ != "")
-            file.close();
     }
 
     void Formatter::FinishTest(const std::string& suite, const std::string& test) {
 
-        std::fstream file;
-        auto& out = filename_ == "" ? std::cout : (file = std::fstream(filename_, std::ios_base::out));
-
         auto data_ptr = GetTest(suite, test);
         if(!data_ptr) {
-            out << "error" << std::endl; //TODO actual error processing
+            std::cerr << "error" << std::endl; //TODO actual error processing
             return;
         }
 
         total_points_ += data_ptr->points;
 
-        if(!pretty_) { //if not pretty, print out the whole json
+        if(json_) {
+            std::fstream file(filename_, std::ios_base::out);
+
             std::vector<std::pair<std::string, JSON>> output;
             output.push_back({"test_results", suites_});
             output.push_back({"points", total_points_});
             output.push_back({"max_points", total_max_points_});
 
-            out << JSON(output) << std::endl << std::endl;
-        } else { //if pretty and not finished, print out only current test
+            file << JSON(output) << std::endl << std::endl;
 
+            file.close();
+        }
+
+        if(pretty_) {
             auto it = std::find_if(suites_.begin(), suites_.end(),
                     [suite](std::pair<std::string, TestVector> a){ return a.first == suite; }
                 );
@@ -169,7 +177,7 @@ namespace {
                 );
 
             if(it2 == it->second.end()) {
-                out << "error" << std::endl; //TODO actual error processing
+                std::cerr << "error" << std::endl; //TODO actual error processing
                 return;
             }
 
@@ -178,7 +186,7 @@ namespace {
             ConsoleWriter writer;
 
             writer.SetColor(test_data.points == test_data.max_points ? ConsoleWriter::Green : ConsoleWriter::Red);
-            out << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
+            std::cout << test_data.points << " / " << test_data.max_points << "  suite: " << suite << ", test: " << test << std::endl;
             writer.SetColor(ConsoleWriter::Black);
 
             for(auto it = test_data.reports.begin(); it != test_data.reports.end(); it++) {
@@ -283,9 +291,6 @@ namespace {
                 writer.WriteRows(cells);
             }
         }
-
-        if(filename_ != "")
-            file.close();
     }
 }
 
@@ -464,14 +469,18 @@ int main(int argc, char** argv) {
         return argv[i++];
     };
 
+    Formatter::pretty_ = false;
     while(i < argc) {
         auto param = next_param();
-        if(param == std::string("--json")) Formatter::pretty_ = false;
+        if(param == std::string("--json")) Formatter::json_ = true;
+        else if(param == std::string("--pretty")) Formatter::pretty_ = true;
+        else if(param == std::string("--no-confirm")) Formatter::do_confirm_ = false;
         else if(param == std::string("--safe")) Test::do_safe_run_ = true;
         else if(strncmp(param, "--", 2) == 0) throw std::runtime_error(std::string("Argument not recognized: ") + param);
         else Formatter::filename_ = param;
     }
-    if(!Formatter::pretty_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
+    if(!Formatter::pretty_ && !Formatter::json_) Formatter::pretty_ = true;
+    if(Formatter::json_ && Formatter::filename_ == "") Formatter::filename_ = "report.json";
 
     Test::RunTests();
 
