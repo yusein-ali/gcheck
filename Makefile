@@ -8,24 +8,27 @@ GCHECK_OBJECTS=$(GCHECK_SOURCES:cpp=o)
 SOURCES=$(GCHECK_SOURCES:%=src/%)
 HEADERS=$(GCHECK_HEADERS:%=$(GCHECK_INCLUDE_DIR)/%) src/console_writer.h
 OBJECTS:=$(GCHECK_OBJECTS:%=build/%)
+PIC_OBJECTS:=$(OBJECTS:o=pic.o)
+
+LIBNAME=$(GCHECK_LIB_NAME)
 
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(GCHECK_INCLUDE_DIR) -Isrc
 
 ifeq ($(OS),Windows_NT)
 	RM=del /f /q
-	LIBNAME=$(GCHECK_LIB)
 	FixPath = $(subst /,\,$1)
 else
 	RM=rm -f
-	LIBNAME=lib$(GCHECK_LIB).a
 	FixPath = $1
 endif
 
-.PHONY: clean all debug set-debug
+.PHONY: clean all debug set-debug shared
 
 all: $(GCHECK_LIB_DIR)/$(LIBNAME)
 
 debug: | set-debug $(GCHECK_LIB_DIR)/$(LIBNAME)
+
+shared: $(GCHECK_LIB_DIR)/$(GCHECK_SHARED_LIB_NAME)
 
 set-debug:
 	$(eval CXXFLAGS += -g)
@@ -33,8 +36,14 @@ set-debug:
 build/%.o : src/%.cpp $(HEADERS) | build
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(GCHECK_LIB_DIR)/$(LIBNAME): $(OBJECTS) | $(GCHECK_LIB_DIR)
+build/%.pic.o : src/%.cpp $(HEADERS) | build
+	$(CXX) -fPIC $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+$(GCHECK_LIB_DIR)/$(LIBNAME): | $(OBJECTS) $(GCHECK_LIB_DIR)
 	ar rcs $(call FixPath, $@ $(OBJECTS))
+
+$(GCHECK_LIB_DIR)/$(GCHECK_SHARED_LIB_NAME): $(PIC_OBJECTS) | $(GCHECK_LIB_DIR)
+	$(CXX) -shared $(CPPFLAGS) $(CXXFLAGS) $(PIC_OBJECTS) -o $@
 
 get-report: $(EXECUTABLE)
 	$(call FixPath, ./$(EXECUTABLE)) --json 2>&1

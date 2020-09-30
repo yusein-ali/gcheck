@@ -5,7 +5,9 @@ GCHECK_LIB_DIR=lib
 ifeq ($(OS),Windows_NT)
     GCHECK_LIB=gcheck.lib
     GCHECK_LIB_NAME=gcheck.lib
+    GCHECK_SHARED_LIB_NAME=error
 else
     GCHECK_LIB=gcheck
     GCHECK_LIB_NAME=libgcheck.a
+    GCHECK_SHARED_LIB_NAME=libgcheck.so
 endif
