@@ -180,5 +180,5 @@ extern template std::stringstream& CustomTest::ExpectEqual(const char* left, std
     if(b) return;
 
 #define FAIL() \
-    GradingMethod(gcheck::AllOrNothing); \
+    SetGradingMethod(gcheck::AllOrNothing); \
     ExpectTrue(false, "FAIL")
