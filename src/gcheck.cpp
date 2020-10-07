@@ -92,7 +92,7 @@ namespace {
             output.push_back({"points", JSON(total_points_)});
             output.push_back({"max_points", JSON(total_max_points_)});
 
-            std::cout << JSON(output) << std::endl << std::endl;
+            file << JSON(output) << std::endl << std::endl;
 
             file.close();
         }
