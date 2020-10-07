@@ -86,4 +86,10 @@ inline void for_each(const std::tuple<Args...>& tuple, Func&& func) {
     }, zip(index_tuple<sizeof...(Args)>(), tuple));
 }
 
+template<typename Func, typename Arg1, typename Args2>
+inline void for_each(const std::pair<Arg1, Args2>& pair, Func&& func) {
+    func(0, pair.first);
+    func(1, pair.second);
+}
+
 } // anonymous
