@@ -573,12 +573,6 @@ def CppProcessor(file, content):
                     Logger.error(file, "Input field in gcheck report contains null fields. Cannot substitute", False)
                     return None
 
-                arg_types = [func for func in top_scopes if func.name == test_case.correct_func]
-                if len(arg_types) == 0:
-                    break # test_case.correct_func is not a known function (probably a variable)
-
-                arg_types = arg_types[0].arg_types
-
                 trans = str.maketrans({"\\":  "\\\\",
                                     "\n":  "\\n",
                                     "\t": "\\t",
