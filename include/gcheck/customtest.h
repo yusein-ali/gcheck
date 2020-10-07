@@ -58,7 +58,7 @@ void CustomTest::CompareWithAnswer(int num, const std::vector<T>& correct, const
     //TODO: not tested.
 }
 
-template<typename T, class = std::enable_if_t<!is_base_of_template<T, Argument>::value>>
+template<typename T, class = std::enable_if_t<!is_base_of_template<std::remove_cv_t<std::remove_reference_t<T>>, Argument>::value>>
 auto extract_argument(T&& n) {
     return std::forward<T>(n);
 }
