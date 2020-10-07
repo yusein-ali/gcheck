@@ -180,7 +180,7 @@ typename std::enable_if<!has_tostring<T>::value, std::string>::type
 toString(const T&) { return "error-type"; }
 
 template<typename T>
-std::string toString(const T*& item) {
+std::string toString(T* const& item) {
     if(item == nullptr)
         return "nullptr";
 
