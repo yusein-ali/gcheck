@@ -46,8 +46,8 @@ constexpr auto type_name() noexcept {
 
 std::string UTF8Encode(std::string);
 
-template<template<typename> class C, typename T, typename Func>
-std::string Stringify(const C<T>& container, Func func, const std::string& start, const std::string& separator, const std::string& end) {
+template<typename C, typename Func>
+std::string Stringify(const C& container, Func func, const std::string& start, const std::string& separator, const std::string& end) {
     std::stringstream ss;
     ss << start;
     for(auto it = container.begin(); it != container.end();) {
