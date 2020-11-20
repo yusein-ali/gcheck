@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <map>
 
 #include "sfinae.h"
 
@@ -155,6 +156,21 @@ public:
         for(auto it = v.begin(); it != v.end();) {
             ret += _JSON(it->first, it->second);
             if(++it != v.end())
+                ret += ",";
+        }
+        ret += "}";
+
+        Set(ret);
+    }
+
+
+    template<typename T>
+    _JSON(const std::map<std::string, T>& m) {
+        std::string ret = "{";
+
+        for(auto it = m.begin(); it != m.end();) {
+            ret += _JSON(it->first, it->second);
+            if(++it != m.end())
                 ret += ",";
         }
         ret += "}";
