@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <map>
 
 #include "argument.h"
 #include "redirectors.h"
@@ -18,8 +19,11 @@ namespace {
         Static class for keeping track of and logging test results.
     */
     class Formatter {
-        typedef std::vector<std::pair<std::string, const TestData&>> TestVector;
-        static std::vector<std::pair<std::string, TestVector>> suites_;
+        typedef std::map<std::string, const TestData*> TestMap;
+        typedef std::map<std::string, JSON> TestMapJSON;
+
+        static std::map<std::string, TestMap> suites_;
+        static std::map<std::string, TestMapJSON> suites_json_;
 
         static double total_points_;
         static double total_max_points_;
@@ -28,8 +32,8 @@ namespace {
 
         Formatter() {}; //Disallows instantiation of this class
 
-        static TestVector* GetTestVector(const std::string& suite);
-        static const TestData* GetTest(const std::string& suite, const std::string& test);
+        static void UpdateTestJSON(const std::string& suite, const std::string& test);
+        static void SaveJSON();
     public:
         static bool pretty_;
         static bool json_;
@@ -49,54 +53,34 @@ namespace {
     bool Formatter::do_confirm_ = true;
     std::string Formatter::filename_ = "report.json";
     std::string Formatter::default_format_ = "horizontal";
-    std::vector<std::pair<std::string, Formatter::TestVector>> Formatter::suites_;
+    std::map<std::string, Formatter::TestMap> Formatter::suites_;
+    std::map<std::string, Formatter::TestMapJSON> Formatter::suites_json_;
 
-    Formatter::TestVector* Formatter::GetTestVector(const std::string& suite) {
-        auto it = std::find_if(suites_.begin(), suites_.end(), [&suite](const std::pair<std::string, TestVector>& item){ return suite == item.first; });
-        if(it == suites_.end())
-            return nullptr;
-
-        return &it->second;
-    }
-
-    const TestData* Formatter::GetTest(const std::string& suite, const std::string& test) {
-        auto tests = GetTestVector(suite);
-        if(!tests)
-            return nullptr;
-
-        auto it = std::find_if(tests->begin(), tests->end(), [&test](const std::pair<std::string, TestData>& p) { return p.first == test; });
-        if(it == tests->end())
-            return nullptr;
-
-        return &it->second;
+    void Formatter::UpdateTestJSON(const std::string& suite, const std::string& test) {
+        suites_json_[suite][test] = JSON(*suites_[suite][test]);
     }
 
     void Formatter::AddTest(const std::string& suite, const std::string& test, const TestData& data) {
-        auto tests = GetTestVector(suite);
-        if(!tests) {
-            suites_.push_back({ suite, TestVector() });
-            tests = &suites_.back().second;
-        }
-
-        tests->push_back({test, data});
+        suites_[suite][test] = &data;
+        UpdateTestJSON(suite, test);
 
         total_max_points_ += data.max_points;
     }
 
+    void Formatter::SaveJSON() {
+        std::vector<std::pair<std::string, JSON>> output;
+        output.push_back({"test_results", suites_json_});
+        output.push_back({"points", JSON(total_points_)});
+        output.push_back({"max_points", JSON(total_max_points_)});
+
+        std::fstream file(filename_, std::ios_base::out);
+
+        file << JSON(output) << std::endl << std::endl;
+
+        file.close();
+    }
+
     void Formatter::Finish() {
-        if(json_) {
-            std::fstream file(filename_, std::ios_base::out);
-
-            std::vector<std::pair<std::string, JSON>> output;
-            output.push_back({"test_results", JSON(suites_)});
-            output.push_back({"points", JSON(total_points_)});
-            output.push_back({"max_points", JSON(total_max_points_)});
-
-            file << JSON(output) << std::endl << std::endl;
-
-            file.close();
-        }
-
         if(pretty_) {
             ConsoleWriter writer;
             writer.WriteSeparator();
@@ -115,7 +99,7 @@ namespace {
     }
 
     void Formatter::StartTest(const std::string& suite, const std::string& test) {
-        auto data_ptr = GetTest(suite, test);
+        auto data_ptr = suites_[suite][test];
         if(!data_ptr) {
             std::cerr << "error" << std::endl; //TODO actual error processing
             return;
@@ -124,16 +108,8 @@ namespace {
         total_points_ += data_ptr->points;
 
         if(json_) {
-            std::fstream file(filename_, std::ios_base::out);
-
-            std::vector<std::pair<std::string, JSON>> output;
-            output.push_back({"test_results", suites_});
-            output.push_back({"points", total_points_});
-            output.push_back({"max_points", total_max_points_});
-
-            file << JSON(output) << std::endl << std::endl;
-
-            file.close();
+            UpdateTestJSON(suite, test);
+            SaveJSON();
         }
 
         if(pretty_) {
@@ -143,8 +119,7 @@ namespace {
     }
 
     void Formatter::FinishTest(const std::string& suite, const std::string& test) {
-
-        auto data_ptr = GetTest(suite, test);
+        auto data_ptr = suites_[suite][test];
         if(!data_ptr) {
             std::cerr << "error" << std::endl; //TODO actual error processing
             return;
@@ -153,34 +128,11 @@ namespace {
         total_points_ += data_ptr->points;
 
         if(json_) {
-            std::fstream file(filename_, std::ios_base::out);
-
-            std::vector<std::pair<std::string, JSON>> output;
-            output.push_back({"test_results", suites_});
-            output.push_back({"points", total_points_});
-            output.push_back({"max_points", total_max_points_});
-
-            file << JSON(output) << std::endl << std::endl;
-
-            file.close();
+            UpdateTestJSON(suite, test);
+            SaveJSON();
         }
 
         if(pretty_) {
-            auto it = std::find_if(suites_.begin(), suites_.end(),
-                    [suite](std::pair<std::string, TestVector> a){ return a.first == suite; }
-                );
-
-            auto it2 = std::find_if(it->second.begin(), it->second.end(),
-                    [test](const std::pair<std::string, TestData>& a){
-                        return a.first == test;
-                    }
-                );
-
-            if(it2 == it->second.end()) {
-                std::cerr << "error" << std::endl; //TODO actual error processing
-                return;
-            }
-
             const TestData& test_data = *data_ptr;
 
             ConsoleWriter writer;
