@@ -56,7 +56,7 @@ class UserObject(Dictifiable):
     def __init__(self, report):
         self.json = report["json"]
         self.string = report["string"]
-        self.construct = report["construct"]
+        self.construct = report.get("construct", None)
 
 class FunctionEntry(Dictifiable):
     def __init__(self, report):

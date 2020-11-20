@@ -110,7 +110,11 @@ std::string toConstruct(const std::string& item) {
 std::string toConstruct(const unsigned char& item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
 std::string toConstruct(const char& item) { return "static_cast<unsigned char>(" + std::to_string((int)item) + ")"; }
 std::string toConstruct(const bool& b) { return b ? "true" : "false"; }
+#ifdef GCHECK_CONSTRUCT_DATA
 std::string toConstruct(const UserObject& u) { return u.construct(); }
+#else
+std::string toConstruct(const UserObject&) { return ""; }
+#endif
 std::string toConstruct(decltype(nullptr)) { return "nullptr"; }
 std::string toConstruct(const int& item) { return std::to_string(item); }
 std::string toConstruct(const long& item) { return std::to_string(item) + 'L'; }

@@ -44,7 +44,9 @@ _JSON<std::allocator>::_JSON(const _FunctionEntry<std::allocator>& e) {
 _JSON<std::allocator>::_JSON(const _UserObject<std::allocator>& o)
         : _JSON(std::vector{
             std::pair("json", o.json()),
+#ifdef GCHECK_CONSTRUCT_DATA
             std::pair("construct", _JSON(o.construct())),
+#endif
             std::pair("string", _JSON(o.string())),
         }) {}
 

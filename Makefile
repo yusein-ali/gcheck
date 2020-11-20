@@ -26,9 +26,16 @@ endif
 
 all: $(GCHECK_LIB_DIR)/$(LIBNAME)
 
+with-construct: | set-construct $(GCHECK_LIB_DIR)/$(LIBNAME)
+
+debug-construct: | set-debug with-construct
+
 debug: | set-debug $(GCHECK_LIB_DIR)/$(LIBNAME)
 
 shared: $(GCHECK_LIB_DIR)/$(GCHECK_SHARED_LIB_NAME)
+
+set-construct:
+	$(eval CPPFLAGS += -DGCHECK_CONSTRUCT_DATA)
 
 set-debug:
 	$(eval CXXFLAGS += -g)
