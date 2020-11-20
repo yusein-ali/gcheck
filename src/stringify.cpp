@@ -32,8 +32,7 @@ std::vector<std::string> Replacees() {
     return replacees;
 }
 
-std::string UTF8Encode(std::string str) {
-
+std::string UTF8Escape(std::string str) {
     static const std::string escapees = Escapees();
     static const std::vector<std::string> replacees = Replacees();
 
@@ -63,6 +62,13 @@ std::string UTF8Encode(std::string str) {
         }
         pos = min;
     }
+
+    return str;
+}
+
+std::string UTF8ify(std::string str) {
+    static const std::string escapees = Escapees();
+    static const std::vector<std::string> replacees = Replacees();
 
     // encode non-utf-8 characters
     std::stack<size_t> positions;
@@ -101,6 +107,11 @@ std::string UTF8Encode(std::string str) {
 
     return str;
 }
+
+std::string UTF8Encode(std::string str) {
+    return UTF8ify(UTF8Escape(str));
+}
+
 
 std::string toConstruct(const char* const& item) { return '"' + UTF8Encode(item) + '"'; }
 std::string toConstruct(const char*& item) { return (const char*)item; }

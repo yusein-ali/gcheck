@@ -66,7 +66,7 @@ public:
     template<template<typename> class T>
     _JSON(const _JSON<T>& json) : string(json) {}
     _JSON(const std::string& str) : string("\"" + Escape(str) + "\"") {}
-    _JSON(const char* str) : _JSON(std::string(str)) {}
+    _JSON(const char* str);
     _JSON(const std::string& key, const _JSON& value) : string(_JSON(key) + ":" + value) {}
     _JSON(const std::string& key, const char* value) : _JSON(key, _JSON(value)) {}
     _JSON(bool b) : string(b ? "true" : "false") {}
