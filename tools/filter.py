@@ -196,7 +196,7 @@ def CppProcessor(file, content):
 
         return pos1 > pos2 or pos3 > pos4
 
-    def find_on_level(string, target, start):
+    def find_on_level(string, target, start, assume_template_error = False):
         stack = [None]
         escape = False
         for index, c in enumerate(string[start:], start):
@@ -213,17 +213,26 @@ def CppProcessor(file, content):
                 if c == '"':
                     stack.pop()
             elif c == "<": # tries to find out whether this is an operator or a template argument
-
                 if template_checker.match(string, index) is not None:
                     stack.append(c)
             elif c in ["(", "{", '"', "'"]:
                 stack.append(c)
             elif {"(":")", "{":"}", "<":">", None:None}[stack[-1]] == c:
                 stack.pop()
+            elif c in [")", "}"] and {")":"(", "}":"{"}[c] in stack:
+                # a fall back in case of invalid template detection
+                for i, c2 in reversed(list(enumerate(stack))):
+                    if c2 == {")":"(", "}":"{"}[c]:
+                        stack = stack[:i]
+                        break
             elif len(stack) == 1 and c == target:
+                return index
+            elif assume_template_error and c == target and len([c for c in stack if c != "<"]) == 1:
                 return index
             if len(stack) == 0:
                 break
+        if not assume_template_error:
+            return find_on_level(string, target, start, True)
         return -1
 
     def rfind_on_level(string, target, end):
