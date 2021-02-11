@@ -385,7 +385,7 @@ bool Test::RunTests() {
     do {
         counter = 0;
         for(auto it = test_list.begin(); it != test_list.end(); it++) {
-            if((*it)->data_.status != Finished && (*it)->data_.prerequisite.IsFulfilled()) {
+            if((*it)->data_.status == NotStarted && (*it)->data_.prerequisite.IsFulfilled()) {
                 (*it)->data_.status = Started;
                 Formatter::StartTest((*it)->suite_, (*it)->test_);
                 (*it)->RunTest();
