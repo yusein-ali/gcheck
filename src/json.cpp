@@ -12,10 +12,10 @@ namespace gcheck {
 
 _JSON<std::allocator> _JSON<std::allocator>::Escape(std::string str) {
     _JSON json;
-    return json.Set(UTF8Escape(str));
+    return json.Set(JSONEscape(str));
 }
 
-_JSON<std::allocator>::_JSON(const char* str) : _JSON(std::string(UTF8ify(str))) {}
+_JSON<std::allocator>::_JSON(const char* str) : _JSON(JSONEscape(str)) {}
 
 _JSON<std::allocator>::_JSON(const _FunctionEntry<std::allocator>& e) {
     std::vector<_JSON> data;

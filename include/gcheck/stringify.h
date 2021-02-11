@@ -44,12 +44,8 @@ constexpr auto type_name() noexcept {
   return std::string(name);
 }
 
-// Escape special characters e.g. \n and \t
-std::string UTF8Escape(std::string);
-// Escape non-utf8 characters e.g. char value 240
-std::string UTF8ify(std::string);
-// Escape special characters and then escape non-utf8 characters
-std::string UTF8Encode(std::string);
+// Escape non-utf8 characters and special characters e.g. \n and \t
+std::string JSONEscape(std::string);
 
 template<typename C, typename Func>
 std::string Stringify(const C& container, Func func, const std::string& start, const std::string& separator, const std::string& end) {

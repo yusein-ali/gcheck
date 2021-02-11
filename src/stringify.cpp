@@ -2,94 +2,80 @@
 #include <stack>
 #include <cstring>
 #include <sstream>
+#include <array>
 
 #include "stringify.h"
 #include "user_object.h"
 
 namespace gcheck {
 
-std::string Escapees() {
-    std::string escapees = "\\\"";
-    for(char c = 0; c < 0x20; c++) {
-        escapees.push_back(c);
-    }
-    return escapees;
-}
-
-std::string Replacee(char val) {
+std::array<std::string, 256> replacee_array() {
     static const char* digits = "0123456789ABCDEF";
 
-    std::string ret = "\\u0000";
-    for (size_t i = 0; i < 2; ++i)
-        ret[i+4] = digits[(val >> 4*(1-i)) & 0xf];
-    return ret;
-}
-std::vector<std::string> Replacees() {
-    std::vector<std::string> replacees{"\\\\", "\\\""};
-    for(char c = 0; c < 0x20; c++) {
-        replacees.push_back(Replacee(c));
+    std::array<std::string, 256> replacees;
+
+    for (int i = 0; i < 256; ++i) {
+        replacees[i] = "\\u0000";
+        for (size_t j = 0; j < 2; ++j)
+            replacees[i][j+4] = digits[(i >> 4*(1-j)) & 0xf];
     }
+
     return replacees;
 }
-
-std::string UTF8Escape(std::string str) {
-    static const std::string escapees = Escapees();
-    static const std::vector<std::string> replacees = Replacees();
-
-    size_t pos = 0;
-    int index = 0;
-    size_t min = std::string::npos;
-    for(unsigned int i = 0; i < escapees.length(); i++) {
-        size_t p = str.find(escapees[i], pos);
-        if(p < min) {
-            min = p;
-            index = i;
-        }
-    }
-    pos = min;
-    while(pos != std::string::npos) {
-        str.replace(pos, 1, replacees[index]);
-        pos += replacees[index].length();
-
-        index = 0;
-        min = std::string::npos;
-        for(unsigned int i = 0; i < escapees.length(); i++) {
-            size_t p = str.find(escapees[i], pos);
-            if(p < min) {
-                min = p;
-                index = i;
-            }
-        }
-        pos = min;
-    }
-
-    return str;
+std::string Replacee(unsigned char val) {
+    static const std::array<std::string, 256> replacees = replacee_array();
+    return replacees[val];
 }
 
-std::string UTF8ify(std::string str) {
-    static const std::string escapees = Escapees();
-    static const std::vector<std::string> replacees = Replacees();
+std::string JSONEscape(std::string str) {
+    // find non-utf-8 characters
+    for(size_t pos = 0; pos < str.length(); pos++) {
+        if((unsigned char)str[pos] == 0xC7) {
+            break;
+        }
+    }
 
-    // encode non-utf-8 characters
     std::stack<size_t> positions;
     for(size_t pos = 0; pos < str.length(); pos++) {
-        int num = 0;
-        while((str[pos] << num) & 0b10000000) num++;
-        if(num == 0)
+        const unsigned char val = str[pos];
+        if(val < 0x20 || val == '\\' || val == '\"') {
+            positions.push(pos);
             continue;
-        else if(num != 1) {
-            int count = 0;
-            while(count < num-1 && (str[pos+count+1] & 0b11000000) == 0b10000000) count++;
-            if(count == num-1) {
-                pos += count;
-                continue;
+        } else if(!(val & 0b10000000)) {
+            continue;
+        }
+        int expected = 0;
+        if(val >> 6 == 0b10) {
+            positions.push(pos);
+            continue;
+        } else if(val >> 5 == 0b110) {
+            expected = 1;
+        } else if(val >> 4 == 0b1110) {
+            expected = 2;
+        } else if(val >> 3 == 0b11110) {
+            expected = 3;
+        } else {
+            positions.push(pos);
+            continue;
+        }
+
+        int count = 0;
+        for(; count < expected; count++) {
+            if((unsigned char)str[pos+count+1] >> 6 != 0b10)
+                break;
+        }
+
+        if(count != expected) {
+            for(int i = 0; i <= count; i++) {
+                positions.push(pos+i);
             }
         }
-        positions.push(pos);
+        pos += count;
     }
 
     str.resize(str.length()+positions.size()*5); // add space for encoding
 
+    // escape non-utf-8 characters
     size_t epos = str.length()-1;
     size_t offset = positions.size()*5;
     char* cstr = str.data();
@@ -108,12 +94,8 @@ std::string UTF8ify(std::string str) {
     return str;
 }
 
-std::string UTF8Encode(std::string str) {
-    return UTF8ify(UTF8Escape(str));
-}
 
-
-std::string toConstruct(const char* const& item) { return '"' + UTF8Encode(item) + '"'; }
+std::string toConstruct(const char* const& item) { return '"' + JSONEscape(item) + '"'; }
 std::string toConstruct(const char*& item) { return (const char*)item; }
 std::string toConstruct(const std::string& item) {
     return "std::string(" + toConstruct((const char*)item.c_str()) + ")";
