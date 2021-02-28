@@ -139,6 +139,7 @@ std::string toString(const std::string& item) { return '"' + item + '"'; }
 std::string toString(const char* const&item) { return toString(std::string(item)); }
 std::string toString(const char*& item) { return toString((const char*)item); }
 std::string toString(const char& item) { return std::string("'") + item + "'"; }
+std::string toString(const unsigned char& item) { return std::to_string(item); }
 std::string toString(const bool& b) { return b ? "true" : "false"; }
 std::string toString(const UserObject& u) { return u.string(); }
 std::string toString(decltype(nullptr)) { return "nullptr"; }

@@ -163,6 +163,7 @@ std::string toString(const std::string& item);
 std::string toString(const char* const& item);
 std::string toString(const char*& item);
 std::string toString(const char& item);
+std::string toString(const unsigned char& item);
 std::string toString(const bool& b);
 std::string toString(const UserObject& u);
 std::string toString(decltype(nullptr));
