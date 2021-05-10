@@ -20,9 +20,12 @@ ForkStatus wait_timeout(pid_t pid, std::chrono::duration<double> time) {
     timeout.tv_nsec = nsecs.count();
 
     siginfo_t info;
-
-    while(sigtimedwait(&mask, &info, &timeout) < 0) {
-        if (errno == EINTR) {
+    while(true) {
+        int val = sigtimedwait(&mask, &info, &timeout);
+        if(val >= 0) {
+            if(info.si_pid != pid) continue;
+            else break;
+        } else if (errno == EINTR) {
             continue;
         } else if (errno == EAGAIN) {
             kill(pid, SIGKILL);

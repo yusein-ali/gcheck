@@ -30,12 +30,12 @@ ForkStatus RunForked(std::chrono::duration<double> timeout, T<std::allocator>& d
 
         allocator.construct(data, data_out);
         exit(0);
-    } /*else if(timeout != timeout.zero()) {
+    } else if(timeout != timeout.zero()) {
         ForkStatus status = wait_timeout(pid, timeout);
         if(status == TIMEDOUT || status == ERROR) {
             return status;
         }
-    }*/ else {
+    } else {
         int status;
         waitpid(pid, &status, WUNTRACED);
         if(!WIFEXITED(status) || WEXITSTATUS(status) != 0)
