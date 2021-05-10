@@ -14,16 +14,16 @@ int IntAndIntInt(int,int) {
     return 0;
 }
 
-FUNCTIONTEST(basic, VoidAndEmpty, 3, VoidAndEmpty, 4) {
+FUNCTIONTEST(basic, VoidAndEmpty, 3, VoidAndEmpty) {
 
 }
-FUNCTIONTEST(basic, IntAndEmpty, 3, IntAndEmpty, 4) {
+FUNCTIONTEST(basic, IntAndEmpty, 2, IntAndEmpty, 3) {
     SetReturn(0);
 }
-FUNCTIONTEST(basic, VoidAndIntInt, 3, VoidAndIntInt, 4) {
+FUNCTIONTEST(basic, VoidAndIntInt, 4, VoidAndIntInt, 4) {
     SetArguments(0,2);
 }
-FUNCTIONTEST(basic, IntAndIntInt, 3, IntAndIntInt, 4) {
+FUNCTIONTEST(basic, IntAndIntInt, 3, IntAndIntInt, 5) {
     SetArguments(0,2);
     SetReturn(0);
 }
