@@ -41,7 +41,7 @@ set-debug:
 	$(eval CXXFLAGS += -g)
 
 build/%.o : src/%.cpp $(HEADERS) | build
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 build/%.pic.o : src/%.cpp $(HEADERS) | build
 	$(CXX) -fPIC $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
@@ -57,6 +57,9 @@ get-report: $(EXECUTABLE)
 
 clean:
 	$(RM) $(call FixPath, build/* $(GCHECK_LIB_DIR)/* $(EXECUTABLE) output.html report.json)
+
+clean-all: clean
+	$(MAKE) -C tests clean
 
 build:
 	mkdir build

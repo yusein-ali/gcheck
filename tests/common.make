@@ -3,8 +3,10 @@ include ../vars.make
 
 OBJECTS=$(SOURCES:%.cpp=$(BUILD_DIR)/%.o)
 
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(GCHECK_INCLUDE_DIR)
-CPPFLAGS = -L$(GCHECK_LIB_DIR) -l$(GCHECK_LIB)
+CXXFLAGS=-std=c++17 -Wall -Wextra -pedantic -I$(GCHECK_INCLUDE_DIR)
+CPPFLAGS=
+LDFLAGS=-L$(GCHECK_LIB_DIR)
+LDLIBS=-l$(GCHECK_LIB)
 
 ifeq ($(OS),Windows_NT)
 	RM=del /f /q
@@ -32,7 +34,7 @@ $(BUILD_DIR)/%.o : %.cpp $(HEADERS) | $(BUILD_DIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(EXECUTABLE): $(GCHECK_LIB_DIR)/lib$(GCHECK_LIB).a $(OBJECTS) | $(BIN_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(OBJECTS) -o $@
+	$(CXX) $(LDFLAGS) $(OBJECTS) $(LDLIBS) -o $@
 
 clean:
 	$(RM) $(call FixPath, $(OBJECTS) $(EXECUTABLE) output.html report.json)
