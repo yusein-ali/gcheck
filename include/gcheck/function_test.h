@@ -265,7 +265,7 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
                 data.return_value = ret;
                 if(expected_return_value_)
                     data.return_value_expected = *expected_return_value_;
-                data.result = expected_return_value_ == ret;
+                data.result = (!expected_return_value_ || *expected_return_value_ == ret);
             }
 
             data.arguments_after = args;
@@ -287,7 +287,7 @@ void FunctionTest<ReturnT, Args...>::RunOnce(FunctionEntry& data) {
         data.return_value = ret;
         if(expected_return_value_)
             data.return_value_expected = *expected_return_value_;
-        data.result = expected_return_value_ == ret && (!args_after_ && !args_);
+        data.result = (!expected_return_value_ || *expected_return_value_ == ret) && (!args_after_ && !args_);
     }
 
     data.max_run_time = max_run_time_;
