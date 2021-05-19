@@ -137,12 +137,18 @@ class Test(Dictifiable):
 class Report(Dictifiable):
     points = 0
     max_points = 0
-    def __init__(self, filename):
-        with open(filename, 'r') as f:
-            self.data = json.load(f)
-            self.points = self.data["points"]
-            self.max_points = self.data["max_points"]
-            self.tests = [Test(suite_name, test_name, test_data) for suite_name, suite_data in self.data["test_results"].items() for test_name, test_data in suite_data.items()]
+    def __init__(self, filename = None):
+        if filename is not None:
+            with open(filename, 'r') as f:
+                self.data = json.load(f)
+                self.points = self.data["points"]
+                self.max_points = self.data["max_points"]
+                self.tests = [Test(suite_name, test_name, test_data) for suite_name, suite_data in self.data["test_results"].items() for test_name, test_data in suite_data.items()]
+        else:
+            self.data = {}
+            self.points = 0
+            self.max_points = 0
+            self.tests = []
 
     def get_json(self):
         return json.dumps(self.data)
