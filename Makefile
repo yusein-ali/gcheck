@@ -22,17 +22,17 @@ else
 	FixPath = $1
 endif
 
-.PHONY: clean all debug set-debug shared
+.PHONY: clean static shared debug set-debug set-construct with-construct debug-construct
 
-all: $(GCHECK_LIB_DIR)/$(LIBNAME)
+static: $(GCHECK_LIB_DIR)/$(LIBNAME)
+
+shared: $(GCHECK_LIB_DIR)/$(GCHECK_SHARED_LIB_NAME)
 
 with-construct: | set-construct $(GCHECK_LIB_DIR)/$(LIBNAME)
 
 debug-construct: | set-debug with-construct
 
 debug: | set-debug $(GCHECK_LIB_DIR)/$(LIBNAME)
-
-shared: $(GCHECK_LIB_DIR)/$(GCHECK_SHARED_LIB_NAME)
 
 set-construct:
 	$(eval CPPFLAGS += -DGCHECK_CONSTRUCT_DATA)
