@@ -666,6 +666,7 @@ def remove(infile, outdir):
 
     if not args.keep_solution:
         content = remove_solution(content)
+        content = apply_students(content)
         content = apply_stubs(content)
 
     if is_test_source(content):
