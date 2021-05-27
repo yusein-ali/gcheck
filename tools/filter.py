@@ -44,7 +44,7 @@ test_source_checker = regex.compile(r"(TEST|IOTEST|FUNCTIONTEST|METHODIOTEST)\([
 template_checker = regex.compile(r"<([^\";<>]|(?0))*>")
 template_checker2 = regex.compile(r"<([^\";<>]|(?0))*>$")
 nullfinder = regex.compile(r"null([^\w]|$)")
-solution_finder = regex.compile(r"(//\s*BEGIN SOLUTION|\/\*\s*BEGIN SOLUTION\s*\*\/)((?!(//\s*BEGIN SOLUTION|\/\*\s*BEGIN SOLUTION\s*\*\/|//\s*END SOLUTION|\/\*\s*END SOLUTION\s*\*\/)).)*(//\s*END SOLUTION|\/\*\s*END SOLUTION\s*\*\/)",
+solution_finder = regex.compile(r"(//\s*BEGIN SOLUTION|\/\*\s*BEGIN SOLUTION\s*\*\/)((?!(//\s*BEGIN SOLUTION|\/\*\s*BEGIN SOLUTION\s*\*\/|//\s*END SOLUTION|\/\*\s*END SOLUTION\s*\*\/)).)*(//\s*END SOLUTION[^\n]*\n?|\/\*\s*END SOLUTION\s*\*\/)",
     regex.DOTALL | regex.IGNORECASE)
 server_internal_finder = regex.compile(r"(?://|/\*)\s*BEGIN\s+SERVER\s+INTERNAL(?:(?!(?://|/\*)\s*END\s+SERVER\s+INTERNAL).)*(?:(?://|/\*)\s*END\s+SERVER\s+INTERNAL\s*(?:\*/)?)?",
     regex.DOTALL | regex.IGNORECASE)
