@@ -28,6 +28,7 @@ FUNCTIONTEST(basic, IntAndIntInt, 3, IntAndIntInt, 5) {
     SetReturn(0);
 }
 
+// tthis is test comment
 
 int IntAndEmpty2() {
     return 1;
