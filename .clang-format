@@ -1,0 +1,74 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+# AlignEscapedNewlines: LeftWithLastLine
+AlignOperands: true
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BraceWrapping: 
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: AfterColon
+BreakConstructorInitializersBeforeComma: false
+BreakFunctionDefinitionParameters: false
+ColumnLimit: 120
+CommentPragmas: (\/\/\/\s?.*|\/\*!\<.*?\*\/|\/\/\!\<.*)
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ContinuationIndentWidth: 8
+ExperimentalAutoDetectBinPacking: true
+IncludeCategories: 
+  - Regex: '^<.*'
+    Priority: 1
+  - Regex: '^".*'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 3
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+IndentCaseLabels: true
+IndentGotoLabels: false
+IndentWidth: 4
+InsertNewlineAtEOF: true
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+MaxEmptyLinesToKeep: 2
+PenaltyBreakAssignment: 10
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakComment: 1000
+PenaltyReturnTypeOnItsOwnLine: 100
+ReflowComments: false
+SpaceAfterCStyleCast: true
+SpaceAfterTemplateKeyword: false
+SpaceBeforeRangeBasedForLoopColon: false
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInConditionalStatement: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+TabWidth: 4
+UseTab: Always
+...
