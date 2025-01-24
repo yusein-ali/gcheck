@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+#include <cstdlib>
+#include <utility>
+
 template<typename T>
 class Deleter {
 public:

@@ -1,6 +1,6 @@
 include vars.make
 
-GCHECK_INCLUDE_DIR:=$(GCHECK_INCLUDE_DIR)/gcheck
+GCHECK_INCLUDE_DIR:=$(GCHECK_INCLUDE_DIR)
 
 GCHECK_SOURCES=gcheck.cpp user_object.cpp redirectors.cpp json.cpp console_writer.cpp argument.cpp stringify.cpp shared_allocator.cpp multiprocessing.cpp customtest.cpp
 GCHECK_OBJECTS=$(GCHECK_SOURCES:cpp=o)

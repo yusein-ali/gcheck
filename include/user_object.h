@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <sstream>
 #include <utility>
+#include <optional>
 
 #include "argument.h"
 #include "json.h"

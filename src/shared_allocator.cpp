@@ -1,4 +1,5 @@
 #include "shared_allocator.h"
+#include <cstdint>
 
 namespace gcheck {
 
