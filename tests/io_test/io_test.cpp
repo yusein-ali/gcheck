@@ -1,5 +1,10 @@
+#if !defined(GCHECK_BUILD_TESTS)
 #include <gcheck/gcheck.h>
 #include <gcheck/io_test.h>
+#else 
+#include "gcheck.h"
+#include "io_test.h"
+#endif
 
 void VoidAndEmpty() {
 

@@ -1,8 +1,9 @@
+.cache/
 docs/
-build/*
-lib/*
-tests/build/*
-tests/bin/*
+build/
+lib/
+tests/build/
+tests/bin/
 report.json
 __pycache__
-.vscode/compile_commands.json
+.vs/

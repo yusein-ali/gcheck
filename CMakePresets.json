@@ -1,0 +1,134 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 16,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "static-debug",
+      "displayName": "Static Library",
+      "description": "Build static libgcheck.a",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_STATIC": "ON",
+        "GCHECK_BUILD_SHARED": "OFF",
+        "GCHECK_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "shared-debug",
+      "displayName": "Shared Library",
+      "description": "Build shared libgcheck.so",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_STATIC": "OFF",
+        "GCHECK_BUILD_SHARED": "ON",
+        "GCHECK_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "static-release",
+      "displayName": "Static Library Release",
+      "description": "Build static libgcheck.a (Release)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GCHECK_BUILD_STATIC": "ON",
+        "GCHECK_BUILD_SHARED": "OFF",
+        "GCHECK_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "shared-release",
+      "displayName": "Shared Library Release",
+      "description": "Build shared libgcheck.so (Release)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GCHECK_BUILD_STATIC": "OFF",
+        "GCHECK_BUILD_SHARED": "ON",
+        "GCHECK_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "test-function",
+      "displayName": "Test Function",
+      "description": "Build function_test executable with gcheck sources",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_TESTS": "ON",
+        "GCHECK_TEST_FUNCTION": "ON",
+        "GCHECK_TEST_IO": "OFF",
+        "GCHECK_TEST_PREREQUISITE": "OFF"
+      }
+    },
+    {
+      "name": "test-io",
+      "displayName": "Test IO",
+      "description": "Build io_test executable with gcheck sources",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_TESTS": "ON",
+        "GCHECK_TEST_FUNCTION": "OFF",
+        "GCHECK_TEST_IO": "ON",
+        "GCHECK_TEST_PREREQUISITE": "OFF"
+      }
+    },
+    {
+      "name": "test-prerequisite",
+      "displayName": "Test Prerequisite",
+      "description": "Build prerequisite executable with gcheck sources",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_TESTS": "ON",
+        "GCHECK_TEST_FUNCTION": "OFF",
+        "GCHECK_TEST_IO": "OFF",
+        "GCHECK_TEST_PREREQUISITE": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-static-debug",
+      "configurePreset": "static-debug"
+    },
+    {
+      "name": "build-shared-debug",
+      "configurePreset": "shared-debug"
+    },
+    {
+      "name": "build-static-release",
+      "configurePreset": "static-release"
+    },
+    {
+      "name": "build-shared-release",
+      "configurePreset": "shared-release"
+    },
+    {
+      "name": "build-test-function",
+      "configurePreset": "test-function"
+    },
+    {
+      "name": "build-test-io",
+      "configurePreset": "test-io"
+    },
+    {
+      "name": "build-test-prerequisite",
+      "configurePreset": "test-prerequisite"
+    }
+  ]
+}
