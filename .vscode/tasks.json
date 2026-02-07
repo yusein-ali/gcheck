@@ -1,47 +1,149 @@
 {
     "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "cmakeConfigurePreset",
+            "type": "pickString",
+            "description": "Select CMake configure preset",
+            "options": [
+                "static-debug",
+                "shared-debug",
+                "static-release",
+                "shared-release",
+                "test-function",
+                "test-io",
+                "test-prerequisite"
+            ],
+            "default": "static-debug"
+        },
+        {
+            "id": "cmakeBuildPreset",
+            "type": "pickString",
+            "description": "Select CMake build preset",
+            "options": [
+                "build-static-debug",
+                "build-shared-debug",
+                "build-static-release",
+                "build-shared-release",
+                "build-test-function",
+                "build-test-io",
+                "build-test-prerequisite"
+            ],
+            "default": "build-static-debug"
+        }
+    ],
     "tasks": [
         {
-            "label": "Build",
+            "label": "CMake: Configure",
             "type": "shell",
-            "command": "make debug",
-            "windows": {
-                "command": "mingw32-make debug",
+            "command": "cmake --preset ${input:cmakeConfigurePreset}",
+            "options": {
+                "cwd": "${workspaceFolder}"
             },
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "presentation": {
-                "clear": true
-            },
-            "problemMatcher": [{
-                "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceFolder}"]}
+            "problemMatcher": [
+                "$gcc"
             ]
         },
         {
-            "label": "Clean",
+            "label": "CMake: Build",
             "type": "shell",
-            "command": "make clean",
-            "args": [],
-            "windows": {
-                "command": "mingw32-make clean",
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "command": "cmake --build --preset ${input:cmakeBuildPreset}",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": [{
-                "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceRoot}"]}
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
             ]
+        },
+        {
+            "label": "CMake: Configure Test Function",
+            "type": "shell",
+            "command": "cmake --preset test-function",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Build Test Function",
+            "type": "shell",
+            "command": "cmake --build --preset build-test-function",
+            "dependsOn": [
+                "CMake: Configure Test Function"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Configure Test IO",
+            "type": "shell",
+            "command": "cmake --preset test-io",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Build Test IO",
+            "type": "shell",
+            "command": "cmake --build --preset build-test-io",
+            "dependsOn": [
+                "CMake: Configure Test IO"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Configure Test Prerequisite",
+            "type": "shell",
+            "command": "cmake --preset test-prerequisite",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Build Test Prerequisite",
+            "type": "shell",
+            "command": "cmake --build --preset build-test-prerequisite",
+            "dependsOn": [
+                "CMake: Configure Test Prerequisite"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "CMake: Clean",
+            "type": "shell",
+            "command": "cmake --build --preset ${input:cmakeBuildPreset} --target clean",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
         }
     ]
 }
