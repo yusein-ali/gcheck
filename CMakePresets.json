@@ -68,6 +68,22 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "GCHECK_BUILD_TESTS": "ON",
         "GCHECK_TEST_FUNCTION": "ON",
+        "GCHECK_TEST_FUNCTION_2": "OFF",
+        "GCHECK_TEST_IO": "OFF",
+        "GCHECK_TEST_PREREQUISITE": "OFF"
+      }
+    },
+    {
+      "name": "test-function-2",
+      "displayName": "Test Function 2",
+      "description": "Build function_test_2 executable with gcheck sources",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "GCHECK_BUILD_TESTS": "ON",
+        "GCHECK_TEST_FUNCTION": "OFF",
+        "GCHECK_TEST_FUNCTION_2": "ON",
         "GCHECK_TEST_IO": "OFF",
         "GCHECK_TEST_PREREQUISITE": "OFF"
       }
@@ -82,6 +98,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "GCHECK_BUILD_TESTS": "ON",
         "GCHECK_TEST_FUNCTION": "OFF",
+        "GCHECK_TEST_FUNCTION_2": "OFF",
         "GCHECK_TEST_IO": "ON",
         "GCHECK_TEST_PREREQUISITE": "OFF"
       }
@@ -96,6 +113,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "GCHECK_BUILD_TESTS": "ON",
         "GCHECK_TEST_FUNCTION": "OFF",
+        "GCHECK_TEST_FUNCTION_2": "OFF",
         "GCHECK_TEST_IO": "OFF",
         "GCHECK_TEST_PREREQUISITE": "ON"
       }
@@ -121,6 +139,10 @@
     {
       "name": "build-test-function",
       "configurePreset": "test-function"
+    },
+    {
+      "name": "build-test-function-2",
+      "configurePreset": "test-function-2"
     },
     {
       "name": "build-test-io",

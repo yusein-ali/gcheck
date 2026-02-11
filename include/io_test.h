@@ -1,10 +1,27 @@
 #pragma once
 
+/**
+ * @file io_test.h
+ * @brief IO-capable function test helpers for stdin/stdout/stderr validation.
+ *
+ * This header provides:
+ * - @ref gcheck::IOPlugin, a mixin that captures stdout/stderr and injects stdin
+ *   around each run.
+ * - @ref gcheck::IOTest, a function-test base class combining
+ *   @ref gcheck::FunctionTest with @ref gcheck::IOPlugin.
+ *
+ * Typical usage flow:
+ * 1. Derive from `IOTest<ReturnT, Args...>`.
+ * 2. In `SetInputsAndOutputs()`, configure inputs/expectations:
+ *    - `SetInput(...)`, `SetOutput(...)`, `SetError(...)`
+ *    - optional return/argument expectations from `FunctionTest`.
+ * 3. Run tests normally; IOPlugin hooks capture/compare IO per run.
+ */
+
 #include <functional>
 #include <optional>
 #include <string>
 
-#include "macrotools.h"
 #include "gcheck.h"
 #include "sfinae.h"
 #include "user_object.h"
@@ -13,8 +30,30 @@
 
 namespace gcheck {
 
+/**
+ * @brief Plugin mixin that adds stdin injection and stdout/stderr capture checks.
+ *
+ * `IOPlugin` registers reset/pre/post callbacks into a @ref FunctionTest:
+ * - Pre-run: optionally inject stdin and start stream capture.
+ * - Post-run: restore streams, store observed IO into @ref FunctionEntry,
+ *   and evaluate output/error expectations.
+ *
+ * Typical usage scenario:
+ * @code{.cpp}
+ * // Inside a FunctionTest/IOTest-derived class:
+ * SetInput("4 5\n");
+ * SetOutput("9\n");
+ * SetError("");
+ * @endcode
+ */
 class IOPlugin {
 public:
+    /**
+     * @brief Construct plugin and register lifecycle hooks into a FunctionTest.
+     *
+     * @tparam Args FunctionTest template arguments.
+     * @param test Target test instance receiving IO hooks.
+     */
     template<typename... Args>
     IOPlugin(FunctionTest<Args...>* test) : tout_(false), terr_(false), tin_(false) {
         test->AddResetTest([this](){ this->ResetTestVars(); });
@@ -22,22 +61,45 @@ public:
         test->AddPostRun([this](auto&&... args){ this->PostRun(std::forward<decltype(args)>(args)...); });
     }
 protected:
+    /** @brief Stdout capturer active during run execution. */
     StdoutCapturer tout_;
+    /** @brief Stderr capturer active during run execution. */
     StderrCapturer terr_;
+    /** @brief Stdin injector used to provide synthetic input. */
     StdinInjecter tin_;
 
+    /** @brief Optional stdin content to feed into tested callable. */
     std::optional<std::string> input_;
+    /** @brief Optional expected stdout content. */
     std::optional<std::string> expected_output_;
+    /** @brief Optional expected stderr content. */
     std::optional<std::string> expected_error_;
+    /** @brief Whether stdin stream should be closed after writing input. */
     bool do_close = false;
 
-    // Sets the input (stdin) given to the tested function
+    /**
+     * @brief Set stdin content for current run.
+     *
+     * @param str Input text to inject.
+     * @param close_stream Whether to close stdin after write.
+     */
     void SetInput(const std::string& str, bool close_stream = false) { input_ = str; do_close = close_stream; }
-    // Sets the expected output (stdout) of tested function
+    /**
+     * @brief Set expected stdout content for current run.
+     *
+     * @param str Expected stdout text.
+     */
     void SetOutput(const std::string& str) { expected_output_ = str; }
-    // Sets the expected error (stderr) of tested function
+    /**
+     * @brief Set expected stderr content for current run.
+     *
+     * @param str Expected stderr text.
+     */
     void SetError(const std::string& str) { expected_error_ = str; }
 
+    /**
+     * @brief Reset per-run IO expectations and input flags.
+     */
     void ResetTestVars() {
         input_.reset();
         expected_output_.reset();
@@ -45,6 +107,12 @@ protected:
         do_close = false;
     }
 private:
+    /**
+     * @brief Pre-run hook: inject stdin (if configured) and start IO capture.
+     *
+     * @param Unused run index.
+     * @param Unused run entry reference.
+     */
     void PreRun(size_t, FunctionEntry&) {
         if(input_) {
             tin_.Capture();
@@ -55,6 +123,16 @@ private:
         tout_.Capture();
         terr_.Capture();
     }
+    /**
+     * @brief Post-run hook: restore streams, persist captured IO, and evaluate expectations.
+     *
+     * Side effects on @p entry:
+     * - stores observed output/error and optional expected fields
+     * - updates `entry.result` with output/error comparisons
+     *
+     * @param Unused run index.
+     * @param entry Run entry being finalized.
+     */
     void PostRun(size_t, FunctionEntry& entry) {
         tout_.Restore();
         terr_.Restore();
@@ -74,84 +152,63 @@ private:
     }
 };
 
-/*
-    Base class for testing functions, their response to standard input and output in standard output and error.
-*/
+/**
+ * @brief Base class for testing functions with IO expectations.
+ *
+ * `IOTest` composes @ref FunctionTest and @ref IOPlugin to validate:
+ * - return values/arguments/runtime (FunctionTest features)
+ * - stdin/stdout/stderr behavior (IOPlugin features)
+ *
+ * Typical usage scenario:
+ * @code{.cpp}
+ * class MyIOCase : public gcheck::IOTest<int, int, int> {
+ * public:
+ *     MyIOCase()
+ *         : IOTest(gcheck::TestInfo("suite", "io_case"), 1,
+ *                  [](int a, int b){ std::cout << a+b << "\n"; return a+b; }) {}
+ * private:
+ *     void SetInputsAndOutputs() override {
+ *         SetArguments(2, 3);
+ *         SetOutput("5\n");
+ *         SetReturn(5);
+ *     }
+ * };
+ * @endcode
+ *
+ * @tparam ReturnT Callable return type.
+ * @tparam Args Callable argument types.
+ */
 template<typename ReturnT, typename... Args>
 class IOTest : public FunctionTest<ReturnT, Args...>, public IOPlugin {
 public:
+    /**
+     * @brief Construct IO-capable function test.
+     *
+     * @param info Test metadata.
+     * @param num_runs Number of configured runs.
+     * @param func Callable under test.
+     */
     IOTest(const TestInfo& info, int num_runs, const std::function<ReturnT(Args...)>& func) : FunctionTest<ReturnT, Args...>(info, num_runs, func), IOPlugin(this) { }
 
 private:
+    /** @brief Keep run-configuration hook private in this adapter layer. */
     using FunctionTest<ReturnT, Args...>::SetInputsAndOutputs;
+    /** @brief Hide base report append helper. */
     using FunctionTest<ReturnT, Args...>::AddReport;
+    /** @brief Hide single-run executor from public interface. */
     using FunctionTest<ReturnT, Args...>::RunOnce;
+    /** @brief Hide expected-arguments storage. */
     using FunctionTest<ReturnT, Args...>::args_;
+    /** @brief Hide expected-arguments-after storage. */
     using FunctionTest<ReturnT, Args...>::args_after_;
+    /** @brief Hide expected-return storage. */
     using FunctionTest<ReturnT, Args...>::expected_return_value_;
+    /** @brief Hide run-count storage. */
     using FunctionTest<ReturnT, Args...>::num_runs_;
+    /** @brief Hide current run index storage. */
     using FunctionTest<ReturnT, Args...>::run_index_;
+    /** @brief Hide argument-after checking flag. */
     using FunctionTest<ReturnT, Args...>::check_arguments_;
 };
 
 } // gcheck
-
-#define _IOTEST7(...) _IOTEST5(__VA_ARGS__)
-#define _IOTEST6(...) _IOTEST5(__VA_ARGS__)
-#define _IOTEST5(suitename, testname, num_runs, ...) \
-    template<typename ReturnT, typename... Args> \
-    class GCHECK_TEST_##suitename##_##testname : public gcheck::IOTest<ReturnT, Args...> { \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
-        using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
-        using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
-        using gcheck::IOTest<ReturnT, Args...>::SetInput; \
-        using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
-        using gcheck::IOTest<ReturnT, Args...>::SetError; \
-        using gcheck::Test::OutputFormat; \
-        using gcheck::Test::SetGradingMethod; \
-        void SetInputsAndOutputs(); \
-    public: \
-        GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(&func)(Args...)) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
-    }; \
-    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(__HEAD(__VA_ARGS__)); \
-    template<typename ReturnT, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs()
-
-#define _IOTEST4(suitename, testname, num_runs, tobetested) \
-    template<typename ReturnT, typename... Args> \
-    class GCHECK_TEST_##suitename##_##testname : public gcheck::IOTest<ReturnT, Args...> { \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
-        using gcheck::FunctionTest<ReturnT, Args...>::AddPreRun; \
-        using gcheck::FunctionTest<ReturnT, Args...>::AddPostRun; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
-        using gcheck::IOTest<ReturnT, Args...>::SetInput; \
-        using gcheck::IOTest<ReturnT, Args...>::SetOutput; \
-        using gcheck::IOTest<ReturnT, Args...>::SetError; \
-        using gcheck::Test::OutputFormat; \
-        using gcheck::Test::SetGradingMethod; \
-        void SetInputsAndOutputs(); \
-    public: \
-        GCHECK_TEST_##suitename##_##testname(std::function<ReturnT(Args...)> func) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(&func)(Args...)) : gcheck::IOTest<ReturnT, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \
-    }; \
-    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(tobetested); \
-    template<typename ReturnT, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, Args...>::SetInputsAndOutputs()
-
-// params: suite name, test name, number of runs, function to be tested, points (optional), prerequisites (optional)
-#define IOTEST(...) \
-    VFUNC(_IOTEST, __VA_ARGS__)

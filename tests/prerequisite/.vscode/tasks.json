@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "make debug",
             "windows": {
-                "command": "mingw32-make debug",
+                "command": "mingw32-make debug"
             },
             "group": {
                 "kind": "build",
@@ -18,10 +18,7 @@
             "presentation": {
                 "clear": true
             },
-            "problemMatcher": [{
-                "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceFolder}"]}
-            ]
+            "problemMatcher": []
         },
         {
             "label": "Clean",
@@ -29,7 +26,7 @@
             "command": "make clean",
             "args": [],
             "windows": {
-                "command": "mingw32-make clean",
+                "command": "mingw32-make clean"
             },
             "group": {
                 "kind": "build",
@@ -38,10 +35,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": [{
-                "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceRoot}"]}
-            ]
+            "problemMatcher": []
         }
     ]
 }

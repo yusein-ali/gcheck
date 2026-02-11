@@ -12,6 +12,7 @@ option(GCHECK_BUILD_SHARED "Build shared gcheck library" OFF)
 option(GCHECK_ENABLE_CONSTRUCT_DATA "Define GCHECK_CONSTRUCT_DATA" OFF)
 option(GCHECK_BUILD_TESTS "Build a test executable from tests/" OFF)
 option(GCHECK_TEST_FUNCTION "Build tests/function_test/function_test.cpp" OFF)
+option(GCHECK_TEST_FUNCTION_2 "Build tests/function_test_2 test executable" OFF)
 option(GCHECK_TEST_IO "Build tests/io_test/io_test.cpp" OFF)
 option(GCHECK_TEST_PREREQUISITE "Build tests/prerequisite/prerequisite.cpp" OFF)
 

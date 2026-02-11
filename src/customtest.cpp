@@ -7,12 +7,16 @@ namespace gcheck {
 
 void CustomTest::ActualTest() {
     if(do_safe_run_) {
+#if defined(__linux__)
         auto status = RunForked(std::chrono::duration<double>(timeout_), data_, 1024*1024, std::bind(&CustomTest::TheTest, this));
         if(status == OK) {
             data_.status = Finished;
         } else if(status == TIMEDOUT) {
             data_.status = TimedOut;
         }
+#else
+        throw std::runtime_error("Safe running is only supported on linux.");
+#endif
     } else {
         TheTest();
         data_.status = Finished;

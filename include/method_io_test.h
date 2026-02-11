@@ -1,102 +1,97 @@
 #pragma once
 
+/**
+ * @file method_io_test.h
+ * @brief Combined method + IO test base class.
+ *
+ * This header provides @ref gcheck::MethodIOTest, which composes:
+ * - @ref gcheck::FunctionTest execution/report pipeline
+ * - @ref gcheck::MethodPlugin object-state tracking
+ * - @ref gcheck::IOPlugin stdin/stdout/stderr capture and checks
+ *
+ * Typical usage flow:
+ * 1. Derive from `MethodIOTest<ReturnT, ObjectType, Args...>`.
+ * 2. In `SetInputsAndOutputs()`, configure:
+ *    - object-under-test via `SetObject(...)`
+ *    - method arguments via `SetArguments(...)`
+ *    - expected return and IO via `SetReturn(...)`, `SetInput(...)`,
+ *      `SetOutput(...)`, `SetError(...)`
+ * 3. Let inherited execution run and produce @ref gcheck::FunctionData entries.
+ */
+
 #include "gcheck.h"
 #include "method_test.h"
 #include "io_test.h"
 
 namespace gcheck {
 
-/*
-    Base class for testing methods, their response to standard input, and output in standard output and error.
-*/
+/**
+ * @brief Base class for testing object methods with stdin/stdout/stderr behavior.
+ *
+ * `MethodIOTest` adapts a callable of signature
+ * `ReturnT(ObjectType*, Args...)` and combines method-state validation with IO
+ * capture/comparison in one test type.
+ *
+ * Typical usage scenario:
+ * @code{.cpp}
+ * class MyMethodIOCase : public gcheck::MethodIOTest<void, MyObj, int> {
+ * public:
+ *     MyMethodIOCase()
+ *         : MethodIOTest(gcheck::TestInfo("suite", "method_io_case"), 1,
+ *                        [](MyObj* o, int x){ o->Run(x); }) {}
+ * private:
+ *     void SetInputsAndOutputs() override {
+ *         SetObject(obj_);
+ *         SetArguments(5);
+ *         SetInput("10\n");
+ *         SetOutput("ok\n");
+ *     }
+ *     MyObj obj_;
+ * };
+ * @endcode
+ *
+ * @tparam ReturnT Callable return type.
+ * @tparam ObjectType Tested object type.
+ * @tparam Args Callable argument types (excluding object pointer).
+ */
 template<typename ReturnT, typename ObjectType, typename... Args>
 class MethodIOTest : public FunctionTest<ReturnT, Args...>, public MethodPlugin<ObjectType>, public IOPlugin {
 public:
+    /** @brief State comparison result tuple `(ok, expected_repr, actual_repr)`. */
     typedef std::tuple<bool, UserObject, UserObject> StateDiff;
+    /**
+     * @brief Construct combined method+IO test adapter.
+     *
+     * Wraps `func(ObjectType*, Args...)` into a callable bound to plugin-managed
+     * `this->object_`, and initializes MethodPlugin and IOPlugin hooks.
+     *
+     * @param info Test metadata.
+     * @param num_runs Number of configured runs.
+     * @param func Method-like callable under test.
+     */
     MethodIOTest(const TestInfo& info, int num_runs, const std::function<ReturnT(ObjectType*, Args...)>& func)
             : FunctionTest<ReturnT, Args...>(info, num_runs, [this, func](Args&&... args){ return func(this->object_, std::forward<Args>(args)...); }),
             MethodPlugin<ObjectType>(this), IOPlugin(this) { }
 
 private:
+    /** @brief Keep `SetInputsAndOutputs` private in this layer (implemented by derived tests). */
     using FunctionTest<ReturnT, Args...>::SetInputsAndOutputs;
+    /** @brief Hide base report append helper from public interface of this adapter. */
     using FunctionTest<ReturnT, Args...>::AddReport;
+    /** @brief Hide single-run executor from public interface. */
     using FunctionTest<ReturnT, Args...>::RunOnce;
+    /** @brief Hide mutable expected-arguments storage. */
     using FunctionTest<ReturnT, Args...>::args_;
+    /** @brief Hide mutable expected-arguments-after storage. */
     using FunctionTest<ReturnT, Args...>::args_after_;
+    /** @brief Hide mutable expected-return storage. */
     using FunctionTest<ReturnT, Args...>::expected_return_value_;
+    /** @brief Hide run-count storage. */
     using FunctionTest<ReturnT, Args...>::num_runs_;
+    /** @brief Hide current run index storage. */
     using FunctionTest<ReturnT, Args...>::run_index_;
+    /** @brief Hide argument-after checking flag. */
     using FunctionTest<ReturnT, Args...>::check_arguments_;
 };
 
 } // gcheck
-
-#define _METHODIOTEST7(...) _METHODIOTEST5(__VA_ARGS__)
-#define _METHODIOTEST6(...) _METHODIOTEST5(__VA_ARGS__)
-#define _METHODIOTEST5(suitename, testname, num_runs, ...) \
-    template<typename ReturnT, typename ObjectType, typename... Args> \
-    class GCHECK_TEST_##suitename##_##testname : public gcheck::MethodIOTest<ReturnT, ObjectType, Args...> { \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetObject; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetInput; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetOutput; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetError; \
-        using gcheck::Test::OutputFormat; \
-        using gcheck::Test::SetGradingMethod; \
-        void SetInputsAndOutputs(); \
-    public: \
-        GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(&func)(ObjectType*, Args...)) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(ObjectType::*func)(Args...) const) \
-                : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, std::function<ReturnT(ObjectType*, Args...)>(func)) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(ObjectType::*func)(Args...)) \
-                : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname, __TAIL(__VA_ARGS__)), num_runs, std::function<ReturnT(ObjectType*, Args...)>(func)) { } \
-    }; \
-    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(__HEAD(__VA_ARGS__)); \
-    template<typename ReturnT, typename ObjectType, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, ObjectType, Args...>::SetInputsAndOutputs()
-
-#define _METHODIOTEST4(suitename, testname, num_runs, tobetested) \
-    template<typename ReturnT, typename ObjectType, typename... Args> \
-    class GCHECK_TEST_##suitename##_##testname : public gcheck::MethodIOTest<ReturnT, ObjectType, Args...> { \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetTimeout; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::IgnoreArgumentsAfter; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetReturn; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetLastArguments; \
-        using gcheck::FunctionTest<ReturnT, Args...>::GetRunIndex; \
-        using gcheck::FunctionTest<ReturnT, Args...>::SetMaxRunTime; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetObject; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetObjectAfter; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetStateComparer; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetInput; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetOutput; \
-        using gcheck::MethodIOTest<ReturnT, ObjectType, Args...>::SetError; \
-        using gcheck::Test::OutputFormat; \
-        using gcheck::Test::SetGradingMethod; \
-        void SetInputsAndOutputs(); \
-    public: \
-        GCHECK_TEST_##suitename##_##testname(const std::function<ReturnT(ObjectType*, Args...)>& func) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(&func)(ObjectType*, Args...)) : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, func) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(ObjectType::*func)(Args...) const) \
-                : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, std::function<ReturnT(ObjectType*, Args...)>(func)) { } \
-        GCHECK_TEST_##suitename##_##testname(ReturnT(ObjectType::*func)(Args...)) \
-                : gcheck::MethodIOTest<ReturnT, ObjectType, Args...>(gcheck::TestInfo(#suitename, #testname), num_runs, std::function<ReturnT(ObjectType*, Args...)>(func)) { } \
-    }; \
-    GCHECK_TEST_##suitename##_##testname GCHECK_TESTVAR_##suitename##_##testname(tobetested); \
-    template<typename ReturnT, typename ObjectType, typename... Args> \
-    void GCHECK_TEST_##suitename##_##testname<ReturnT, ObjectType, Args...>::SetInputsAndOutputs()
-
-// params: suite name, test name, number of runs, method to be tested, points (optional), prerequisites (optional)
-#define METHODIOTEST(...) \
-    VFUNC(_METHODIOTEST, __VA_ARGS__)
