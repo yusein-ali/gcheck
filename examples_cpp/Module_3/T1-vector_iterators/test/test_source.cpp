@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#include <sstream>
 
 #include "vector_it.hpp"
 #include <gcheck/argument.h>
@@ -37,9 +38,18 @@ std::vector<int> TRead(const std::vector<int>& v) {
     return out;
 }
 
-TEST(Iterator, ReadVector) {
-    CompareWithCallable(10, CRead, TRead, rnd);
-}
+namespace {
+
+class IteratorReadVectorTest : public gcheck::CustomTest {
+public:
+    IteratorReadVectorTest() : gcheck::CustomTest(gcheck::TestInfo("Iterator", "ReadVector")) {}
+
+private:
+    void TheTest() override {
+        CompareWithCallable(10, CRead, TRead, rnd);
+    }
+};
+IteratorReadVectorTest iterator_read_vector_test;
 
 
 // BEGIN SERVER INTERNAL
@@ -60,9 +70,16 @@ std::string TPrintSum1(const std::vector<int> v) {
     return tout.str();
 }
 
-TEST(Iterator, PrintSum1) {
-    CompareWithCallable(10, CPrintSum1, TPrintSum1, rnd);
-}
+class IteratorPrintSum1Test : public gcheck::CustomTest {
+public:
+    IteratorPrintSum1Test() : gcheck::CustomTest(gcheck::TestInfo("Iterator", "PrintSum1")) {}
+
+private:
+    void TheTest() override {
+        CompareWithCallable(10, CPrintSum1, TPrintSum1, rnd);
+    }
+};
+IteratorPrintSum1Test iterator_print_sum1_test;
 
 
 // BEGIN SERVER INTERNAL
@@ -84,6 +101,15 @@ std::string TPrintSum2(const std::vector<int> v) {
     return tout.str();
 }
 
-TEST(Iterator, PrintSum2) {
-    CompareWithCallable(10, CPrintSum2, TPrintSum2, rnd);
-}
+class IteratorPrintSum2Test : public gcheck::CustomTest {
+public:
+    IteratorPrintSum2Test() : gcheck::CustomTest(gcheck::TestInfo("Iterator", "PrintSum2")) {}
+
+private:
+    void TheTest() override {
+        CompareWithCallable(10, CPrintSum2, TPrintSum2, rnd);
+    }
+};
+IteratorPrintSum2Test iterator_print_sum2_test;
+
+} // namespace

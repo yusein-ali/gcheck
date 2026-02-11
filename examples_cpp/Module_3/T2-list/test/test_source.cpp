@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 #include <iterator>
@@ -72,11 +73,21 @@ void TGetLines(const std::string& input, std::list<std::string>& l) {
     GetLines(f, l);
 }
 
-FUNCTIONTEST(List, GetLines, num_runs, TGetLines) {
-    SetTimeout(1);
-    SetArguments(rnd.Next(), rnd3.Next());
-    SetArgumentsAfter(rnd(), CGetLines(rnd()));
-}
+namespace {
+
+class ListGetLinesTest : public gcheck::FunctionTest<void, const std::string&, std::list<std::string>&> {
+public:
+    ListGetLinesTest() : gcheck::FunctionTest<void, const std::string&, std::list<std::string>&>(
+        gcheck::TestInfo("List", "GetLines"), num_runs, TGetLines) {}
+
+private:
+    void SetInputsAndOutputs() override {
+        SetTimeout(1);
+        SetArguments(rnd.Next(), rnd3.Next());
+        SetArgumentsAfter(rnd(), CGetLines(rnd()));
+    }
+};
+ListGetLinesTest list_get_lines_test;
 
 
 // BEGIN SERVER INTERNAL
@@ -97,12 +108,20 @@ std::string TPrint(const std::list<std::string>& lines) {
     return tout.str();
 }
 
-IOTEST(List, Print, num_runs, Print) {
-    SetTimeout(1);
-    SetArguments(rnd3.Next());
-    SetArgumentsAfter(rnd3());
-    SetOutput(CPrint(rnd3()));
-}
+class ListPrintTest : public gcheck::IOTest<void, const std::list<std::string>&> {
+public:
+    ListPrintTest() : gcheck::IOTest<void, const std::list<std::string>&>(
+        gcheck::TestInfo("List", "Print"), num_runs, Print) {}
+
+private:
+    void SetInputsAndOutputs() override {
+        SetTimeout(1);
+        SetArguments(rnd3.Next());
+        SetArgumentsAfter(rnd3());
+        SetOutput(CPrint(rnd3()));
+    }
+};
+ListPrintTest list_print_test;
 
 
 // BEGIN SERVER INTERNAL
@@ -119,8 +138,18 @@ std::vector<std::string> TSortAndUnique(std::list<std::string> lines) {
     return std::vector<std::string>(lines.begin(), lines.end());
 }
 
-FUNCTIONTEST(List, SortAndUnique, num_runs, SortAndUnique) {
-    SetTimeout(1);
-    SetArguments(rnd3.Next());
-    SetArgumentsAfter(CSortAndUnique(rnd3()));
-}
+class ListSortAndUniqueTest : public gcheck::FunctionTest<void, std::list<std::string>&> {
+public:
+    ListSortAndUniqueTest() : gcheck::FunctionTest<void, std::list<std::string>&>(
+        gcheck::TestInfo("List", "SortAndUnique"), num_runs, SortAndUnique) {}
+
+private:
+    void SetInputsAndOutputs() override {
+        SetTimeout(1);
+        SetArguments(rnd3.Next());
+        SetArgumentsAfter(CSortAndUnique(rnd3()));
+    }
+};
+ListSortAndUniqueTest list_sort_and_unique_test;
+
+} // namespace

@@ -1,5 +1,6 @@
 #include <string>
 #include <cmath>
+#include <sstream>
 
 #include "matrix.hpp"
 #include <gcheck/argument.h>
@@ -128,22 +129,38 @@ Matrix CRead(const std::vector<int>& input) {
 }
 // END SERVER INTERNAL
 
-IOTEST(Matrix, Read, seq.GetSize(), TRead, 2.5) {
-    SetTimeout(1);
-    auto input = seq.Next();
-    SetArguments(sqrt(input.size()));
-    SetInput(GetInputString(input));
-    SetReturn(CRead(input));
-}
+namespace {
+
+class MatrixReadTest : public gcheck::IOTest<Matrix, int> {
+public:
+    MatrixReadTest() : gcheck::IOTest<Matrix, int>(gcheck::TestInfo("Matrix", "Read", 2.5), (int)seq.GetSize(), TRead) {}
+
+private:
+    void SetInputsAndOutputs() override {
+        SetTimeout(1);
+        auto input = seq.Next();
+        SetArguments((int)sqrt(input.size()));
+        SetInput(GetInputString(input));
+        SetReturn(CRead(input));
+    }
+};
+MatrixReadTest matrix_read_test;
 
 // BEGIN SERVER INTERNAL
-IOTEST(Matrix, Read_random, 10, TRead, 5) {
-    SetTimeout(1);
-    auto input = rnd.Next();
-    SetArguments(sqrt(input.size()));
-    SetInput(GetInputString(input));
-    SetReturn(CRead(input));
-}
+class MatrixReadRandomTest : public gcheck::IOTest<Matrix, int> {
+public:
+    MatrixReadRandomTest() : gcheck::IOTest<Matrix, int>(gcheck::TestInfo("Matrix", "Read_random", 5), 10, TRead) {}
+
+private:
+    void SetInputsAndOutputs() override {
+        SetTimeout(1);
+        auto input = rnd.Next();
+        SetArguments((int)sqrt(input.size()));
+        SetInput(GetInputString(input));
+        SetReturn(CRead(input));
+    }
+};
+MatrixReadRandomTest matrix_read_random_test;
 // END SERVER INTERNAL
 
 /* STUDENT:
@@ -174,14 +191,28 @@ gcheck::Result<Matrix, Matrix> CRotate(const std::vector<int>& input) {
 }
 // END SERVER INTERNAL
 
-TEST(Matrix, Rotate, 2.5) {
-    seq.Reset();
-    CompareWithCallable(seq.GetSize(), CRotate, TRotate, seq);
-}
+class MatrixRotateTest : public gcheck::CustomTest {
+public:
+    MatrixRotateTest() : gcheck::CustomTest(gcheck::TestInfo("Matrix", "Rotate", 2.5)) {}
+
+private:
+    void TheTest() override {
+        seq.Reset();
+        CompareWithCallable((int)seq.GetSize(), CRotate, TRotate, seq);
+    }
+};
+MatrixRotateTest matrix_rotate_test;
 // BEGIN SERVER INTERNAL
-TEST(Matrix, Rotate_random, 5) {
-    CompareWithCallable(10, CRotate, TRotate, rnd);
-}
+class MatrixRotateRandomTest : public gcheck::CustomTest {
+public:
+    MatrixRotateRandomTest() : gcheck::CustomTest(gcheck::TestInfo("Matrix", "Rotate_random", 5)) {}
+
+private:
+    void TheTest() override {
+        CompareWithCallable(10, CRotate, TRotate, rnd);
+    }
+};
+MatrixRotateRandomTest matrix_rotate_random_test;
 // END SERVER INTERNAL
 
 
@@ -217,12 +248,28 @@ gcheck::Result<std::string, Matrix> CPrint(const std::vector<int>& input) {
 }
 // END SERVER INTERNAL
 
-TEST(Matrix, Print, 2) {
-    seq.Reset();
-    CompareWithCallable(seq.GetSize(), CPrint, TPrint, seq);
-}
+class MatrixPrintTest : public gcheck::CustomTest {
+public:
+    MatrixPrintTest() : gcheck::CustomTest(gcheck::TestInfo("Matrix", "Print", 2)) {}
+
+private:
+    void TheTest() override {
+        seq.Reset();
+        CompareWithCallable((int)seq.GetSize(), CPrint, TPrint, seq);
+    }
+};
+MatrixPrintTest matrix_print_test;
 // BEGIN SERVER INTERNAL
-TEST(Matrix, Print_random, 3) {
-    CompareWithCallable(10, CPrint, TPrint, rnd);
-}
+class MatrixPrintRandomTest : public gcheck::CustomTest {
+public:
+    MatrixPrintRandomTest() : gcheck::CustomTest(gcheck::TestInfo("Matrix", "Print_random", 3)) {}
+
+private:
+    void TheTest() override {
+        CompareWithCallable(10, CPrint, TPrint, rnd);
+    }
+};
+MatrixPrintRandomTest matrix_print_random_test;
 // END SERVER INTERNAL
+
+} // namespace

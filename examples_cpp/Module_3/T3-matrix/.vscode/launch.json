@@ -1,0 +1,71 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug t3_matrix",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "CMake: Build",
+            "program": "${workspaceFolder}/build/t3_matrix",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "program": "${workspaceFolder}/build/t3_matrix.exe",
+                "miDebuggerPath": "gdb.exe"
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": []
+            }
+        },
+        {
+            "name": "Debug t3_matrix_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "CMake: Build Test",
+            "program": "${workspaceFolder}/build/t3_matrix_test",
+            "args": [
+                "--json"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "program": "${workspaceFolder}/build/t3_matrix_test.exe",
+                "miDebuggerPath": "gdb.exe"
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": []
+            }
+        }
+    ]
+}
