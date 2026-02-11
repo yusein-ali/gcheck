@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug method_test_private_state_example",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "CMake: Build Test",
+            "program": "${workspaceFolder}/build/method_test_private_state_example",
+            "args": [
+                "--json"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "program": "${workspaceFolder}/build/method_test_private_state_example.exe",
+                "miDebuggerPath": "gdb.exe"
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": []
+            }
+        }
+    ]
+}

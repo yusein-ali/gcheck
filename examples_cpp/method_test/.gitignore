@@ -1,0 +1,10 @@
+/build/
+/.cache/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/compile_commands.json
+/Makefile
+/.ninja_deps
+/.ninja_log
+/build.ninja

@@ -1,7 +1,8 @@
 #include <string>
 #include <tuple>
 
-#include <gcheck.h>
+#include <gcheck/gcheck.h>
+#include <gcheck/method_test.h>
 
 /**
  * @brief Example class with private state.
