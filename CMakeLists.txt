@@ -1,11 +1,33 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(gcheck LANGUAGES CXX)
+project(gcheck VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/docs")
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+        ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.doxygen
+        @ONLY
+    )
+
+    add_custom_target(doc
+        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.doxygen
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Generating API documentation with Doxygen into doc/html"
+        VERBATIM
+    )
+else()
+    message(STATUS "Doxygen not found: 'doc' target will not be available.")
+endif()
 
 option(GCHECK_BUILD_STATIC "Build static gcheck library" ON)
 option(GCHECK_BUILD_SHARED "Build shared gcheck library" OFF)
@@ -30,7 +52,8 @@ function(gcheck_configure_library target_name)
     target_sources(${target_name} PRIVATE ${GCHECK_SOURCES})
     target_include_directories(${target_name}
         PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
     )
@@ -64,15 +87,65 @@ else()
         message(FATAL_ERROR "GCHECK_BUILD_SHARED is not supported on Windows")
     endif()
 
+    set(GCHECK_INSTALL_TARGETS)
+
     if(GCHECK_BUILD_STATIC)
         add_library(gcheck_static STATIC)
-        set_target_properties(gcheck_static PROPERTIES OUTPUT_NAME gcheck)
+        if(GCHECK_BUILD_SHARED)
+            set_target_properties(gcheck_static PROPERTIES OUTPUT_NAME gcheck EXPORT_NAME gcheck_static)
+        else()
+            set_target_properties(gcheck_static PROPERTIES OUTPUT_NAME gcheck EXPORT_NAME gcheck)
+        endif()
         gcheck_configure_library(gcheck_static)
+        list(APPEND GCHECK_INSTALL_TARGETS gcheck_static)
     endif()
 
     if(GCHECK_BUILD_SHARED)
         add_library(gcheck_shared SHARED)
-        set_target_properties(gcheck_shared PROPERTIES OUTPUT_NAME gcheck)
+        set_target_properties(gcheck_shared PROPERTIES OUTPUT_NAME gcheck EXPORT_NAME gcheck)
         gcheck_configure_library(gcheck_shared)
+        list(APPEND GCHECK_INSTALL_TARGETS gcheck_shared)
     endif()
+
+    set(GCHECK_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/gcheck" CACHE STRING "Installation directory for gcheck CMake package files")
+
+    install(
+        TARGETS ${GCHECK_INSTALL_TARGETS}
+        EXPORT gcheckTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+
+    install(
+        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gcheck
+        FILES_MATCHING PATTERN "*.h"
+    )
+
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/gcheckConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/gcheckConfig.cmake
+        INSTALL_DESTINATION ${GCHECK_INSTALL_CMAKEDIR}
+    )
+
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/gcheckConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+
+    install(
+        EXPORT gcheckTargets
+        FILE gcheckTargets.cmake
+        NAMESPACE gcheck::
+        DESTINATION ${GCHECK_INSTALL_CMAKEDIR}
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/gcheckConfig.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/gcheckConfigVersion.cmake
+        DESTINATION ${GCHECK_INSTALL_CMAKEDIR}
+    )
 endif()
