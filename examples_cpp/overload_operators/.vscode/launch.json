@@ -1,0 +1,71 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug overload_operators",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "CMake: Build",
+            "program": "${workspaceFolder}/build/overload_operators",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "program": "${workspaceFolder}/build/overload_operators.exe",
+                "miDebuggerPath": "gdb.exe"
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": []
+            }
+        },
+        {
+            "name": "Debug overload_operators_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "CMake: Build Test",
+            "program": "${workspaceFolder}/build/overload_operators_test",
+            "args": [
+                "--json"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "environment": [],
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb"
+            },
+            "windows": {
+                "MIMode": "gdb",
+                "program": "${workspaceFolder}/build/overload_operators_test.exe",
+                "miDebuggerPath": "gdb.exe"
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": []
+            }
+        }
+    ]
+}
