@@ -8,8 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-get_filename_component(GCHECK_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../../build/install" ABSOLUTE)
-list(APPEND CMAKE_PREFIX_PATH "${GCHECK_INSTALL_PREFIX}")
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/gcheck_include.cmake)
 find_package(gcheck CONFIG REQUIRED)
 
 add_executable(t2_list
