@@ -11,6 +11,7 @@
                 "static-release",
                 "shared-release",
                 "test-function",
+                "test-function-2",
                 "test-io",
                 "test-prerequisite"
             ],
@@ -26,6 +27,7 @@
                 "build-static-release",
                 "build-shared-release",
                 "build-test-function",
+                "build-test-function-2",
                 "build-test-io",
                 "build-test-prerequisite"
             ],
@@ -71,6 +73,27 @@
             "command": "cmake --build --preset build-test-function",
             "dependsOn": [
                 "CMake: Configure Test Function"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Configure Test Function 2",
+            "type": "shell",
+            "command": "cmake --preset test-function-2",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Test Function 2",
+            "type": "shell",
+            "command": "cmake --build --preset build-test-function-2",
+            "dependsOn": [
+                "CMake: Configure Test Function 2"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
