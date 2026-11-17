@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <tuple>
+#include <cstdint>
 #if !defined(_WIN32) && !defined(WIN32)
     #include <sys/types.h>
     #include <sys/wait.h>

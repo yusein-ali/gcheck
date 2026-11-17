@@ -6,6 +6,7 @@
 #include <tuple>
 #include <variant>
 #include <algorithm>
+#include <optional>
 
 namespace gcheck {
 /*
