@@ -75,6 +75,8 @@ protected:
 public:
     Distribution() : generator_(std::random_device()()) {}
     Distribution(uint32_t seed) : generator_(seed == UINT32_MAX ? std::random_device()() : seed) {}
+    // The derived distributions are owned and deleted through shared_ptr.
+    virtual ~Distribution() = default;
 
     //virtual Distribution Clone() = 0;
     virtual A operator()() = 0;
@@ -273,6 +275,10 @@ public:
         return this->value_;
     }
 
+    // This Clone is not const, so it does not override Argument's Clone() const:
+    // a Container cloned through NextType is copied as an Argument that holds
+    // the current value. The using-declaration keeps the base Clone visible.
+    using Argument<ReturnType>::Clone;
     NextType<ContainerT<strip_next<T>>>* Clone() {
         return new Container(*this);
     }

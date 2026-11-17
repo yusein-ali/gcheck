@@ -208,7 +208,7 @@ namespace {
                             row.push_back(str);
                             if(!headers_filled) headers.push_back(header);
                         };
-                        auto add_if = [&add, &headers, &row, headers_filled](const std::optional<UserObject>& i, const std::string& header) {
+                        auto add_if = [&add](const std::optional<UserObject>& i, const std::string& header) {
                             if(i) add(i->string(), header);
                         };
                         if(it2->max_run_time) {
