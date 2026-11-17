@@ -126,7 +126,7 @@ Command line args for the executable:
 - "--no-confirm"
   - skip the confirmation after running the tests if pretty output is enabled
 - "--safe"
-  - whether to run the tests in a separate process. This needs to be enabled for timeouts to work. Only available on linux.
+  - whether to run the tests in a separate process. This needs to be enabled for timeouts to work. Available on Linux, other Unix systems and macOS.
 - "--width <width>"
   - the line length of the pretty output. The program tries to figure out the console width if this isn't specified.
 - <filename>

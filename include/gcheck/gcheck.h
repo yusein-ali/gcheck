@@ -208,6 +208,17 @@ struct _TestReport {
     std::variant<_EqualsData<allocator>, _TrueData<allocator>, _FalseData<allocator>, _CaseData<allocator>, _FunctionData<allocator>> data;
 
     _TestReport(const _TestReport& r) : data(r.data) { info_stream << r.info_stream.str(); }
+    // The stream member deletes the implicit copy assignment, and the
+    // containers of libc++ need one to copy a report between allocators.
+    _TestReport& operator=(const _TestReport& r) {
+        if(this != &r) {
+            data = r.data;
+            info_stream.clear();
+            info_stream.str(r.info_stream.str());
+            info_stream.seekp(0, std::ios_base::end);
+        }
+        return *this;
+    }
     template<typename T>
     _TestReport(const T& d) : data(d) {}
     template<template<typename> class T>
