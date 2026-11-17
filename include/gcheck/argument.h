@@ -104,13 +104,15 @@ public:
     RangeDistribution(const A& start = std::numeric_limits<A>::min(), const A& end = std::numeric_limits<A>::max(), uint32_t seed = UINT32_MAX)
         : Distribution<A>(seed), start_(start), end_(end), distribution_(start, end) {}
     RangeDistribution(const RangeDistribution<A>& dist) : Distribution<A>(dist), start_(dist.start_), end_(dist.end_), distribution_(dist.distribution_) {}
-    A operator()() { return distribution_(Distribution<A>::generator_); }
+    A operator()() { return static_cast<A>(distribution_(Distribution<A>::generator_)); }
 private:
     A start_;
     A end_;
-    // Use int distribution for integral types and real distribution for floating point types
+    // Use int distribution for integral types and real distribution for floating point types.
+    // The standard does not allow uniform_int_distribution for char and other one-byte types
+    // (libc++ rejects char), so types narrower than int are drawn as int.
     typename std::conditional<std::is_integral<A>::value,
-        std::uniform_int_distribution<A>,
+        std::uniform_int_distribution<typename std::conditional<(sizeof(A) < sizeof(int)), int, A>::type>,
         std::uniform_real_distribution<A>
         >::type distribution_;
 };
